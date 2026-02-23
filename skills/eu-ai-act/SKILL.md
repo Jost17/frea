@@ -49,7 +49,7 @@ description: "EU AI Act Compliance-Checker. Klassifiziert KI-Ideen nach Risikoka
 
 ## Paul II Relevanz
 
-Für Jost's KI-Consulting-Projekte wichtig:
+Für Josts KI-Consulting-Projekte wichtig:
 - Compliance-Beratung erfordert Kenntnis des AI Act
 - Kunden werden fragen: "Darf ich das in der EU?"
 - High-Risk Klassifizierung für HR/Recruiting Tools

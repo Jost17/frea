@@ -1,6 +1,6 @@
 ---
 name: cv-optimizer
-description: "CV-Optimierung basierend auf authentischen Bausteinen. Matcht Jost's echte Erfahrungen gegen Job Descriptions, prueft auf Authentizitaet und generiert rollenspezifische CVs. USE WHEN: 'optimiere CV', 'CV fuer Job', 'authenticity check', 'CV generieren', 'CV anpassen', 'passt mein CV'."
+description: "CV-Optimierung basierend auf authentischen Bausteinen. Matcht Josts echte Erfahrungen gegen Job Descriptions, prueft auf Authentizitaet und generiert rollenspezifische CVs. NUR FUER JOST VERWENDEN: 'optimiere CV', 'CV fuer Job', 'authenticity check', 'CV generieren', 'CV anpassen', 'passt mein CV'.""
 ---
 
 # CV-Optimizer Skill
@@ -50,7 +50,7 @@ description: "CV-Optimierung basierend auf authentischen Bausteinen. Matcht Jost
 
 ## Bausteine
 
-**Location:** Jost's Obsidian Vault unter `cv/bausteine/`
+**Location:** Josts Obsidian Vault unter `cv/bausteine/`
 
 Jeder Baustein = authentische Erfahrung. CV wird aus Bausteinen zusammengesetzt, nicht neu geschrieben.
 
