@@ -1,21 +1,23 @@
 ---
 name: youtube-curator
 description: |
-  Automatische YouTube-Kuratierung fuer 42 abonnierte Kanaele.
-  AI/ML (19), Productivity (7), Tech/Business (8), Trading (8).
+  Automatische YouTube-Kuratierung fuer Jost.
+  Ich hole Transkripte direkt und analysiere auf Insights.
   NUR FUER JOST: Persoenliche Video-Queue.
 triggers:
   - "check YouTube"
   - "was gibt's Neues auf YouTube"
   - "YouTube queue"
   - "neue Videos"
+  - "analysiere Video"
+  - "Video analysieren"
 auto_activate:
   - context: morning-check-in
 ---
 
 # YouTube Curator Skill
 
-Automatische YouTube-Kuratierung fuer Jost.
+Ich hole YouTube-Videos direkt und analysiere sie auf Insights.
 
 ## Kanaele (42 in 4 Kategorien)
 
@@ -24,19 +26,20 @@ Automatische YouTube-Kuratierung fuer Jost.
 - **Tech/Business** (8): Greg Isenberg, Every, Stratechery, Knowledge Project, Create and Build, Lenny's, Fireship, NetworkChuck
 - **Trading** (8): Stockbee, Qullamaggie, TraderLion, Moglen, Trade Risk, Investors Underground, Bulls, SMB Capital
 
-## Quick Commands
+## Mein Workflow
 
-```bash
-python3 ~/.claude/skills/youtube-curator/youtube_curator.py fetch
-python3 ~/.claude/skills/youtube-curator/youtube_curator.py queue
-```
+1. **Video finden** → URL oder Kanal/Thema nennen
+2. **Transkript holen** → web_fetch (oft) oder browser (Fallback)
+3. **Analysieren** → IDEAS, INSIGHTS, QUOTES, HABITS, FACTS, RECOMMENDATIONS
+4. **Bewerten** → Score 1-10 basierend auf Insight-Dichte
+5. **Video-Note erstellen** → Output: `$OBSIDIAN_VAULT/001 Pipeline/Processing/Video Notes WIP/`
 
-## Scoring (V2 - Transkript-basiert)
+## Scoring (Transkript-basiert)
 
 | Insight Count | Score | Aktion |
 |---------------|-------|--------|
 | 4+ | 8-10 | **AUTO** → Video-Note |
-| 2-3 | 5-7 | **MEDIUM** → Manuell |
+| 2-3 | 5-7 | **MEDIUM** → Nachfrage |
 | 0-1 | 1-4 | **LOW** → Skip |
 
 ## Trigger
@@ -44,6 +47,28 @@ python3 ~/.claude/skills/youtube-curator/youtube_curator.py queue
 - "check YouTube"
 - "was gibt's Neues auf YouTube"
 - "YouTube queue"
+- "analysiere Video [URL]"
+
+## Output
+
+Video-Note Format:
+```
+# VID_YYYY-MM-DD_Author_Title
+
+## Key Insights
+- ...
+
+## Quotes
+- ...
+
+## Action Items
+- ...
+
+## Notes
+...
+```
+
+Speicherort: `$OBSIDIAN_VAULT/001 Pipeline/Processing/Video Notes WIP/`
 
 ## Paul II Relevanz
 
