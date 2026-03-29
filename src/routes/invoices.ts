@@ -183,7 +183,15 @@ invoiceRoutes.get("/:id", (c) => {
           <div class="max-w-4xl">
             <div class="mb-6 flex items-center justify-between">
               <h1 class="text-2xl font-semibold">Rechnung ${invoice.invoice_number}</h1>
-              <span class="text-sm font-medium text-gray-600">Status: ${invoice.status}</span>
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-medium text-gray-600">Status: ${invoice.status}</span>
+                <a
+                  href="/rechnungen/${invoice.id}/pdf"
+                  class="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                >
+                  PDF herunterladen
+                </a>
+              </div>
             </div>
 
             <div class="rounded-lg border border-gray-200 bg-white p-8">
@@ -274,5 +282,39 @@ invoiceRoutes.get("/:id", (c) => {
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "Rechnung konnte nicht geladen werden", 500);
+  }
+});
+
+// PDF download route
+invoiceRoutes.get("/:id/pdf", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
+
+    const invoice = getInvoice(id);
+    if (!invoice) throw new AppError("Rechnung nicht gefunden", 404);
+
+    const { generateInvoicePdf } = await import("../lib/pdf-generator");
+    const pdfBuffer = await generateInvoicePdf(id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const uint8 = new Uint8Array(
+      pdfBuffer.buffer as ArrayBuffer,
+      pdfBuffer.byteOffset,
+      pdfBuffer.byteLength,
+    );
+
+    const filename = `Rechnung_${invoice.invoice_number.replace(/[^a-zA-Z0-9-_]/g, "_")}.pdf`;
+
+    return c.newResponse(uint8, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Length": String(pdfBuffer.length),
+      },
+    });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    return logAndRespond(c, err, "PDF konnte nicht generiert werden", 500);
   }
 });
