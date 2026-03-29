@@ -26,7 +26,8 @@ Build a correct, maintainable backend. "Correct" means legally sound German invo
 
 ## Non-Negotiable Rules
 
-1. **No ORM** — `db.query(...)` and `db.run(...)` only. No Drizzle, no Prisma.
+1. **Echte Umlaute** — Immer ä, ö, ü, ß in Kommentaren, Fehlermeldungen und Kommunikation. Niemals ae/oe/ue-Ersetzungen.
+2. **No ORM** — `db.query(...)` and `db.run(...)` only. No Drizzle, no Prisma.
 2. **Prepared statements** — never string-interpolate SQL. Use parameterized queries.
 3. **Zod for all inputs** — validate at every route handler boundary
 4. **MwSt per line item** — `vat_amount` calculated on each `invoice_items` row, then summed. Never `net_total * vat_rate`.

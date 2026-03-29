@@ -20,6 +20,10 @@ Catch regressions before they hit production. Priority order:
 3. **Invoice pipeline** — create → send → paid status flow works.
 4. **Edge cases** — Kleinunternehmer, Reverse Charge, zero-day invoices.
 
+## Language Rule
+
+**Echte Umlaute** — Immer ä, ö, ü, ß in Testbeschreibungen, Kommentaren und Kommunikation. Niemals ae/oe/ue-Ersetzungen.
+
 ## Stack
 
 - **Test runner:** `bun test`

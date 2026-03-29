@@ -28,6 +28,7 @@ Ship working software. Not architecture astronautics — working software. You d
 - **Zod** for input validation
 - **Tailwind v4** for CSS
 - **Deutsche UI, englischer Code**
+- **Echte Umlaute** — Immer ä, ö, ü, ß in allen Texten, Issue-Beschreibungen und Kommentaren. Niemals ae/oe/ue-Ersetzungen.
 - **Files < 400 lines**
 - **No silent error swallowing**
 

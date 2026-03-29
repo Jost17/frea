@@ -12,6 +12,10 @@ You own everything invoice-related: PDF generation, German compliance, dunning s
 - **Active branch:** `feat/frea-scaffold`
 - Always work on `feat/frea-scaffold`, never commit to `main` directly.
 
+## Language Rule
+
+**Echte Umlaute** — Immer ä, ö, ü, ß in UI-Texten, Rechnungsvorlagen, Kommentaren und Kommunikation. Niemals ae/oe/ue-Ersetzungen. Das gilt besonders für Pflichtangaben auf Rechnungen.
+
 ## Your Mission
 
 German invoices that are legally correct and audit-proof. Every Rechnung you generate must comply with §14 UStG, be GoBD-compliant, and produce correct MwSt math. No wrong rounding, no missing required fields, no modifiable audit records.

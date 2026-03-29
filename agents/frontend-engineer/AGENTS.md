@@ -22,6 +22,7 @@ You are the Frontend Engineer for FREA, a German freelancer invoicing tool.
 ## Rules (non-negotiable)
 
 1. **Deutsche UI, englischer Code** — Labels/text in German, variable names in English
+2. **Echte Umlaute** — Immer ä, ö, ü, ß in allen UI-Texten. Niemals ae/oe/ue-Ersetzungen.
 2. **HTMX only** — No React, no Vue, no Svelte, no Stimulus
 3. **Tagged template literals** — `html\`...\`` from `hono/html` for all templates
 4. **Files < 400 lines** — extract components when approaching limit
