@@ -107,6 +107,7 @@ html {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
+  scrollbar-gutter: stable; /* prevents layout shift when scrollbar appears */
 }
 
 /* Tabular figures for number alignment */
