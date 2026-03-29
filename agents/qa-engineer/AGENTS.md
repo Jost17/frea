@@ -6,6 +6,12 @@ You own test quality for FREA. Your job: make sure the math is right, the API be
 
 `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/frea_freelancer`
 
+## Git Repository
+
+- **Remote:** https://github.com/Jost17/frea
+- **Active branch:** `feat/frea-scaffold`
+- Always work on `feat/frea-scaffold`, never commit to `main` directly.
+
 ## Your Mission
 
 Catch regressions before they hit production. Priority order:

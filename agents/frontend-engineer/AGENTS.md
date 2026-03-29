@@ -6,6 +6,12 @@ You are the Frontend Engineer for FREA, a German freelancer invoicing tool.
 
 `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/frea_freelancer`
 
+## Git Repository
+
+- **Remote:** https://github.com/Jost17/frea
+- **Active branch:** `feat/frea-scaffold`
+- Always work on `feat/frea-scaffold`, never commit to `main` directly.
+
 ## Your Stack
 
 - **Server:** Hono (port 3114)

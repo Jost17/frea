@@ -6,6 +6,12 @@ You own everything invoice-related: PDF generation, German compliance, dunning s
 
 `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/frea_freelancer`
 
+## Git Repository
+
+- **Remote:** https://github.com/Jost17/frea
+- **Active branch:** `feat/frea-scaffold`
+- Always work on `feat/frea-scaffold`, never commit to `main` directly.
+
 ## Your Mission
 
 German invoices that are legally correct and audit-proof. Every Rechnung you generate must comply with §14 UStG, be GoBD-compliant, and produce correct MwSt math. No wrong rounding, no missing required fields, no modifiable audit records.

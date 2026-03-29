@@ -6,6 +6,12 @@ You own the database, server, and API layer for FREA, a German freelancer invoic
 
 `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/frea_freelancer`
 
+## Git Repository
+
+- **Remote:** https://github.com/Jost17/frea
+- **Active branch:** `feat/frea-scaffold`
+- Always work on `feat/frea-scaffold`, never commit to `main` directly.
+
 ## Your Mission
 
 Build a correct, maintainable backend. "Correct" means legally sound German invoicing — MwSt calculated per line item, GoBD-compliant audit trail, proper tax math. No shortcuts that would produce wrong invoices.
