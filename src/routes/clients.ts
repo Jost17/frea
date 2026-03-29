@@ -3,10 +3,24 @@ import { html } from "hono/html";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
 import { getAllActiveClients, getClient, createClient, updateClient, deleteClient } from "../db/queries";
-import { clientSchema } from "../validation/schemas";
+import { clientSchema, type Client } from "../validation/schemas";
 import { Layout } from "../templates/layout";
+import { parseFormFields } from "../utils/form-parser";
 
 export const clientRoutes = new Hono<AppEnv>();
+
+const CLIENT_FIELDS = {
+  name: "string",
+  address: "string",
+  postal_code: "string",
+  city: "string",
+  email: "string",
+  phone: "string",
+  contact_person: "string",
+  vat_id: "string",
+  buyer_reference: "string",
+  notes: "string",
+} as const;
 
 // List all clients
 clientRoutes.get("/", (c) => {
@@ -48,8 +62,8 @@ clientRoutes.get("/", (c) => {
                         return html`
                           <tr class="border-t hover:bg-gray-50">
                             <td class="px-4 py-3 font-medium text-gray-900">${client.name}</td>
-                            <td class="px-4 py-3 text-gray-600">${client.city || "—"}</td>
-                            <td class="px-4 py-3 text-gray-600">${client.email || "—"}</td>
+                            <td class="px-4 py-3 text-gray-600">${client.city || "\u2014"}</td>
+                            <td class="px-4 py-3 text-gray-600">${client.email || "\u2014"}</td>
                             <td class="px-4 py-3 text-center">
                               <a
                                 href="/kunden/${client.id}"
@@ -89,8 +103,8 @@ clientRoutes.get("/new", (c) => {
 // View/edit client
 clientRoutes.get("/:id", (c) => {
   try {
-    const id = parseInt(c.req.param("id"));
-    if (isNaN(id)) throw new AppError("Ungültige Kunden-ID", 400);
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungueltige Kunden-ID", 400);
 
     const client = getClient(id);
     if (!client) throw new AppError("Kunde nicht gefunden", 404);
@@ -114,21 +128,8 @@ clientRoutes.get("/:id", (c) => {
 clientRoutes.post("/", async (c) => {
   try {
     const body = await c.req.formData();
-    const data = {
-      name: String(body.get("name") ?? ""),
-      address: String(body.get("address") ?? ""),
-      postal_code: String(body.get("postal_code") ?? ""),
-      city: String(body.get("city") ?? ""),
-      country: "Deutschland",
-      email: String(body.get("email") ?? ""),
-      phone: String(body.get("phone") ?? ""),
-      contact_person: String(body.get("contact_person") ?? ""),
-      vat_id: String(body.get("vat_id") ?? ""),
-      buyer_reference: String(body.get("buyer_reference") ?? ""),
-      notes: String(body.get("notes") ?? ""),
-    };
-
-    const validated = clientSchema.parse(data);
+    const data = parseFormFields(body, CLIENT_FIELDS);
+    const validated = clientSchema.parse({ ...data, country: "Deutschland" });
     const id = createClient(validated);
 
     return c.redirect(`/kunden/${id}`);
@@ -144,25 +145,12 @@ clientRoutes.post("/", async (c) => {
 // Update client
 clientRoutes.post("/:id", async (c) => {
   try {
-    const id = parseInt(c.req.param("id"));
-    if (isNaN(id)) throw new AppError("Ungültige Kunden-ID", 400);
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungueltige Kunden-ID", 400);
 
     const body = await c.req.formData();
-    const data = {
-      name: String(body.get("name") ?? ""),
-      address: String(body.get("address") ?? ""),
-      postal_code: String(body.get("postal_code") ?? ""),
-      city: String(body.get("city") ?? ""),
-      country: "Deutschland",
-      email: String(body.get("email") ?? ""),
-      phone: String(body.get("phone") ?? ""),
-      contact_person: String(body.get("contact_person") ?? ""),
-      vat_id: String(body.get("vat_id") ?? ""),
-      buyer_reference: String(body.get("buyer_reference") ?? ""),
-      notes: String(body.get("notes") ?? ""),
-    };
-
-    const validated = clientSchema.parse(data);
+    const data = parseFormFields(body, CLIENT_FIELDS);
+    const validated = clientSchema.parse({ ...data, country: "Deutschland" });
     updateClient(id, validated);
 
     return c.redirect(`/kunden/${id}`);
@@ -178,19 +166,19 @@ clientRoutes.post("/:id", async (c) => {
 // Delete client
 clientRoutes.post("/:id/delete", (c) => {
   try {
-    const id = parseInt(c.req.param("id"));
-    if (isNaN(id)) throw new AppError("Ungültige Kunden-ID", 400);
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungueltige Kunden-ID", 400);
 
     deleteClient(id);
     return c.redirect("/kunden");
   } catch (err) {
-    return logAndRespond(c, err, "Kunde konnte nicht gelöscht werden", 500);
+    return logAndRespond(c, err, "Kunde konnte nicht geloescht werden", 500);
   }
 });
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function renderClientForm(client: any) {
+function renderClientForm(client: Client | null) {
   const isNew = !client;
   const action = isNew ? "/kunden" : `/kunden/${client.id}`;
 
@@ -199,13 +187,15 @@ function renderClientForm(client: any) {
       <div class="mb-6 flex items-center justify-between">
         <h1 class="text-2xl font-semibold">${isNew ? "Neuer Kunde" : `Kunde: ${client.name}`}</h1>
         ${!isNew
-          ? html`<a
-              href="/kunden/${client.id}/delete"
-              onclick="return confirm('Wirklich löschen?')"
-              class="text-red-600 hover:underline text-xs"
-            >
-              Löschen
-            </a>`
+          ? html`<form method="post" action="/kunden/${client.id}/delete" class="inline">
+              <button
+                type="submit"
+                onclick="return confirm('Wirklich loeschen?')"
+                class="text-red-600 hover:underline text-xs"
+              >
+                Loeschen
+              </button>
+            </form>`
           : ""}
       </div>
 

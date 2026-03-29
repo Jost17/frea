@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+// ─── Input Schemas (Zod) ──────────────────────────────────────────────────────
+
 // Settings
 export const settingsSchema = z.object({
   company_name: z.string().min(1, "Firma erforderlich"),
@@ -7,7 +9,7 @@ export const settingsSchema = z.object({
   postal_code: z.string().default(""),
   city: z.string().default(""),
   country: z.string().default("Deutschland"),
-  email: z.string().email("Gültige E-Mail erforderlich"),
+  email: z.string().email("Gueltige E-Mail erforderlich"),
   phone: z.string().optional().default(""),
   mobile: z.string().optional().default(""),
   bank_name: z.string().default(""),
@@ -22,7 +24,7 @@ export const settingsSchema = z.object({
   kleinunternehmer: z.number().default(0),
 });
 
-export type Settings = z.infer<typeof settingsSchema>;
+export type Settings = z.infer<typeof settingsSchema> & { id: number };
 
 // Clients
 export const clientSchema = z.object({
@@ -31,7 +33,7 @@ export const clientSchema = z.object({
   postal_code: z.string().optional().default(""),
   city: z.string().optional().default(""),
   country: z.string().optional().default("Deutschland"),
-  email: z.string().email("Gültige E-Mail").optional().or(z.literal("")),
+  email: z.string().email("Gueltige E-Mail").optional().or(z.literal("")),
   phone: z.string().optional().default(""),
   contact_person: z.string().optional().default(""),
   vat_id: z.string().optional().default(""),
@@ -39,7 +41,11 @@ export const clientSchema = z.object({
   notes: z.string().optional().default(""),
 });
 
-export type Client = z.infer<typeof clientSchema> & { id: number; created_at: string; archived: number };
+export type Client = z.infer<typeof clientSchema> & {
+  id: number;
+  created_at: string;
+  archived: number;
+};
 
 // Projects
 export const projectSchema = z.object({
@@ -56,7 +62,11 @@ export const projectSchema = z.object({
   notes: z.string().optional().default(""),
 });
 
-export type Project = z.infer<typeof projectSchema> & { id: number; created_at: string; archived: number };
+export type Project = z.infer<typeof projectSchema> & {
+  id: number;
+  created_at: string;
+  archived: number;
+};
 
 // Time Entries
 export const timeEntrySchema = z.object({
@@ -67,7 +77,11 @@ export const timeEntrySchema = z.object({
   billable: z.number().default(1),
 });
 
-export type TimeEntry = z.infer<typeof timeEntrySchema> & { id: number; created_at: string; invoice_id: number | null };
+export type TimeEntry = z.infer<typeof timeEntrySchema> & {
+  id: number;
+  created_at: string;
+  invoice_id: number | null;
+};
 
 // Invoices
 export const invoiceCreateSchema = z.object({
@@ -83,3 +97,51 @@ export const invoiceCreateSchema = z.object({
 });
 
 export type InvoiceCreate = z.infer<typeof invoiceCreateSchema>;
+
+// ─── DB Row Types (not Zod-validated, represent SELECT results) ───────────────
+
+export interface Invoice {
+  id: number;
+  invoice_number: string;
+  client_id: number;
+  project_id: number;
+  invoice_date: string;
+  due_date: string;
+  period_month: number;
+  period_year: number;
+  net_amount: number;
+  vat_amount: number;
+  gross_amount: number;
+  status: "draft" | "sent" | "paid" | "cancelled";
+  pdf_path: string | null;
+  po_number: string | null;
+  service_period_from: string | null;
+  service_period_to: string | null;
+  paid_date: string | null;
+  reminder_level: number;
+  created_at: string;
+}
+
+export interface InvoiceItem {
+  id: number;
+  invoice_id: number;
+  description: string;
+  period_start: string;
+  period_end: string;
+  days: number;
+  daily_rate: number;
+  net_amount: number;
+  vat_rate: number;
+  vat_amount: number;
+  gross_amount: number;
+}
+
+export interface AuditLog {
+  id: number;
+  timestamp: string;
+  entity_type: string;
+  entity_id: number;
+  action: "create" | "update" | "delete" | "status_change";
+  changes: string | null;
+  source: "web" | "api";
+}

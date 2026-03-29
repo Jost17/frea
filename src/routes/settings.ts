@@ -5,8 +5,27 @@ import { AppError, logAndRespond } from "../middleware/error-handler";
 import { getSettings, updateSettings } from "../db/queries";
 import { settingsSchema } from "../validation/schemas";
 import { Layout } from "../templates/layout";
+import { parseFormFields } from "../utils/form-parser";
 
 export const settingsRoutes = new Hono<AppEnv>();
+
+const SETTINGS_FIELDS = {
+  company_name: "string",
+  address: "string",
+  postal_code: "string",
+  city: "string",
+  email: "string",
+  phone: "string",
+  bank_name: "string",
+  iban: "string",
+  bic: "string",
+  tax_number: "string",
+  ust_id: "string",
+  vat_rate: "float",
+  payment_days: "int",
+  invoice_prefix: "string",
+  kleinunternehmer: "bool",
+} as const;
 
 settingsRoutes.get("/", (c) => {
   try {
@@ -173,7 +192,7 @@ settingsRoutes.get("/", (c) => {
                       class="h-4 w-4 rounded border-gray-300"
                     />
                     <label for="kleinunternehmer" class="ml-2 text-sm font-medium text-gray-700"
-                      >Kleinunternehmer (§19 UStG)</label
+                      >Kleinunternehmer (\u00A719 UStG)</label
                     >
                   </div>
                 </div>
@@ -206,7 +225,7 @@ settingsRoutes.get("/", (c) => {
                         name="iban"
                         required
                         value="${settings.iban}"
-                        class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-mono text-sm"
+                        class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-mono"
                       />
                     </div>
                     <div>
@@ -219,7 +238,7 @@ settingsRoutes.get("/", (c) => {
                         name="bic"
                         required
                         value="${settings.bic}"
-                        class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-mono text-sm"
+                        class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-mono"
                       />
                     </div>
                   </div>
@@ -232,7 +251,7 @@ settingsRoutes.get("/", (c) => {
                   <div class="grid grid-cols-2 gap-4">
                     <div>
                       <label for="invoice_prefix" class="block text-sm font-medium text-gray-700"
-                        >Präfix</label
+                        >Praefix</label
                       >
                       <input
                         type="text"
@@ -280,28 +299,8 @@ settingsRoutes.get("/", (c) => {
 settingsRoutes.post("/", async (c) => {
   try {
     const body = await c.req.formData();
-
-    const data = {
-      company_name: String(body.get("company_name") ?? ""),
-      address: String(body.get("address") ?? ""),
-      postal_code: String(body.get("postal_code") ?? ""),
-      city: String(body.get("city") ?? ""),
-      country: "Deutschland",
-      email: String(body.get("email") ?? ""),
-      phone: String(body.get("phone") ?? ""),
-      mobile: "",
-      bank_name: String(body.get("bank_name") ?? ""),
-      iban: String(body.get("iban") ?? ""),
-      bic: String(body.get("bic") ?? ""),
-      tax_number: String(body.get("tax_number") ?? ""),
-      ust_id: String(body.get("ust_id") ?? ""),
-      vat_rate: parseFloat(String(body.get("vat_rate") ?? "0.19")),
-      payment_days: parseInt(String(body.get("payment_days") ?? "28")),
-      invoice_prefix: String(body.get("invoice_prefix") ?? "RE"),
-      kleinunternehmer: body.has("kleinunternehmer") ? 1 : 0,
-    };
-
-    const validated = settingsSchema.parse(data);
+    const data = parseFormFields(body, SETTINGS_FIELDS);
+    const validated = settingsSchema.parse({ ...data, country: "Deutschland", mobile: "" });
     updateSettings(validated);
 
     return c.redirect("/einstellungen?success=1");

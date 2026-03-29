@@ -1,36 +1,92 @@
 import { db } from "./schema";
-import type { Settings, Client, Project, TimeEntry, InvoiceCreate } from "../validation/schemas";
+import type {
+  Settings,
+  Client,
+  Project,
+  TimeEntry,
+  InvoiceCreate,
+  Invoice,
+  InvoiceItem,
+  AuditLog,
+} from "../validation/schemas";
 
-// ─── Prepared statements ──────────────────────────────────────────────────────
+// ─── Column Allowlists (SQL injection prevention) ─────────────────────────────
 
-// Settings
+const SETTINGS_COLUMNS = new Set([
+  "company_name", "address", "postal_code", "city", "country",
+  "email", "phone", "mobile", "bank_name", "iban", "bic",
+  "tax_number", "ust_id", "vat_rate", "payment_days",
+  "invoice_prefix", "next_invoice_number", "kleinunternehmer",
+]);
+
+const CLIENT_COLUMNS = new Set([
+  "name", "address", "postal_code", "city", "country",
+  "email", "phone", "contact_person", "vat_id", "buyer_reference", "notes",
+]);
+
+const PROJECT_COLUMNS = new Set([
+  "client_id", "code", "name", "daily_rate", "start_date", "end_date",
+  "budget_days", "service_description", "contract_number", "contract_date", "notes",
+]);
+
+const TIME_ENTRY_COLUMNS = new Set([
+  "project_id", "date", "duration", "description", "billable",
+]);
+
+// ─── Generic Safe Update Helper (P1-2 + P3-12) ──────────────────────────────
+
+type SQLValue = string | number | bigint | boolean | null | Uint8Array;
+
+function safeUpdate(
+  table: string,
+  allowedColumns: ReadonlySet<string>,
+  data: Record<string, unknown>,
+  id: number,
+): void {
+  const entries = Object.entries(data).filter(
+    ([k, v]) => v !== undefined && allowedColumns.has(k),
+  );
+  if (entries.length === 0) return;
+  const fields = entries.map(([k]) => `${k} = ?`).join(", ");
+  const values = entries.map(([, v]) => v as SQLValue);
+  db.query(`UPDATE ${table} SET ${fields} WHERE id = ?`).run(...values, id);
+}
+
+// ─── Audit Log (P2-6: GoBD compliance) ───────────────────────────────────────
+
+export function appendAuditLog(
+  entityType: AuditLog["entity_type"],
+  entityId: number,
+  action: AuditLog["action"],
+  changes: Record<string, unknown> | null,
+  source: AuditLog["source"] = "web",
+): void {
+  db.query(
+    `INSERT INTO audit_log (entity_type, entity_id, action, changes, source)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(entityType, entityId, action, changes ? JSON.stringify(changes) : null, source);
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
 
 export function getSettings() {
   return db
     .query<Settings, []>(
       `SELECT
-        company_name, address, postal_code, city, country,
+        id, company_name, address, postal_code, city, country,
         email, phone, mobile, bank_name, iban, bic, tax_number,
-        ust_id, vat_rate, payment_days, invoice_prefix, kleinunternehmer
+        ust_id, vat_rate, payment_days, invoice_prefix,
+        next_invoice_number, kleinunternehmer
        FROM settings WHERE id = 1`,
     )
     .get();
 }
 
 export function updateSettings(data: Partial<Settings>): void {
-  const fields = Object.keys(data)
-    .filter((k) => data[k as keyof Settings] !== undefined)
-    .map((k) => `${k} = ?`)
-    .join(", ");
-
-  const values = Object.values(data).filter((v) => v !== undefined);
-
-  if (fields.length === 0) return;
-
-  db.query(`UPDATE settings SET ${fields} WHERE id = 1`).run(...values);
+  safeUpdate("settings", SETTINGS_COLUMNS, data as Record<string, unknown>, 1);
 }
 
-// Invoices
+// ─── Invoices (overdue count) ────────────────────────────────────────────────
 
 export function getOverdueInvoiceCount(): number {
   const result = db
@@ -43,7 +99,7 @@ export function getOverdueInvoiceCount(): number {
   return result?.count ?? 0;
 }
 
-// Clients
+// ─── Clients ─────────────────────────────────────────────────────────────────
 
 export function getAllActiveClients() {
   return db
@@ -54,7 +110,6 @@ export function getAllActiveClients() {
     .all();
 }
 
-// Clients - full operations
 export function getClient(id: number) {
   return db
     .query<Client, [number]>(
@@ -67,7 +122,7 @@ export function getClient(id: number) {
     .get(id);
 }
 
-export function createClient(data: Omit<Client, "id" | "created_at" | "archived">) {
+export function createClient(data: Omit<Client, "id" | "created_at" | "archived">): number | undefined {
   const stmt = db.query(
     `INSERT INTO clients
      (name, address, postal_code, city, country, email, phone, contact_person, vat_id, buyer_reference, notes)
@@ -89,29 +144,25 @@ export function createClient(data: Omit<Client, "id" | "created_at" | "archived"
     data.notes ?? "",
   ) as { id: number } | undefined;
 
+  if (result?.id) {
+    appendAuditLog("client", result.id, "create", data);
+  }
+
   return result?.id;
 }
 
 export function updateClient(id: number, data: Partial<Omit<Client, "id" | "created_at" | "archived">>) {
-  const fields = Object.keys(data)
-    .filter((k) => data[k as keyof typeof data] !== undefined)
-    .map((k) => `${k} = ?`)
-    .join(", ");
-
-  const values = Object.values(data).filter((v) => v !== undefined);
-
-  if (fields.length === 0) return;
-
-  db.query(`UPDATE clients SET ${fields} WHERE id = ?`).run(...values, id);
+  safeUpdate("clients", CLIENT_COLUMNS, data as Record<string, unknown>, id);
+  appendAuditLog("client", id, "update", data);
 }
 
 export function deleteClient(id: number) {
   db.query("UPDATE clients SET archived = 1 WHERE id = ?").run(id);
+  appendAuditLog("client", id, "delete", null);
 }
 
-// Projects
+// ─── Projects ────────────────────────────────────────────────────────────────
 
-// Projects - full operations
 export function getProject(id: number) {
   return db
     .query<Project, [number]>(
@@ -135,7 +186,30 @@ export function getActiveProjectsForClient(clientId: number) {
     .all(clientId);
 }
 
-export function createProject(data: Omit<Project, "id" | "created_at" | "archived">) {
+// JOIN query to avoid N+1 (P2-7)
+export interface ProjectWithClient {
+  id: number;
+  client_id: number;
+  client_name: string;
+  code: string;
+  name: string;
+  daily_rate: number;
+}
+
+export function getAllActiveProjectsWithClient() {
+  return db
+    .query<ProjectWithClient, []>(
+      `SELECT p.id, p.client_id, c.name as client_name,
+              p.code, p.name, p.daily_rate
+       FROM projects p
+       JOIN clients c ON p.client_id = c.id AND c.archived = 0
+       WHERE p.archived = 0
+       ORDER BY c.name, p.code`,
+    )
+    .all();
+}
+
+export function createProject(data: Omit<Project, "id" | "created_at" | "archived">): number | undefined {
   const stmt = db.query(
     `INSERT INTO projects
      (client_id, code, name, daily_rate, start_date, end_date, budget_days, service_description, contract_number, contract_date, notes)
@@ -157,27 +231,25 @@ export function createProject(data: Omit<Project, "id" | "created_at" | "archive
     data.notes ?? "",
   ) as { id: number } | undefined;
 
+  if (result?.id) {
+    appendAuditLog("project", result.id, "create", data);
+  }
+
   return result?.id;
 }
 
 export function updateProject(id: number, data: Partial<Omit<Project, "id" | "created_at" | "archived">>) {
-  const fields = Object.keys(data)
-    .filter((k) => data[k as keyof typeof data] !== undefined)
-    .map((k) => `${k} = ?`)
-    .join(", ");
-
-  const values = Object.values(data).filter((v) => v !== undefined);
-
-  if (fields.length === 0) return;
-
-  db.query(`UPDATE projects SET ${fields} WHERE id = ?`).run(...values, id);
+  safeUpdate("projects", PROJECT_COLUMNS, data as Record<string, unknown>, id);
+  appendAuditLog("project", id, "update", data);
 }
 
 export function deleteProject(id: number) {
   db.query("UPDATE projects SET archived = 1 WHERE id = ?").run(id);
+  appendAuditLog("project", id, "delete", null);
 }
 
-// Time Entries
+// ─── Time Entries ────────────────────────────────────────────────────────────
+
 export function getTimeEntry(id: number) {
   return db
     .query<TimeEntry, [number]>(
@@ -197,7 +269,36 @@ export function getTimeEntriesForProject(projectId: number) {
     .all(projectId);
 }
 
-export function createTimeEntry(data: Omit<TimeEntry, "id" | "created_at" | "invoice_id">) {
+// JOIN query to avoid N+1 (P2-7)
+export interface TimeEntryWithContext {
+  id: number;
+  project_id: number;
+  project_name: string;
+  client_id: number;
+  client_name: string;
+  date: string;
+  duration: number;
+  description: string | null;
+  billable: number;
+}
+
+export function getAllUnbilledTimeEntries() {
+  return db
+    .query<TimeEntryWithContext, []>(
+      `SELECT
+        t.id, t.project_id, p.name as project_name,
+        c.id as client_id, c.name as client_name,
+        t.date, t.duration, t.description, t.billable
+       FROM time_entries t
+       JOIN projects p ON t.project_id = p.id AND p.archived = 0
+       JOIN clients c ON p.client_id = c.id AND c.archived = 0
+       WHERE t.invoice_id IS NULL
+       ORDER BY c.name, p.name, t.date DESC`,
+    )
+    .all();
+}
+
+export function createTimeEntry(data: Omit<TimeEntry, "id" | "created_at" | "invoice_id">): number | undefined {
   const stmt = db.query(
     `INSERT INTO time_entries (project_id, date, duration, description, billable)
      VALUES (?, ?, ?, ?, ?)
@@ -212,151 +313,149 @@ export function createTimeEntry(data: Omit<TimeEntry, "id" | "created_at" | "inv
     data.billable ?? 1,
   ) as { id: number } | undefined;
 
+  if (result?.id) {
+    appendAuditLog("time_entry", result.id, "create", data);
+  }
+
   return result?.id;
 }
 
 export function updateTimeEntry(id: number, data: Partial<Omit<TimeEntry, "id" | "created_at" | "invoice_id">>) {
-  const fields = Object.keys(data)
-    .filter((k) => data[k as keyof typeof data] !== undefined)
-    .map((k) => `${k} = ?`)
-    .join(", ");
-
-  const values = Object.values(data).filter((v) => v !== undefined);
-
-  if (fields.length === 0) return;
-
-  db.query(`UPDATE time_entries SET ${fields} WHERE id = ?`).run(...values, id);
+  safeUpdate("time_entries", TIME_ENTRY_COLUMNS, data as Record<string, unknown>, id);
+  appendAuditLog("time_entry", id, "update", data);
 }
 
 export function deleteTimeEntry(id: number) {
   db.query("DELETE FROM time_entries WHERE id = ? AND invoice_id IS NULL").run(id);
+  appendAuditLog("time_entry", id, "delete", null);
 }
 
-// Invoices
-// ─── Kaufmännische Rundung: immer auf 2 Dezimalstellen ───
+// ─── Invoices ────────────────────────────────────────────────────────────────
+
 function roundToEuro(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export interface InvoiceRow {
-  id?: number;
-  invoice_number: string;
-  client_id: number;
-  project_id: number;
-  invoice_date: string;
-  due_date: string;
-  period_month: number;
-  period_year: number;
-  net_amount: number;
-  vat_amount: number;
-  gross_amount: number;
-  status: string;
-  pdf_path: string | null;
-  po_number: string | null;
-  service_period_from: string | null;
-  service_period_to: string | null;
-  paid_date: string | null;
-  reminder_level: number;
-  created_at: string;
-}
-
 export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], settings: Settings): number {
-  // Calculate totals PER LINE ITEM with proper MwSt
-  let totalNet = 0;
-  let totalVat = 0;
+  // Wrapped in transaction for atomicity (P1-1)
+  return db.transaction(() => {
+    // Batch-fetch projects to avoid N+1 (P2-7)
+    const uniqueProjectIds = [...new Set(timeEntries.map((e) => e.project_id))];
+    const placeholders = uniqueProjectIds.map(() => "?").join(",");
+    const projects = db
+      .query<Project, number[]>(
+        `SELECT id, client_id, code, name, daily_rate, start_date, end_date, budget_days,
+                service_description, contract_number, contract_date, notes, created_at, archived
+         FROM projects WHERE id IN (${placeholders})`,
+      )
+      .all(...uniqueProjectIds);
+    const projectMap = new Map(projects.map((p) => [p.id, p]));
 
-  const vatRate = settings.vat_rate;
-  const invoiceItems = timeEntries.map((entry) => {
-    const project = getProject(entry.project_id);
-    if (!project) throw new Error(`Projekt ${entry.project_id} nicht gefunden`);
+    // Calculate totals PER LINE ITEM with proper MwSt
+    let totalNet = 0;
+    let totalVat = 0;
 
-    const netAmount = roundToEuro(entry.duration * project.daily_rate);
-    const vatAmount = roundToEuro(netAmount * vatRate);
-    const grossAmount = roundToEuro(netAmount + vatAmount);
+    const vatRate = settings.vat_rate;
+    const invoiceItems = timeEntries.map((entry) => {
+      const project = projectMap.get(entry.project_id);
+      if (!project) throw new Error(`Projekt ${entry.project_id} nicht gefunden`);
 
-    totalNet += netAmount;
-    totalVat += vatAmount;
+      const netAmount = roundToEuro(entry.duration * project.daily_rate);
+      const vatAmount = roundToEuro(netAmount * vatRate);
+      const grossAmount = roundToEuro(netAmount + vatAmount);
 
-    return { entry, project, netAmount, vatAmount, grossAmount };
-  });
+      totalNet += netAmount;
+      totalVat += vatAmount;
 
-  // Round totals (safety)
-  totalNet = roundToEuro(totalNet);
-  totalVat = roundToEuro(totalVat);
-  const totalGross = roundToEuro(totalNet + totalVat);
+      return { entry, project, netAmount, vatAmount, grossAmount };
+    });
 
-  // Generate invoice number
-  const nextNum = (settings.next_invoice_number || 1).toString().padStart(4, "0");
-  const invoiceNumber = `${settings.invoice_prefix}-${data.period_year}-${nextNum}`;
+    // Round totals (safety)
+    totalNet = roundToEuro(totalNet);
+    totalVat = roundToEuro(totalVat);
+    const totalGross = roundToEuro(totalNet + totalVat);
 
-  // Calculate due date
-  const invoiceDateObj = new Date(data.invoice_date);
-  const dueDateObj = new Date(invoiceDateObj);
-  dueDateObj.setDate(dueDateObj.getDate() + (settings.payment_days || 28));
-  const dueDate = dueDateObj.toISOString().split("T")[0];
+    // Generate invoice number
+    const nextNum = (settings.next_invoice_number || 1).toString().padStart(4, "0");
+    const invoiceNumber = `${settings.invoice_prefix}-${data.period_year}-${nextNum}`;
 
-  // Create invoice record
-  const stmt = db.query(
-    `INSERT INTO invoices
-     (invoice_number, client_id, project_id, invoice_date, due_date, period_month, period_year, net_amount, vat_amount, gross_amount, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')
-     RETURNING id`,
-  );
+    // Calculate due date
+    const invoiceDateObj = new Date(data.invoice_date);
+    const dueDateObj = new Date(invoiceDateObj);
+    dueDateObj.setDate(dueDateObj.getDate() + (settings.payment_days || 28));
+    const dueDate = dueDateObj.toISOString().split("T")[0];
 
-  const invoiceRecord = stmt.get(
-    invoiceNumber,
-    data.client_id,
-    data.project_id,
-    data.invoice_date,
-    dueDate,
-    data.period_month,
-    data.period_year,
-    totalNet,
-    totalVat,
-    totalGross,
-  ) as { id: number } | undefined;
+    // Create invoice record
+    const invoiceRecord = db
+      .query(
+        `INSERT INTO invoices
+         (invoice_number, client_id, project_id, invoice_date, due_date, period_month, period_year, net_amount, vat_amount, gross_amount, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')
+         RETURNING id`,
+      )
+      .get(
+        invoiceNumber,
+        data.client_id,
+        data.project_id,
+        data.invoice_date,
+        dueDate,
+        data.period_month,
+        data.period_year,
+        totalNet,
+        totalVat,
+        totalGross,
+      ) as { id: number } | undefined;
 
-  if (!invoiceRecord) throw new Error("Rechnung konnte nicht erstellt werden");
+    if (!invoiceRecord) throw new Error("Rechnung konnte nicht erstellt werden");
 
-  const invoiceId = invoiceRecord.id;
+    const invoiceId = invoiceRecord.id;
 
-  // Create line items
-  const insertItem = db.query(
-    `INSERT INTO invoice_items
-     (invoice_id, description, period_start, period_end, days, daily_rate, net_amount, vat_rate, vat_amount, gross_amount)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
-
-  for (const item of invoiceItems) {
-    insertItem.run(
-      invoiceId,
-      `${item.project.name}: ${item.entry.description || "Tätigkeit"}`,
-      data.service_period_from || item.entry.date,
-      data.service_period_to || item.entry.date,
-      item.entry.duration,
-      item.project.daily_rate,
-      item.netAmount,
-      vatRate,
-      item.vatAmount,
-      item.grossAmount,
+    // Create line items
+    const insertItem = db.query(
+      `INSERT INTO invoice_items
+       (invoice_id, description, period_start, period_end, days, daily_rate, net_amount, vat_rate, vat_amount, gross_amount)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
-  }
 
-  // Link time entries to invoice
-  const linkStmt = db.query("UPDATE time_entries SET invoice_id = ? WHERE id = ?");
-  for (const entry of timeEntries) {
-    linkStmt.run(invoiceId, entry.id);
-  }
+    for (const item of invoiceItems) {
+      insertItem.run(
+        invoiceId,
+        `${item.project.name}: ${item.entry.description || "Taetigkeit"}`,
+        data.service_period_from || item.entry.date,
+        data.service_period_to || item.entry.date,
+        item.entry.duration,
+        item.project.daily_rate,
+        item.netAmount,
+        vatRate,
+        item.vatAmount,
+        item.grossAmount,
+      );
+    }
 
-  // Update next invoice number
-  db.query("UPDATE settings SET next_invoice_number = next_invoice_number + 1 WHERE id = 1").run();
+    // Link time entries to invoice
+    const linkStmt = db.query("UPDATE time_entries SET invoice_id = ? WHERE id = ?");
+    for (const entry of timeEntries) {
+      linkStmt.run(invoiceId, entry.id);
+    }
 
-  return invoiceId;
+    // Update next invoice number
+    db.query("UPDATE settings SET next_invoice_number = next_invoice_number + 1 WHERE id = 1").run();
+
+    // Audit log
+    appendAuditLog("invoice", invoiceId, "create", {
+      invoice_number: invoiceNumber,
+      net_amount: totalNet,
+      gross_amount: totalGross,
+      time_entry_count: timeEntries.length,
+    });
+
+    return invoiceId;
+  })();
 }
 
 export function getInvoice(id: number) {
   return db
-    .query<InvoiceRow & { id: number }, [number]>(
+    .query<Invoice, [number]>(
       `SELECT * FROM invoices WHERE id = ?`,
     )
     .get(id);
@@ -364,7 +463,7 @@ export function getInvoice(id: number) {
 
 export function getInvoiceItems(invoiceId: number) {
   return db
-    .query<any, [number]>(
+    .query<InvoiceItem, [number]>(
       `SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY period_start`,
     )
     .all(invoiceId);

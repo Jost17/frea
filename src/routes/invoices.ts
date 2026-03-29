@@ -3,17 +3,12 @@ import { html } from "hono/html";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
 import {
-  getOverdueInvoiceCount,
   getSettings,
   getClient,
-  getProject,
-  getTimeEntriesForProject,
-  getTimeEntry,
-  createInvoice,
   getInvoice,
   getInvoiceItems,
 } from "../db/queries";
-import { invoiceCreateSchema } from "../validation/schemas";
+
 import { Layout } from "../templates/layout";
 
 export const invoiceRoutes = new Hono<AppEnv>();
@@ -170,8 +165,8 @@ invoiceRoutes.get("/create", (c) => {
 // View invoice
 invoiceRoutes.get("/:id", (c) => {
   try {
-    const id = parseInt(c.req.param("id"));
-    if (isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
 
     const invoice = getInvoice(id);
     if (!invoice) throw new AppError("Rechnung nicht gefunden", 404);
@@ -201,7 +196,7 @@ invoiceRoutes.get("/:id", (c) => {
               <div class="mb-8 grid grid-cols-2 gap-8">
                 <div>
                   <p class="font-semibold text-gray-900">${settings.company_name}</p>
-                  <p class="text-sm text-gray-600">${settings.address || ""}${settings.postal_code ? ", " + settings.postal_code : ""}</p>
+                  <p class="text-sm text-gray-600">${settings.address || ""}${settings.postal_code ? `, ${settings.postal_code}` : ""}</p>
                   <p class="text-sm text-gray-600">${settings.city || ""}</p>
                   <p class="mt-2 text-sm text-gray-600">
                     ${settings.email || ""}<br />
@@ -219,7 +214,7 @@ invoiceRoutes.get("/:id", (c) => {
               <div class="mb-8 border-t border-gray-200 pt-6">
                 <p class="text-sm font-semibold text-gray-700 uppercase">Rechnungsempfänger</p>
                 <p class="font-semibold text-gray-900">${client.name}</p>
-                <p class="text-sm text-gray-600">${client.address || ""}${client.postal_code ? ", " + client.postal_code : ""}</p>
+                <p class="text-sm text-gray-600">${client.address || ""}${client.postal_code ? `, ${client.postal_code}` : ""}</p>
                 <p class="text-sm text-gray-600">${client.city || ""}</p>
               </div>
 

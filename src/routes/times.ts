@@ -3,24 +3,36 @@ import { html } from "hono/html";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
 import {
-  getAllActiveClients,
-  getActiveProjectsForClient,
+  getAllActiveProjectsWithClient,
+  getAllUnbilledTimeEntries,
   getTimeEntry,
-  getTimeEntriesForProject,
   createTimeEntry,
   updateTimeEntry,
   deleteTimeEntry,
+  type ProjectWithClient,
 } from "../db/queries";
-import { timeEntrySchema } from "../validation/schemas";
+import { timeEntrySchema, type TimeEntry } from "../validation/schemas";
 import { Layout } from "../templates/layout";
+import { parseFormFields } from "../utils/form-parser";
 
 export const timeRoutes = new Hono<AppEnv>();
 
-// List all unbilled time entries by project
+const TIME_ENTRY_FIELDS = {
+  project_id: "int",
+  date: "string",
+  duration: "float",
+  description: "string",
+  billable: "bool",
+} as const;
+
+// List all unbilled time entries — single JOIN query (P2-7)
 timeRoutes.get("/", (c) => {
   try {
-    const clients = getAllActiveClients();
+    const entries = getAllUnbilledTimeEntries();
     const overdueCount = c.get("overdueCount");
+
+    // Group by client in application code
+    const byClient = Map.groupBy(entries, (e) => e.client_name);
 
     return c.html(
       Layout({
@@ -29,7 +41,7 @@ timeRoutes.get("/", (c) => {
         overdueCount,
         children: html`
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-semibold">Zeiteinträge</h1>
+            <h1 class="text-2xl font-semibold">Zeiteintraege</h1>
             <a
               href="/zeiten/new"
               class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -38,73 +50,61 @@ timeRoutes.get("/", (c) => {
             </a>
           </div>
 
-          ${clients.length === 0
-            ? html`<p class="text-gray-500">Keine Kunden/Projekte gefunden.</p>`
+          ${byClient.size === 0
+            ? html`<p class="text-gray-500">Keine Zeiteintraege gefunden.</p>`
             : html`
                 <div class="space-y-8">
-                  ${clients
-                    .map((client) => {
-                      const projects = getActiveProjectsForClient(client.id);
-                      const entries = projects.flatMap((p) => {
-                        const times = getTimeEntriesForProject(p.id);
-                        return times.map((t) => ({ ...t, projectName: p.name, clientName: client.name }));
-                      });
-
-                      return html`
-                        <div>
-                          <h2 class="text-lg font-semibold mb-3">${client.name}</h2>
-                          ${entries.length === 0
-                            ? html`<p class="text-gray-400 text-sm">Keine Einträge</p>`
-                            : html`
-                                <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
-                                  <table class="w-full text-sm">
-                                    <thead class="border-b bg-gray-50">
-                                      <tr>
-                                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Projekt</th>
-                                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Datum</th>
-                                        <th class="px-4 py-3 text-right font-semibold text-gray-700">Stunden</th>
-                                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Beschreibung</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-gray-700">Aktion</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      ${entries.map((entry) => {
-                                        return html`
-                                          <tr class="border-t hover:bg-gray-50">
-                                            <td class="px-4 py-3 font-medium text-gray-900">${entry.projectName}</td>
-                                            <td class="px-4 py-3 text-gray-600">${entry.date}</td>
-                                            <td class="px-4 py-3 text-right text-gray-600">${entry.duration.toFixed(1)}h</td>
-                                            <td class="px-4 py-3 text-gray-600 text-xs">${entry.description || "—"}</td>
-                                            <td class="px-4 py-3 text-center">
-                                              <a href="/zeiten/${entry.id}" class="text-blue-600 hover:underline text-xs">
-                                                Bearbeiten
-                                              </a>
-                                            </td>
-                                          </tr>
-                                        `;
-                                      })}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              `}
+                  ${[...byClient.entries()].map(([clientName, clientEntries]) => {
+                    return html`
+                      <div>
+                        <h2 class="text-lg font-semibold mb-3">${clientName}</h2>
+                        <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
+                          <table class="w-full text-sm">
+                            <thead class="border-b bg-gray-50">
+                              <tr>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Projekt</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Datum</th>
+                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Stunden</th>
+                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Beschreibung</th>
+                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Aktion</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              ${clientEntries.map((entry) => {
+                                return html`
+                                  <tr class="border-t hover:bg-gray-50">
+                                    <td class="px-4 py-3 font-medium text-gray-900">${entry.project_name}</td>
+                                    <td class="px-4 py-3 text-gray-600">${entry.date}</td>
+                                    <td class="px-4 py-3 text-right text-gray-600">${entry.duration.toFixed(1)}h</td>
+                                    <td class="px-4 py-3 text-gray-600 text-xs">${entry.description || "\u2014"}</td>
+                                    <td class="px-4 py-3 text-center">
+                                      <a href="/zeiten/${entry.id}" class="text-blue-600 hover:underline text-xs">
+                                        Bearbeiten
+                                      </a>
+                                    </td>
+                                  </tr>
+                                `;
+                              })}
+                            </tbody>
+                          </table>
                         </div>
-                      `;
-                    })
-                    .filter((div) => true)}
+                      </div>
+                    `;
+                  })}
                 </div>
               `}
         `,
       }),
     );
   } catch (err) {
-    return logAndRespond(c, err, "Zeiteinträge konnten nicht geladen werden", 500);
+    return logAndRespond(c, err, "Zeiteintraege konnten nicht geladen werden", 500);
   }
 });
 
 // New entry form
 timeRoutes.get("/new", (c) => {
   try {
-    const clients = getAllActiveClients();
+    const allProjects = getAllActiveProjectsWithClient();
     const overdueCount = c.get("overdueCount");
 
     return c.html(
@@ -112,7 +112,7 @@ timeRoutes.get("/new", (c) => {
         title: "Neuer Zeiteintrag",
         activeNav: "zeiten",
         overdueCount,
-        children: renderTimeForm(null, clients),
+        children: renderTimeForm(null, allProjects),
       }),
     );
   } catch (err) {
@@ -123,13 +123,13 @@ timeRoutes.get("/new", (c) => {
 // View/edit entry
 timeRoutes.get("/:id", (c) => {
   try {
-    const id = parseInt(c.req.param("id"));
-    if (isNaN(id)) throw new AppError("Ungültige Eintrag-ID", 400);
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungueltige Eintrag-ID", 400);
 
     const entry = getTimeEntry(id);
     if (!entry) throw new AppError("Eintrag nicht gefunden", 404);
 
-    const clients = getAllActiveClients();
+    const allProjects = getAllActiveProjectsWithClient();
     const overdueCount = c.get("overdueCount");
 
     return c.html(
@@ -137,7 +137,7 @@ timeRoutes.get("/:id", (c) => {
         title: "Zeiteintrag bearbeiten",
         activeNav: "zeiten",
         overdueCount,
-        children: renderTimeForm(entry, clients),
+        children: renderTimeForm(entry, allProjects),
       }),
     );
   } catch (err) {
@@ -150,14 +150,7 @@ timeRoutes.get("/:id", (c) => {
 timeRoutes.post("/", async (c) => {
   try {
     const body = await c.req.formData();
-    const data = {
-      project_id: parseInt(String(body.get("project_id") ?? "0")),
-      date: String(body.get("date") ?? ""),
-      duration: parseFloat(String(body.get("duration") ?? "0")),
-      description: String(body.get("description") ?? ""),
-      billable: body.has("billable") ? 1 : 0,
-    };
-
+    const data = parseFormFields(body, TIME_ENTRY_FIELDS);
     const validated = timeEntrySchema.parse(data);
     const id = createTimeEntry(validated);
 
@@ -174,18 +167,11 @@ timeRoutes.post("/", async (c) => {
 // Update entry
 timeRoutes.post("/:id", async (c) => {
   try {
-    const id = parseInt(c.req.param("id"));
-    if (isNaN(id)) throw new AppError("Ungültige Eintrag-ID", 400);
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungueltige Eintrag-ID", 400);
 
     const body = await c.req.formData();
-    const data = {
-      project_id: parseInt(String(body.get("project_id") ?? "0")),
-      date: String(body.get("date") ?? ""),
-      duration: parseFloat(String(body.get("duration") ?? "0")),
-      description: String(body.get("description") ?? ""),
-      billable: body.has("billable") ? 1 : 0,
-    };
-
+    const data = parseFormFields(body, TIME_ENTRY_FIELDS);
     const validated = timeEntrySchema.parse(data);
     updateTimeEntry(id, validated);
 
@@ -202,24 +188,21 @@ timeRoutes.post("/:id", async (c) => {
 // Delete entry
 timeRoutes.post("/:id/delete", (c) => {
   try {
-    const id = parseInt(c.req.param("id"));
-    if (isNaN(id)) throw new AppError("Ungültige Eintrag-ID", 400);
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungueltige Eintrag-ID", 400);
 
     deleteTimeEntry(id);
     return c.redirect("/zeiten");
   } catch (err) {
-    return logAndRespond(c, err, "Eintrag konnte nicht gelöscht werden", 500);
+    return logAndRespond(c, err, "Eintrag konnte nicht geloescht werden", 500);
   }
 });
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function renderTimeForm(entry: any, clients: any[]) {
+function renderTimeForm(entry: TimeEntry | null, allProjects: ProjectWithClient[]) {
   const isNew = !entry;
   const action = isNew ? "/zeiten" : `/zeiten/${entry.id}`;
-  const selectedClientId = entry?.project_id
-    ? clients.find((c) => getActiveProjectsForClient(c.id).some((p) => p.id === entry.project_id))?.id
-    : null;
 
   return html`
     <div class="max-w-2xl">
@@ -228,42 +211,19 @@ function renderTimeForm(entry: any, clients: any[]) {
       </div>
 
       <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="client_select" class="block text-sm font-medium text-gray-700">Kunde (für Projekt-Wahl)</label>
-            <select
-              id="client_select"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              onchange="updateProjectSelect(this.value)"
-            >
-              <option value="">-- Wählen --</option>
-              ${clients.map((c) => {
-                return html`<option value="${c.id}" ${selectedClientId === c.id ? "selected" : ""}>${c.name}</option>`;
-              })}
-            </select>
-          </div>
-
-          <div>
-            <label for="project_id" class="block text-sm font-medium text-gray-700">Projekt *</label>
-            <select
-              id="project_id"
-              name="project_id"
-              required
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="">-- Wählen --</option>
-              ${clients
-                .flatMap((c) => {
-                  return getActiveProjectsForClient(c.id).map((p) => ({
-                    ...p,
-                    clientId: c.id,
-                  }));
-                })
-                .map((p) => {
-                  return html`<option value="${p.id}" ${entry?.project_id === p.id ? "selected" : ""}>${p.name} (${p.code})</option>`;
-                })}
-            </select>
-          </div>
+        <div>
+          <label for="project_id" class="block text-sm font-medium text-gray-700">Projekt *</label>
+          <select
+            id="project_id"
+            name="project_id"
+            required
+            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="">-- Waehlen --</option>
+            ${allProjects.map((p) => {
+              return html`<option value="${p.id}" ${entry?.project_id === p.id ? "selected" : ""}>${p.client_name} / ${p.name} (${p.code})</option>`;
+            })}
+          </select>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
@@ -321,13 +281,15 @@ ${entry?.description || ""}</textarea
           <a href="/zeiten" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
           ${!isNew
             ? html`
-                <a
-                  href="/zeiten/${entry.id}/delete"
-                  onclick="return confirm('Wirklich löschen?')"
-                  class="px-4 py-2 text-sm text-red-600 hover:text-red-700"
-                >
-                  Löschen
-                </a>
+                <form method="post" action="/zeiten/${entry.id}/delete" class="inline">
+                  <button
+                    type="submit"
+                    onclick="return confirm('Wirklich loeschen?')"
+                    class="px-4 py-2 text-sm text-red-600 hover:text-red-700"
+                  >
+                    Loeschen
+                  </button>
+                </form>
               `
             : ""}
           <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
@@ -336,11 +298,5 @@ ${entry?.description || ""}</textarea
         </div>
       </form>
     </div>
-
-    <script>
-      function updateProjectSelect(clientId) {
-        // This is handled server-side rendering, but we could add client-side filtering here later
-      }
-    </script>
   `;
 }

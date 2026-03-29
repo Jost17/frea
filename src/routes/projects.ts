@@ -4,22 +4,40 @@ import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
 import {
   getAllActiveClients,
-  getActiveProjectsForClient,
+  getAllActiveProjectsWithClient,
   getProject,
   createProject,
   updateProject,
   deleteProject,
 } from "../db/queries";
-import { projectSchema } from "../validation/schemas";
+import { projectSchema, type Project, type Client } from "../validation/schemas";
 import { Layout } from "../templates/layout";
+import { parseFormFields } from "../utils/form-parser";
 
 export const projectRoutes = new Hono<AppEnv>();
 
-// List all projects grouped by client
+const PROJECT_FIELDS = {
+  client_id: "int",
+  code: "string",
+  name: "string",
+  daily_rate: "float",
+  start_date: "string",
+  end_date: "string",
+  budget_days: "float",
+  service_description: "string",
+  contract_number: "string",
+  contract_date: "string",
+  notes: "string",
+} as const;
+
+// List all projects — single JOIN query (P2-7)
 projectRoutes.get("/", (c) => {
   try {
-    const clients = getAllActiveClients();
+    const projects = getAllActiveProjectsWithClient();
     const overdueCount = c.get("overdueCount");
+
+    // Group by client in application code
+    const byClient = Map.groupBy(projects, (p) => p.client_name);
 
     return c.html(
       Layout({
@@ -37,38 +55,33 @@ projectRoutes.get("/", (c) => {
             </a>
           </div>
 
-          ${clients.length === 0
+          ${byClient.size === 0
             ? html`<p class="text-gray-500">Keine Kunden gefunden. Bitte zuerst einen Kunden anlegen.</p>`
             : html`
                 <div class="space-y-8">
-                  ${clients.map((client) => {
-                    const projects = getActiveProjectsForClient(client.id);
+                  ${[...byClient.entries()].map(([clientName, clientProjects]) => {
                     return html`
                       <div>
-                        <h2 class="text-lg font-semibold mb-3">${client.name}</h2>
-                        ${projects.length === 0
-                          ? html`<p class="text-gray-400 text-sm">Keine Projekte</p>`
-                          : html`
-                              <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
-                                <table class="w-full text-sm">
-                                  <tbody>
-                                    ${projects.map((project) => {
-                                      return html`
-                                        <tr class="border-t hover:bg-gray-50">
-                                          <td class="px-4 py-3">
-                                            <a href="/projekte/${project.id}" class="font-medium text-blue-600 hover:underline">
-                                              ${project.name}
-                                            </a>
-                                            <div class="text-xs text-gray-500">${project.code}</div>
-                                          </td>
-                                          <td class="px-4 py-3 text-right">${project.daily_rate.toFixed(2)} €/Tag</td>
-                                        </tr>
-                                      `;
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            `}
+                        <h2 class="text-lg font-semibold mb-3">${clientName}</h2>
+                        <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
+                          <table class="w-full text-sm">
+                            <tbody>
+                              ${clientProjects.map((project) => {
+                                return html`
+                                  <tr class="border-t hover:bg-gray-50">
+                                    <td class="px-4 py-3">
+                                      <a href="/projekte/${project.id}" class="font-medium text-blue-600 hover:underline">
+                                        ${project.name}
+                                      </a>
+                                      <div class="text-xs text-gray-500">${project.code}</div>
+                                    </td>
+                                    <td class="px-4 py-3 text-right">${project.daily_rate.toFixed(2)} \u20AC/Tag</td>
+                                  </tr>
+                                `;
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     `;
                   })}
@@ -104,8 +117,8 @@ projectRoutes.get("/new", (c) => {
 // View/edit project
 projectRoutes.get("/:id", (c) => {
   try {
-    const id = parseInt(c.req.param("id"));
-    if (isNaN(id)) throw new AppError("Ungültige Projekt-ID", 400);
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungueltige Projekt-ID", 400);
 
     const project = getProject(id);
     if (!project) throw new AppError("Projekt nicht gefunden", 404);
@@ -131,20 +144,7 @@ projectRoutes.get("/:id", (c) => {
 projectRoutes.post("/", async (c) => {
   try {
     const body = await c.req.formData();
-    const data = {
-      client_id: parseInt(String(body.get("client_id") ?? "0")),
-      code: String(body.get("code") ?? ""),
-      name: String(body.get("name") ?? ""),
-      daily_rate: parseFloat(String(body.get("daily_rate") ?? "0")),
-      start_date: String(body.get("start_date") ?? ""),
-      end_date: String(body.get("end_date") ?? ""),
-      budget_days: parseFloat(String(body.get("budget_days") ?? "0")),
-      service_description: String(body.get("service_description") ?? ""),
-      contract_number: String(body.get("contract_number") ?? ""),
-      contract_date: String(body.get("contract_date") ?? ""),
-      notes: String(body.get("notes") ?? ""),
-    };
-
+    const data = parseFormFields(body, PROJECT_FIELDS);
     const validated = projectSchema.parse(data);
     const id = createProject(validated);
 
@@ -161,24 +161,11 @@ projectRoutes.post("/", async (c) => {
 // Update project
 projectRoutes.post("/:id", async (c) => {
   try {
-    const id = parseInt(c.req.param("id"));
-    if (isNaN(id)) throw new AppError("Ungültige Projekt-ID", 400);
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungueltige Projekt-ID", 400);
 
     const body = await c.req.formData();
-    const data = {
-      client_id: parseInt(String(body.get("client_id") ?? "0")),
-      code: String(body.get("code") ?? ""),
-      name: String(body.get("name") ?? ""),
-      daily_rate: parseFloat(String(body.get("daily_rate") ?? "0")),
-      start_date: String(body.get("start_date") ?? ""),
-      end_date: String(body.get("end_date") ?? ""),
-      budget_days: parseFloat(String(body.get("budget_days") ?? "0")),
-      service_description: String(body.get("service_description") ?? ""),
-      contract_number: String(body.get("contract_number") ?? ""),
-      contract_date: String(body.get("contract_date") ?? ""),
-      notes: String(body.get("notes") ?? ""),
-    };
-
+    const data = parseFormFields(body, PROJECT_FIELDS);
     const validated = projectSchema.parse(data);
     updateProject(id, validated);
 
@@ -195,19 +182,22 @@ projectRoutes.post("/:id", async (c) => {
 // Delete project
 projectRoutes.post("/:id/delete", (c) => {
   try {
-    const id = parseInt(c.req.param("id"));
-    if (isNaN(id)) throw new AppError("Ungültige Projekt-ID", 400);
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungueltige Projekt-ID", 400);
 
     deleteProject(id);
     return c.redirect("/projekte");
   } catch (err) {
-    return logAndRespond(c, err, "Projekt konnte nicht gelöscht werden", 500);
+    return logAndRespond(c, err, "Projekt konnte nicht geloescht werden", 500);
   }
 });
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function renderProjectForm(project: any, clients: any[]) {
+function renderProjectForm(
+  project: Project | null,
+  clients: Pick<Client, "id" | "name">[],
+) {
   const isNew = !project;
   const action = isNew ? "/projekte" : `/projekte/${project.id}`;
 
@@ -216,13 +206,15 @@ function renderProjectForm(project: any, clients: any[]) {
       <div class="mb-6 flex items-center justify-between">
         <h1 class="text-2xl font-semibold">${isNew ? "Neues Projekt" : `Projekt: ${project.name}`}</h1>
         ${!isNew
-          ? html`<a
-              href="/projekte/${project.id}/delete"
-              onclick="return confirm('Wirklich löschen?')"
-              class="text-red-600 hover:underline text-xs"
-            >
-              Löschen
-            </a>`
+          ? html`<form method="post" action="/projekte/${project.id}/delete" class="inline">
+              <button
+                type="submit"
+                onclick="return confirm('Wirklich loeschen?')"
+                class="text-red-600 hover:underline text-xs"
+              >
+                Loeschen
+              </button>
+            </form>`
           : ""}
       </div>
 
@@ -235,7 +227,7 @@ function renderProjectForm(project: any, clients: any[]) {
             required
             class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
           >
-            <option value="">-- Wählen --</option>
+            <option value="">-- Waehlen --</option>
             ${clients.map((c) => {
               return html`<option value="${c.id}" ${project?.client_id === c.id ? "selected" : ""}>${c.name}</option>`;
             })}

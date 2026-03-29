@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { join } from "node:path";
 
-const DB_PATH = process.env.FREA_DB_PATH || join(import.meta.dir, "../../data/frea.db");
+const DB_PATH = Bun.env.FREA_DB_PATH || join(import.meta.dir, "../../data/frea.db");
 
 export const db = new Database(DB_PATH, { create: true });
 
@@ -77,7 +77,7 @@ export function initializeSchema() {
     )
   `);
 
-  // Zeiteinträge
+  // Zeiteintraege
   db.run(`
     CREATE TABLE IF NOT EXISTS time_entries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,7 +133,7 @@ export function initializeSchema() {
     )
   `);
 
-  // GoBD Audit Log (append-only, trigger-geschützt)
+  // GoBD Audit Log (append-only, trigger-geschuetzt)
   db.run(`
     CREATE TABLE IF NOT EXISTS audit_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -156,7 +156,7 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id)");
 
-  // GoBD: Audit Log ist append-only (keine Änderungen/Löschungen erlaubt)
+  // GoBD: Audit Log ist append-only (keine Aenderungen/Loeschungen erlaubt)
   db.run(`
     CREATE TRIGGER IF NOT EXISTS audit_log_no_update
     BEFORE UPDATE ON audit_log
@@ -176,11 +176,11 @@ export function initializeSchema() {
   // Initialize default settings if not present
   const existing = db.query("SELECT id FROM settings WHERE id = 1").get();
   if (!existing) {
-    const companyName = process.env.COMPANY_NAME || "Mein Unternehmen";
-    const email = process.env.EMAIL || "info@example.de";
-    const iban = process.env.IBAN || "DE00000000000000000000";
-    const bic = process.env.BIC || "TESTDEXX";
-    const taxNumber = process.env.TAX_NUMBER || "000000000";
+    const companyName = Bun.env.COMPANY_NAME || "Mein Unternehmen";
+    const email = Bun.env.EMAIL || "info@example.de";
+    const iban = Bun.env.IBAN || "DE00000000000000000000";
+    const bic = Bun.env.BIC || "TESTDEXX";
+    const taxNumber = Bun.env.TAX_NUMBER || "000000000";
 
     db.run(
       `INSERT INTO settings
@@ -189,127 +189,4 @@ export function initializeSchema() {
       [companyName, email, iban, bic, taxNumber],
     );
   }
-}
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface Settings {
-  id: number;
-  company_name: string;
-  address: string;
-  postal_code: string;
-  city: string;
-  country: string;
-  email: string;
-  phone: string | null;
-  mobile: string | null;
-  bank_name: string;
-  iban: string;
-  bic: string;
-  tax_number: string;
-  ust_id: string | null;
-  vat_rate: number;
-  payment_days: number;
-  invoice_prefix: string;
-  next_invoice_number: number;
-  kleinunternehmer: number;
-}
-
-export interface Client {
-  id: number;
-  name: string;
-  address: string | null;
-  postal_code: string | null;
-  city: string | null;
-  country: string;
-  email: string | null;
-  phone: string | null;
-  contact_person: string | null;
-  vat_id: string | null;
-  buyer_reference: string | null;
-  notes: string | null;
-  created_at: string;
-  archived: number;
-}
-
-export interface Project {
-  id: number;
-  client_id: number;
-  code: string;
-  name: string;
-  daily_rate: number;
-  start_date: string | null;
-  end_date: string | null;
-  budget_days: number | null;
-  service_description: string | null;
-  contract_number: string | null;
-  contract_date: string | null;
-  notes: string | null;
-  created_at: string;
-  archived: number;
-}
-
-export interface TimeEntry {
-  id: number;
-  project_id: number;
-  date: string;
-  duration: number;
-  description: string | null;
-  billable: number;
-  invoice_id: number | null;
-  created_at: string;
-}
-
-export interface Invoice {
-  id: number;
-  invoice_number: string;
-  client_id: number;
-  project_id: number;
-  invoice_date: string;
-  due_date: string;
-  period_month: number;
-  period_year: number;
-  net_amount: number;
-  vat_amount: number;
-  gross_amount: number;
-  status: "draft" | "sent" | "paid" | "cancelled";
-  pdf_path: string | null;
-  po_number: string | null;
-  service_period_from: string | null;
-  service_period_to: string | null;
-  paid_date: string | null;
-  reminder_level: number;
-  created_at: string;
-}
-
-export interface InvoiceItem {
-  id: number;
-  invoice_id: number;
-  description: string;
-  period_start: string;
-  period_end: string;
-  days: number;
-  daily_rate: number;
-  net_amount: number;
-  vat_rate: number;
-  vat_amount: number;
-  gross_amount: number;
-}
-
-export interface AuditLog {
-  id: number;
-  timestamp: string;
-  entity_type: string;
-  entity_id: number;
-  action: "create" | "update" | "delete" | "status_change";
-  changes: string | null;
-  source: "web" | "api";
-}
-
-export function getRequiredSettings(): Settings {
-  const settings = db.query("SELECT * FROM settings WHERE id = 1").get() as Settings | undefined;
-  if (!settings) {
-    throw new Error("Bitte zuerst Stammdaten in den Einstellungen konfigurieren");
-  }
-  return settings;
 }
