@@ -127,6 +127,83 @@ export function getOverdueInvoiceCount(): number {
   return result?.count ?? 0;
 }
 
+// ─── Dashboard Stats ────────────────────────────────────────────────────────
+
+export interface DashboardStats {
+  open_invoices_count: number;
+  open_invoices_sum: number;
+  revenue_current_month: number;
+  active_clients_count: number;
+  active_projects_count: number;
+  overdue_invoices_count: number;
+}
+
+export function getDashboardStats(): DashboardStats {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-indexed
+
+  const result = db.query<{
+    open_invoices_count: number;
+    open_invoices_sum: number;
+    revenue_current_month: number;
+    active_clients_count: number;
+    active_projects_count: number;
+    overdue_invoices_count: number;
+  }, []>(
+    `WITH open_invoices AS (
+       SELECT COUNT(*) as count, COALESCE(SUM(gross_amount), 0) as sum
+       FROM invoices WHERE status IN ('draft', 'sent')
+     ),
+     overdue_invoices AS (
+       SELECT COUNT(*) as count
+       FROM invoices
+       WHERE status IN ('draft', 'sent')
+       AND due_date < date('now')
+     ),
+     revenue_month AS (
+       SELECT COALESCE(SUM(gross_amount), 0) as sum
+       FROM invoices
+       WHERE status IN ('sent', 'paid')
+       AND strftime('%Y', invoice_date) = ?
+       AND CAST(strftime('%m', invoice_date) AS INTEGER) = ?
+     ),
+     active_clients AS (
+       SELECT COUNT(*) as count FROM clients WHERE archived = 0
+     ),
+     active_projects AS (
+       SELECT COUNT(*) as count FROM projects WHERE archived = 0
+     )
+     SELECT
+       (SELECT count FROM open_invoices) as open_invoices_count,
+       (SELECT sum FROM open_invoices) as open_invoices_sum,
+       (SELECT sum FROM revenue_month) as revenue_current_month,
+       (SELECT count FROM active_clients) as active_clients_count,
+       (SELECT count FROM active_projects) as active_projects_count,
+       (SELECT count FROM overdue_invoices) as overdue_invoices_count`,
+  ).get(currentYear.toString(), currentMonth);
+
+  if (!result) {
+    return {
+      open_invoices_count: 0,
+      open_invoices_sum: 0,
+      revenue_current_month: 0,
+      active_clients_count: 0,
+      active_projects_count: 0,
+      overdue_invoices_count: 0,
+    };
+  }
+
+  return {
+    open_invoices_count: result.open_invoices_count ?? 0,
+    open_invoices_sum: result.open_invoices_sum ?? 0,
+    revenue_current_month: result.revenue_current_month ?? 0,
+    active_clients_count: result.active_clients_count ?? 0,
+    active_projects_count: result.active_projects_count ?? 0,
+    overdue_invoices_count: result.overdue_invoices_count ?? 0,
+  };
+}
+
 // ─── Clients ─────────────────────────────────────────────────────────────────
 
 export function getAllActiveClients() {
