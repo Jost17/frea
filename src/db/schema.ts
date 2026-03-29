@@ -173,6 +173,12 @@ export function initializeSchema() {
     END
   `);
 
+  // Migration: add onboarding_complete column if not present (safe for existing DBs)
+  const settingsCols = db.query<{ name: string }, []>("PRAGMA table_info(settings)").all();
+  if (!settingsCols.some((c) => c.name === "onboarding_complete")) {
+    db.run("ALTER TABLE settings ADD COLUMN onboarding_complete INTEGER DEFAULT 0");
+  }
+
   // Initialize default settings if not present
   const existing = db.query("SELECT id FROM settings WHERE id = 1").get();
   if (!existing) {

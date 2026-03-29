@@ -86,6 +86,19 @@ export function updateSettings(data: Partial<Settings>): void {
   safeUpdate("settings", SETTINGS_COLUMNS, data as Record<string, unknown>, 1);
 }
 
+export function isOnboardingComplete(): boolean {
+  const row = db
+    .query<{ onboarding_complete: number }, []>(
+      "SELECT onboarding_complete FROM settings WHERE id = 1",
+    )
+    .get();
+  return row?.onboarding_complete === 1;
+}
+
+export function completeOnboarding(): void {
+  db.query("UPDATE settings SET onboarding_complete = 1 WHERE id = 1").run();
+}
+
 // ─── Invoices (overdue count) ────────────────────────────────────────────────
 
 export function getOverdueInvoiceCount(): number {

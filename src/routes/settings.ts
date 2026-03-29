@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { html } from "hono/html";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
-import { getSettings, updateSettings } from "../db/queries";
+import { completeOnboarding, getSettings, isOnboardingComplete, updateSettings } from "../db/queries";
 import { settingsSchema } from "../validation/schemas";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
@@ -34,6 +34,7 @@ settingsRoutes.get("/", (c) => {
       throw new AppError("Einstellungen nicht initialisiert", 500);
     }
 
+    const onboarding = c.req.query("onboarding") === "1" || !isOnboardingComplete();
     const overdueCount = c.get("overdueCount");
     return c.html(
       Layout({
@@ -42,6 +43,22 @@ settingsRoutes.get("/", (c) => {
         overdueCount,
         children: html`
           <div class="max-w-2xl">
+            ${onboarding
+              ? html`
+                  <div
+                    class="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4"
+                    role="status"
+                  >
+                    <h2 class="mb-1 text-base font-semibold text-blue-900">
+                      Willkommen bei FREA!
+                    </h2>
+                    <p class="text-sm text-blue-700">
+                      Bitte gib zuerst deine Firmendaten ein. Diese werden auf allen Rechnungen
+                      verwendet.
+                    </p>
+                  </div>
+                `
+              : ""}
             <h1 class="mb-6 text-2xl font-semibold">Firmeneinstellungen</h1>
             <form
               method="post"
@@ -298,10 +315,16 @@ settingsRoutes.get("/", (c) => {
 
 settingsRoutes.post("/", async (c) => {
   try {
+    const firstSetup = !isOnboardingComplete();
     const body = await c.req.formData();
     const data = parseFormFields(body, SETTINGS_FIELDS);
     const validated = settingsSchema.parse({ ...data, country: "Deutschland", mobile: "" });
     updateSettings(validated);
+
+    if (firstSetup) {
+      completeOnboarding();
+      return c.redirect("/?onboarding_done=1");
+    }
 
     return c.redirect("/einstellungen?success=1");
   } catch (err) {

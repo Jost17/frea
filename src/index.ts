@@ -7,6 +7,7 @@ import type { AppEnv } from "./env";
 import { globalErrorHandler, globalNotFoundHandler } from "./middleware/error-handler";
 import { navContextMiddleware } from "./middleware/nav-context";
 import { securityHeaders } from "./middleware/security-headers";
+import { isOnboardingComplete } from "./db/queries";
 import { apiRoutes } from "./routes/api";
 import { clientRoutes } from "./routes/clients";
 import { dashboardRoutes } from "./routes/dashboard";
@@ -22,6 +23,17 @@ const app = new Hono<AppEnv>();
 app.use("*", logger());
 app.use("*", securityHeaders);
 app.use("*", csrf());
+
+// Onboarding-Guard: redirect to /einstellungen until setup is complete
+app.use("*", async (c, next) => {
+  const path = new URL(c.req.url).pathname;
+  const isSettingsPath = path.startsWith("/einstellungen");
+  const isStaticPath = path.startsWith("/static") || path.startsWith("/api");
+  if (!isSettingsPath && !isStaticPath && !isOnboardingComplete()) {
+    return c.redirect("/einstellungen?onboarding=1");
+  }
+  return next();
+});
 
 // navContextMiddleware scoped to UI routes (executes a DB query)
 app.use("/", navContextMiddleware);

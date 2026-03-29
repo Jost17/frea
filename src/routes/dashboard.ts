@@ -87,12 +87,27 @@ dashboardRoutes.get("/", (c) => {
         </div>
       `;
 
+  const onboardingDone = c.req.query("onboarding_done") === "1";
+  const children = onboardingDone
+    ? html`
+        <div
+          class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4"
+          role="status"
+        >
+          <p class="text-sm font-medium text-green-800">
+            Einrichtung abgeschlossen! Firmendaten wurden gespeichert.
+          </p>
+        </div>
+        ${content}
+      `
+    : content;
+
   return c.html(
     Layout({
       title: "Dashboard",
       activeNav: "dashboard",
       overdueCount,
-      children: content,
+      children,
     }),
   );
 });
