@@ -30,7 +30,13 @@
       "trailingCommas": "all"
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "files": {
-    "includes": ["src/**", "tests/**"]
+    "includes": ["src/**", "tests/**", "agents/**"],
+    "ignoreUnknown": true
   }
 }

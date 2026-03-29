@@ -1,0 +1,36 @@
+#!/bin/sh
+# Pre-commit hook for FREA
+# Runs before each commit to ensure code quality
+
+echo "Running pre-commit checks..."
+
+# Change to repo root
+cd "$(git rev-parse --show-toplevel)"
+
+# Check TypeScript types (requires typescript as devDependency)
+echo "  [1/2] Running typecheck..."
+if command -v bun > /dev/null 2>&1; then
+    if ! bun run typecheck > /tmp/typecheck_out.txt 2>&1; then
+        echo "  ✗ TypeScript type check failed:"
+        cat /tmp/typecheck_out.txt
+        exit 1
+    fi
+    echo "  ✓ TypeScript OK"
+else
+    echo "  ⚠ bun not found — skipping typecheck (install bun first)"
+fi
+
+# Run biome lint
+echo "  [2/2] Running lint..."
+if command -v bun > /dev/null 2>&1; then
+    if ! bun run lint > /tmp/lint_out.txt 2>&1; then
+        echo "  ✗ Lint failed:"
+        cat /tmp/lint_out.txt
+        exit 1
+    fi
+    echo "  ✓ Lint OK"
+else
+    echo "  ⚠ bun not found — skipping lint"
+fi
+
+echo "Pre-commit checks passed!"

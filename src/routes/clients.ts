@@ -1,11 +1,17 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
+import {
+  createClient,
+  deleteClient,
+  getAllActiveClients,
+  getClient,
+  updateClient,
+} from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
-import { getAllActiveClients, getClient, createClient, updateClient, deleteClient } from "../db/queries";
-import { clientSchema, type Client } from "../validation/schemas";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
+import { type Client, clientSchema } from "../validation/schemas";
 
 export const clientRoutes = new Hono<AppEnv>();
 
@@ -44,9 +50,10 @@ clientRoutes.get("/", (c) => {
             </a>
           </div>
 
-          ${clients.length === 0
-            ? html`<p class="text-gray-500">Keine Kunden gefunden.</p>`
-            : html`
+          ${
+            clients.length === 0
+              ? html`<p class="text-gray-500">Keine Kunden gefunden.</p>`
+              : html`
                 <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
                   <table class="w-full text-sm">
                     <thead class="border-b bg-gray-50">
@@ -78,7 +85,8 @@ clientRoutes.get("/", (c) => {
                     </tbody>
                   </table>
                 </div>
-              `}
+              `
+          }
         `,
       }),
     );
@@ -186,8 +194,9 @@ function renderClientForm(client: Client | null) {
     <div class="max-w-2xl">
       <div class="mb-6 flex items-center justify-between">
         <h1 class="text-2xl font-semibold">${isNew ? "Neuer Kunde" : `Kunde: ${client.name}`}</h1>
-        ${!isNew
-          ? html`<form method="post" action="/kunden/${client.id}/delete" class="inline">
+        ${
+          !isNew
+            ? html`<form method="post" action="/kunden/${client.id}/delete" class="inline">
               <button
                 type="submit"
                 onclick="return confirm('Wirklich loeschen?')"
@@ -196,7 +205,8 @@ function renderClientForm(client: Client | null) {
                 Loeschen
               </button>
             </form>`
-          : ""}
+            : ""
+        }
       </div>
 
       <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">

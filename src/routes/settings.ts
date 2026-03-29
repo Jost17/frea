@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
+import { getSettings, updateSettings } from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
-import { getSettings, updateSettings } from "../db/queries";
-import { settingsSchema } from "../validation/schemas";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
+import { settingsSchema } from "../validation/schemas";
 
 export const settingsRoutes = new Hono<AppEnv>();
 

@@ -1,13 +1,8 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
+import { getClient, getInvoice, getInvoiceItems, getSettings } from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
-import {
-  getSettings,
-  getClient,
-  getInvoice,
-  getInvoiceItems,
-} from "../db/queries";
 
 import { Layout } from "../templates/layout";
 
@@ -142,7 +137,7 @@ invoiceRoutes.get("/create", (c) => {
                 <h2 class="mb-4 font-semibold text-gray-900">Abrechenbare Zeiteinträge</h2>
                 <p class="mb-4 text-sm text-gray-600">Diese werden nach Projekt gruppiert. Wähle die Einträge aus, die abgerechnet werden sollen.</p>
 
-                ${/* Placeholder for time entry selection */html``}
+                ${/* Placeholder for time entry selection */ html``}
               </div>
 
               <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">

@@ -1,18 +1,18 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import type { AppEnv } from "../env";
-import { AppError, logAndRespond } from "../middleware/error-handler";
 import {
+  createProject,
+  deleteProject,
   getAllActiveClients,
   getAllActiveProjectsWithClient,
   getProject,
-  createProject,
   updateProject,
-  deleteProject,
 } from "../db/queries";
-import { projectSchema, type Project, type Client } from "../validation/schemas";
+import type { AppEnv } from "../env";
+import { AppError, logAndRespond } from "../middleware/error-handler";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
+import { type Client, type Project, projectSchema } from "../validation/schemas";
 
 export const projectRoutes = new Hono<AppEnv>();
 
@@ -55,9 +55,10 @@ projectRoutes.get("/", (c) => {
             </a>
           </div>
 
-          ${byClient.size === 0
-            ? html`<p class="text-gray-500">Keine Kunden gefunden. Bitte zuerst einen Kunden anlegen.</p>`
-            : html`
+          ${
+            byClient.size === 0
+              ? html`<p class="text-gray-500">Keine Kunden gefunden. Bitte zuerst einen Kunden anlegen.</p>`
+              : html`
                 <div class="space-y-8">
                   ${[...byClient.entries()].map(([clientName, clientProjects]) => {
                     return html`
@@ -86,7 +87,8 @@ projectRoutes.get("/", (c) => {
                     `;
                   })}
                 </div>
-              `}
+              `
+          }
         `,
       }),
     );
@@ -194,10 +196,7 @@ projectRoutes.post("/:id/delete", (c) => {
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function renderProjectForm(
-  project: Project | null,
-  clients: Pick<Client, "id" | "name">[],
-) {
+function renderProjectForm(project: Project | null, clients: Pick<Client, "id" | "name">[]) {
   const isNew = !project;
   const action = isNew ? "/projekte" : `/projekte/${project.id}`;
 
@@ -205,8 +204,9 @@ function renderProjectForm(
     <div class="max-w-2xl">
       <div class="mb-6 flex items-center justify-between">
         <h1 class="text-2xl font-semibold">${isNew ? "Neues Projekt" : `Projekt: ${project.name}`}</h1>
-        ${!isNew
-          ? html`<form method="post" action="/projekte/${project.id}/delete" class="inline">
+        ${
+          !isNew
+            ? html`<form method="post" action="/projekte/${project.id}/delete" class="inline">
               <button
                 type="submit"
                 onclick="return confirm('Wirklich loeschen?')"
@@ -215,7 +215,8 @@ function renderProjectForm(
                 Loeschen
               </button>
             </form>`
-          : ""}
+            : ""
+        }
       </div>
 
       <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">

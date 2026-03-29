@@ -1,19 +1,19 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import type { AppEnv } from "../env";
-import { AppError, logAndRespond } from "../middleware/error-handler";
 import {
+  createTimeEntry,
+  deleteTimeEntry,
   getAllActiveProjectsWithClient,
   getAllUnbilledTimeEntries,
   getTimeEntry,
-  createTimeEntry,
-  updateTimeEntry,
-  deleteTimeEntry,
   type ProjectWithClient,
+  updateTimeEntry,
 } from "../db/queries";
-import { timeEntrySchema, type TimeEntry } from "../validation/schemas";
+import type { AppEnv } from "../env";
+import { AppError, logAndRespond } from "../middleware/error-handler";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
+import { type TimeEntry, timeEntrySchema } from "../validation/schemas";
 
 export const timeRoutes = new Hono<AppEnv>();
 
@@ -50,9 +50,10 @@ timeRoutes.get("/", (c) => {
             </a>
           </div>
 
-          ${byClient.size === 0
-            ? html`<p class="text-gray-500">Keine Zeiteintraege gefunden.</p>`
-            : html`
+          ${
+            byClient.size === 0
+              ? html`<p class="text-gray-500">Keine Zeiteintraege gefunden.</p>`
+              : html`
                 <div class="space-y-8">
                   ${[...byClient.entries()].map(([clientName, clientEntries]) => {
                     return html`
@@ -92,7 +93,8 @@ timeRoutes.get("/", (c) => {
                     `;
                   })}
                 </div>
-              `}
+              `
+          }
         `,
       }),
     );
@@ -279,8 +281,9 @@ ${entry?.description || ""}</textarea
 
         <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
           <a href="/zeiten" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
-          ${!isNew
-            ? html`
+          ${
+            !isNew
+              ? html`
                 <form method="post" action="/zeiten/${entry.id}/delete" class="inline">
                   <button
                     type="submit"
@@ -291,7 +294,8 @@ ${entry?.description || ""}</textarea
                   </button>
                 </form>
               `
-            : ""}
+              : ""
+          }
           <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
             Speichern
           </button>

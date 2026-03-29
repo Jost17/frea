@@ -1,37 +1,67 @@
-import { db } from "./schema";
 import type {
-  Settings,
-  Client,
-  Project,
-  TimeEntry,
-  InvoiceCreate,
-  Invoice,
-  InvoiceItem,
   AuditLog,
+  Client,
+  Invoice,
+  InvoiceCreate,
+  InvoiceItem,
+  Project,
+  Settings,
+  TimeEntry,
 } from "../validation/schemas";
+import { db } from "./schema";
 
 // ─── Column Allowlists (SQL injection prevention) ─────────────────────────────
 
 const SETTINGS_COLUMNS = new Set([
-  "company_name", "address", "postal_code", "city", "country",
-  "email", "phone", "mobile", "bank_name", "iban", "bic",
-  "tax_number", "ust_id", "vat_rate", "payment_days",
-  "invoice_prefix", "next_invoice_number", "kleinunternehmer",
+  "company_name",
+  "address",
+  "postal_code",
+  "city",
+  "country",
+  "email",
+  "phone",
+  "mobile",
+  "bank_name",
+  "iban",
+  "bic",
+  "tax_number",
+  "ust_id",
+  "vat_rate",
+  "payment_days",
+  "invoice_prefix",
+  "next_invoice_number",
+  "kleinunternehmer",
 ]);
 
 const CLIENT_COLUMNS = new Set([
-  "name", "address", "postal_code", "city", "country",
-  "email", "phone", "contact_person", "vat_id", "buyer_reference", "notes",
+  "name",
+  "address",
+  "postal_code",
+  "city",
+  "country",
+  "email",
+  "phone",
+  "contact_person",
+  "vat_id",
+  "buyer_reference",
+  "notes",
 ]);
 
 const PROJECT_COLUMNS = new Set([
-  "client_id", "code", "name", "daily_rate", "start_date", "end_date",
-  "budget_days", "service_description", "contract_number", "contract_date", "notes",
+  "client_id",
+  "code",
+  "name",
+  "daily_rate",
+  "start_date",
+  "end_date",
+  "budget_days",
+  "service_description",
+  "contract_number",
+  "contract_date",
+  "notes",
 ]);
 
-const TIME_ENTRY_COLUMNS = new Set([
-  "project_id", "date", "duration", "description", "billable",
-]);
+const TIME_ENTRY_COLUMNS = new Set(["project_id", "date", "duration", "description", "billable"]);
 
 // ─── Generic Safe Update Helper (P1-2 + P3-12) ──────────────────────────────
 
@@ -43,9 +73,7 @@ function safeUpdate(
   data: Record<string, unknown>,
   id: number,
 ): void {
-  const entries = Object.entries(data).filter(
-    ([k, v]) => v !== undefined && allowedColumns.has(k),
-  );
+  const entries = Object.entries(data).filter(([k, v]) => v !== undefined && allowedColumns.has(k));
   if (entries.length === 0) return;
   const fields = entries.map(([k]) => `${k} = ?`).join(", ");
   const values = entries.map(([, v]) => v as SQLValue);
@@ -122,7 +150,9 @@ export function getClient(id: number) {
     .get(id);
 }
 
-export function createClient(data: Omit<Client, "id" | "created_at" | "archived">): number | undefined {
+export function createClient(
+  data: Omit<Client, "id" | "created_at" | "archived">,
+): number | undefined {
   const stmt = db.query(
     `INSERT INTO clients
      (name, address, postal_code, city, country, email, phone, contact_person, vat_id, buyer_reference, notes)
@@ -151,7 +181,10 @@ export function createClient(data: Omit<Client, "id" | "created_at" | "archived"
   return result?.id;
 }
 
-export function updateClient(id: number, data: Partial<Omit<Client, "id" | "created_at" | "archived">>) {
+export function updateClient(
+  id: number,
+  data: Partial<Omit<Client, "id" | "created_at" | "archived">>,
+) {
   safeUpdate("clients", CLIENT_COLUMNS, data as Record<string, unknown>, id);
   appendAuditLog("client", id, "update", data);
 }
@@ -209,7 +242,9 @@ export function getAllActiveProjectsWithClient() {
     .all();
 }
 
-export function createProject(data: Omit<Project, "id" | "created_at" | "archived">): number | undefined {
+export function createProject(
+  data: Omit<Project, "id" | "created_at" | "archived">,
+): number | undefined {
   const stmt = db.query(
     `INSERT INTO projects
      (client_id, code, name, daily_rate, start_date, end_date, budget_days, service_description, contract_number, contract_date, notes)
@@ -238,7 +273,10 @@ export function createProject(data: Omit<Project, "id" | "created_at" | "archive
   return result?.id;
 }
 
-export function updateProject(id: number, data: Partial<Omit<Project, "id" | "created_at" | "archived">>) {
+export function updateProject(
+  id: number,
+  data: Partial<Omit<Project, "id" | "created_at" | "archived">>,
+) {
   safeUpdate("projects", PROJECT_COLUMNS, data as Record<string, unknown>, id);
   appendAuditLog("project", id, "update", data);
 }
@@ -298,7 +336,9 @@ export function getAllUnbilledTimeEntries() {
     .all();
 }
 
-export function createTimeEntry(data: Omit<TimeEntry, "id" | "created_at" | "invoice_id">): number | undefined {
+export function createTimeEntry(
+  data: Omit<TimeEntry, "id" | "created_at" | "invoice_id">,
+): number | undefined {
   const stmt = db.query(
     `INSERT INTO time_entries (project_id, date, duration, description, billable)
      VALUES (?, ?, ?, ?, ?)
@@ -320,7 +360,10 @@ export function createTimeEntry(data: Omit<TimeEntry, "id" | "created_at" | "inv
   return result?.id;
 }
 
-export function updateTimeEntry(id: number, data: Partial<Omit<TimeEntry, "id" | "created_at" | "invoice_id">>) {
+export function updateTimeEntry(
+  id: number,
+  data: Partial<Omit<TimeEntry, "id" | "created_at" | "invoice_id">>,
+) {
   safeUpdate("time_entries", TIME_ENTRY_COLUMNS, data as Record<string, unknown>, id);
   appendAuditLog("time_entry", id, "update", data);
 }
@@ -336,7 +379,11 @@ function roundToEuro(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], settings: Settings): number {
+export function createInvoice(
+  data: InvoiceCreate,
+  timeEntries: TimeEntry[],
+  settings: Settings,
+): number {
   // Wrapped in transaction for atomicity (P1-1)
   return db.transaction(() => {
     // Batch-fetch projects to avoid N+1 (P2-7)
@@ -439,7 +486,9 @@ export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], set
     }
 
     // Update next invoice number
-    db.query("UPDATE settings SET next_invoice_number = next_invoice_number + 1 WHERE id = 1").run();
+    db.query(
+      "UPDATE settings SET next_invoice_number = next_invoice_number + 1 WHERE id = 1",
+    ).run();
 
     // Audit log
     appendAuditLog("invoice", invoiceId, "create", {
@@ -454,11 +503,7 @@ export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], set
 }
 
 export function getInvoice(id: number) {
-  return db
-    .query<Invoice, [number]>(
-      `SELECT * FROM invoices WHERE id = ?`,
-    )
-    .get(id);
+  return db.query<Invoice, [number]>(`SELECT * FROM invoices WHERE id = ?`).get(id);
 }
 
 export function getInvoiceItems(invoiceId: number) {
