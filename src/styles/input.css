@@ -1,2 +1,199 @@
 @import "tailwindcss";
 @source "../**/*.ts";
+
+/* ============================================================
+   DESIGN TOKENS — FREA
+   FREA-Brand: Emerald + Dark Slate
+   Light default, Dark via [data-theme="dark"]
+   ============================================================ */
+
+/* Dark mode via data attribute (not media query) */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@theme {
+  /* Typography — system font stack (no external CDN dependency) */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "Cascadia Code", "Fira Code", monospace;
+
+  /* Primary accent — FREA Emerald */
+  --color-primary: oklch(72% 0.17 165);
+  --color-primary-hover: oklch(65% 0.17 165);
+  --color-primary-subtle: oklch(96% 0.04 165);
+
+  /* Backgrounds */
+  --color-bg-primary: oklch(98.5% 0.003 265);
+  --color-bg-surface: oklch(100% 0 0);
+  --color-bg-surface-raised: oklch(97% 0.005 265);
+
+  /* Borders */
+  --color-border-subtle: oklch(93% 0.006 265);
+  --color-border-medium: oklch(88% 0.01 265);
+
+  /* Text */
+  --color-text-primary: oklch(21% 0.02 265);
+  --color-text-secondary: oklch(45% 0.02 265);
+  --color-text-muted: oklch(65% 0.015 265);
+
+  /* Semantic accents */
+  --color-accent-success: oklch(72% 0.17 165);
+  --color-accent-warning: oklch(72% 0.14 75);
+  --color-accent-danger: oklch(58% 0.18 25);
+  --color-accent-info: oklch(60% 0.14 250);
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+
+  /* Border radii */
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  /* Status badge tokens — Light */
+  --color-status-draft-bg: oklch(95% 0.01 265);
+  --color-status-draft-text: oklch(45% 0.02 265);
+  --color-status-open-bg: oklch(94% 0.06 165);
+  --color-status-open-text: oklch(38% 0.14 165);
+  --color-status-paid-bg: oklch(93% 0.06 155);
+  --color-status-paid-text: oklch(35% 0.14 155);
+  --color-status-overdue-bg: oklch(94% 0.06 25);
+  --color-status-overdue-text: oklch(38% 0.18 25);
+  --color-status-cancelled-bg: oklch(95% 0.01 265);
+  --color-status-cancelled-text: oklch(45% 0.02 265);
+
+  /* Motion */
+  --duration-slow: 300ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Dark mode overrides --- */
+[data-theme="dark"] {
+  --color-primary: oklch(78% 0.18 165);
+  --color-primary-hover: oklch(83% 0.18 165);
+  --color-primary-subtle: oklch(22% 0.06 165);
+
+  --color-bg-primary: oklch(13% 0.015 265);
+  --color-bg-surface: oklch(16% 0.015 265);
+  --color-bg-surface-raised: oklch(20% 0.015 265);
+
+  --color-border-subtle: oklch(22% 0.015 265);
+  --color-border-medium: oklch(28% 0.015 265);
+
+  --color-text-primary: oklch(93% 0.005 265);
+  --color-text-secondary: oklch(65% 0.01 265);
+  --color-text-muted: oklch(45% 0.01 265);
+
+  --color-accent-success: oklch(78% 0.18 165);
+  --color-accent-warning: oklch(78% 0.15 75);
+  --color-accent-danger: oklch(65% 0.2 25);
+  --color-accent-info: oklch(68% 0.16 250);
+
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.15);
+  --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.25), 0 2px 4px -2px rgb(0 0 0 / 0.15);
+
+  --color-status-draft-bg: oklch(25% 0.01 265);
+  --color-status-draft-text: oklch(70% 0.02 265);
+  --color-status-open-bg: oklch(22% 0.06 165);
+  --color-status-open-text: oklch(78% 0.14 165);
+  --color-status-paid-bg: oklch(22% 0.06 155);
+  --color-status-paid-text: oklch(72% 0.14 155);
+  --color-status-overdue-bg: oklch(22% 0.06 25);
+  --color-status-overdue-text: oklch(72% 0.18 25);
+  --color-status-cancelled-bg: oklch(25% 0.01 265);
+  --color-status-cancelled-text: oklch(70% 0.02 265);
+}
+
+/* --- Base styles --- */
+html {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+/* Tabular figures for number alignment */
+.font-mono, .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Smooth transitions for interactive elements */
+a, button, input, select, textarea {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+/* Theme transition (avoids flash on toggle) */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease !important;
+}
+
+/* --- HTMX loading indicators --- */
+.htmx-request .htmx-indicator {
+  display: inline-block;
+}
+.htmx-indicator {
+  display: none;
+}
+
+/* Form dimming during HTMX request */
+form.htmx-request {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Row deletion fade-out */
+tr.htmx-swapping td {
+  opacity: 0;
+  transition: opacity var(--duration-slow) ease-out;
+}
+
+/* New content fade-in */
+.htmx-settling {
+  animation: htmx-settle var(--duration-slow) var(--ease-default);
+}
+@keyframes htmx-settle {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Custom scrollbar --- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-medium);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* --- Animations --- */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* --- Layer Components --- */
+@layer components {
+  .card {
+    @apply bg-bg-surface border border-border-subtle rounded-lg shadow-card;
+  }
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+}
