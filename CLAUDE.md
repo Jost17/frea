@@ -28,6 +28,20 @@ German freelancer invoicing tool — managed by Paperclip agents.
 9. Immutability (spread operator)
 10. Files < 400 lines
 
+## EU Compliance (enforced — ADR-001)
+
+11. Europäische Dienstleister only — kein US-Hosting, kein Google Analytics, kein Google Fonts CDN
+12. Self-host fonts and static assets — keine externen CDN-Requests
+13. WCAG 2.1 AA baseline — alle UI-Komponenten müssen konform sein:
+    - Kontrast ≥ 4.5:1 (Text), ≥ 3:1 (UI-Elemente)
+    - Sichtbarer Fokusring auf allen interaktiven Elementen
+    - Semantisches HTML: `<button>`, `<label>`, `<nav>`, `<main>`, korrekte Heading-Hierarchie
+    - Formular-Labels: jedes Input hat ein assoziiertes `<label>`
+    - `<html lang="de">` gesetzt
+14. Skip-Link im Layout: `<a href="#main-content" class="sr-only focus:not-sr-only">Zum Hauptinhalt</a>`
+
+Full details: `docs/adr/001-eu-compliance.md`
+
 ## Reference
 
 Reference implementation (read-only): `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/freelancer_tool/`
