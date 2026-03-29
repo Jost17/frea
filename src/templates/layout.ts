@@ -54,16 +54,17 @@ export const Layout = ({ title, children, activeNav, overdueCount }: LayoutProps
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>FREA · ${title}</title>
       <link rel="stylesheet" href="/static/styles.css" />
-      <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+      <script src="/static/htmx.min.js"></script>
     </head>
     <body class="h-full">
+      <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-blue-700 focus:rounded focus:shadow">Zum Hauptinhalt</a>
       <nav class="border-b bg-white px-4 py-2">
         <div class="mx-auto max-w-7xl flex items-center gap-1">
           <a href="/" class="mr-4 text-sm font-bold text-gray-900">FREA</a>
           ${navItems.map((item) => navLink(item, activeNav, overdueCount))}
         </div>
       </nav>
-      <main class="mx-auto max-w-7xl px-4 py-6">
+      <main id="main-content" class="mx-auto max-w-7xl px-4 py-6">
         ${children}
       </main>
     </body>
