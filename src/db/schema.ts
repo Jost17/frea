@@ -172,6 +172,23 @@ export function initializeSchema() {
       SELECT RAISE(ABORT, 'GoBD: audit_log records cannot be deleted');
     END
   `);
+
+  // Initialize default settings if not present
+  const existing = db.query("SELECT id FROM settings WHERE id = 1").get();
+  if (!existing) {
+    const companyName = process.env.COMPANY_NAME || "Mein Unternehmen";
+    const email = process.env.EMAIL || "info@example.de";
+    const iban = process.env.IBAN || "DE00000000000000000000";
+    const bic = process.env.BIC || "TESTDEXX";
+    const taxNumber = process.env.TAX_NUMBER || "000000000";
+
+    db.run(
+      `INSERT INTO settings
+       (company_name, email, iban, bic, tax_number, vat_rate, invoice_prefix, payment_days)
+       VALUES (?, ?, ?, ?, ?, 0.19, 'RE', 28)`,
+      [companyName, email, iban, bic, taxNumber],
+    );
+  }
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
