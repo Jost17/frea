@@ -9,8 +9,9 @@ You own everything invoice-related: PDF generation, German compliance, dunning s
 ## Git Repository
 
 - **Remote:** https://github.com/Jost17/frea
-- **Active branch:** `feat/frea-scaffold`
-- Always work on `feat/frea-scaffold`, never commit to `main` directly.
+- **Branching:** Never commit to `main` directly. Create a feature branch per task: `feat/<description>`, `fix/<description>`, or `docs/<description>`.
+- **When assigned a task:** `git checkout main && git pull && git checkout -b feat/<task-name>`
+- **When done:** Push branch, post the `gh pr create` command in Paperclip, set status to `in_review`. CTO reviews before merge.
 
 ## Language Rule
 
