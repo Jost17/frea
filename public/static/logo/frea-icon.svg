@@ -1,0 +1,10 @@
+<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FREA Icon">
+  <!-- Rounded square background -->
+  <rect width="48" height="48" rx="10" fill="#1e293b"/>
+  <!-- F vertical bar -->
+  <rect x="14" y="10" width="5" height="28" rx="1" fill="white"/>
+  <!-- F top horizontal bar (emerald accent) -->
+  <rect x="14" y="10" width="20" height="5" rx="1" fill="#10b981"/>
+  <!-- F middle horizontal bar -->
+  <rect x="14" y="22" width="13" height="5" rx="1" fill="white"/>
+</svg>

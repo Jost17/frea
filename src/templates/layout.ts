@@ -53,6 +53,7 @@ export const Layout = ({ title, children, activeNav, overdueCount }: LayoutProps
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>FREA · ${title}</title>
+      <link rel="icon" type="image/svg+xml" href="/static/logo/frea-favicon.svg" />
       <link rel="stylesheet" href="/static/styles.css" />
       <script src="/static/htmx.min.js"></script>
     </head>
@@ -60,7 +61,9 @@ export const Layout = ({ title, children, activeNav, overdueCount }: LayoutProps
       <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-blue-700 focus:rounded focus:shadow">Zum Hauptinhalt</a>
       <nav class="border-b bg-white px-4 py-2">
         <div class="mx-auto max-w-7xl flex items-center gap-1">
-          <a href="/" class="mr-4 text-sm font-bold text-gray-900">FREA</a>
+          <a href="/" class="mr-4 flex-shrink-0" aria-label="FREA Startseite">
+            <img src="/static/logo/frea-logo-light.svg" alt="FREA" height="32" class="h-8 w-auto" />
+          </a>
           ${navItems.map((item) => navLink(item, activeNav, overdueCount))}
         </div>
       </nav>

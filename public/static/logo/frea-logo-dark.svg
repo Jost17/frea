@@ -1,0 +1,23 @@
+<svg viewBox="0 0 176 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FREA — Freelancing. Ohne Papierkram.">
+  <!-- Dark background -->
+  <rect width="176" height="48" rx="12" fill="#1e293b"/>
+  <!-- Icon mark (no bg needed, reuses parent bg) -->
+  <!-- F vertical bar -->
+  <rect x="14" y="10" width="5" height="28" rx="1" fill="white"/>
+  <!-- F top horizontal bar (emerald accent) -->
+  <rect x="14" y="10" width="20" height="5" rx="1" fill="#10b981"/>
+  <!-- F middle horizontal bar -->
+  <rect x="14" y="22" width="13" height="5" rx="1" fill="white"/>
+  <!-- Wordmark text on dark background -->
+  <text
+    x="44"
+    y="32"
+    font-family="Inter, system-ui, -apple-system, sans-serif"
+    font-size="26"
+    font-weight="700"
+    letter-spacing="-0.5"
+    fill="white"
+  >FREA</text>
+  <!-- Emerald accent dot under the A -->
+  <rect x="134" y="38" width="14" height="3" rx="1.5" fill="#10b981"/>
+</svg>
