@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Data (sensitive - keep local only)
+data/
+
+# Environment (NEVER commit actual values)
+.env
+.env.local
+.env.*.local
+*.env.backup
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build
+dist/
+build/
+public/static/styles.css
