@@ -6,6 +6,7 @@ import { initializeSchema } from "./db/schema";
 import type { AppEnv } from "./env";
 import { globalErrorHandler, globalNotFoundHandler } from "./middleware/error-handler";
 import { navContextMiddleware } from "./middleware/nav-context";
+import { onboardingGuard } from "./middleware/onboarding-guard";
 import { securityHeaders } from "./middleware/security-headers";
 import { apiRoutes } from "./routes/api";
 import { clientRoutes } from "./routes/clients";
@@ -15,7 +16,12 @@ import { projectRoutes } from "./routes/projects";
 import { settingsRoutes } from "./routes/settings";
 import { timeRoutes } from "./routes/times";
 
-initializeSchema();
+try {
+  initializeSchema();
+} catch (err) {
+  console.error("[startup] Schema initialization failed:", err);
+  process.exit(1);
+}
 
 const app = new Hono<AppEnv>();
 
@@ -23,12 +29,15 @@ app.use("*", logger());
 app.use("*", securityHeaders);
 app.use("*", csrf());
 
+app.use("*", onboardingGuard);
+
 // navContextMiddleware scoped to UI routes (executes a DB query)
 app.use("/", navContextMiddleware);
 app.use("/kunden/*", navContextMiddleware);
 app.use("/projekte/*", navContextMiddleware);
 app.use("/zeiten/*", navContextMiddleware);
 app.use("/rechnungen/*", navContextMiddleware);
+app.use("/einstellungen", navContextMiddleware);
 app.use("/einstellungen/*", navContextMiddleware);
 
 app.onError(globalErrorHandler);
