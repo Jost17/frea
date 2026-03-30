@@ -91,7 +91,7 @@ function getNextInvoiceNumber(): string {
   const start = settings.start_number || 1;
 
   // Find all invoice numbers for this year
-  const yearPattern = `${prefix}-${year}-`;
+  const yearPattern = `${prefix}-${year}-%`;
   const existing = db.prepare(
     "SELECT invoice_number FROM invoices WHERE invoice_number LIKE ? ORDER BY invoice_number"
   ).all(yearPattern) as any[];
@@ -122,31 +122,45 @@ function getNextInvoiceNumber(): string {
   return `${prefix}-${year}-${String(next).padStart(3, '0')}`;
 }
 
-// GET /api/invoices — list all (optionally filtered by status)
+// GET /api/invoices — list all (optionally filtered by status), paginated
 invoicesRoute.get('/', (c) => {
   const status = c.req.query('status');
+  const limit = Math.min(parseInt(c.req.query('limit') ?? '100', 10), 500);
+  const offset = parseInt(c.req.query('offset') ?? '0', 10);
 
-  let sql = `
+  const baseSelect = `
     SELECT i.*, c.name as client_name
     FROM invoices i
     LEFT JOIN clients c ON c.id = i.client_id
   `;
-  const params: any[] = [];
 
+  // Build WHERE clause
+  let where = '';
+  const params: any[] = [];
   if (status) {
-    // Handle 'overdue': due_date < today AND status NOT IN (paid, cancelled)
     if (status === 'overdue') {
-      sql += ` WHERE date(i.due_date) < date('now') AND i.status NOT IN ('paid', 'cancelled')`;
+      where = ` WHERE date(i.due_date) < date('now') AND i.status NOT IN ('paid', 'cancelled')`;
     } else {
-      sql += ` WHERE i.status = ?`;
+      where = ` WHERE i.status = ?`;
       params.push(status);
     }
   }
 
-  sql += ` ORDER BY i.created_at DESC`;
+  // Count total (ignoring limit/offset)
+  const totalRow = db.prepare(`SELECT COUNT(*) as cnt FROM invoices i${where}`).get(...params) as any;
+  const total = totalRow?.cnt ?? 0;
 
-  const invoices = db.prepare(sql).all(...params);
-  return c.json(invoices);
+  // Data query with limit/offset
+  const dataSql = `${baseSelect}${where} ORDER BY i.created_at DESC LIMIT ? OFFSET ?`;
+  const invoices = db.prepare(dataSql).all(...params, limit, offset);
+
+  return c.json(invoices, {
+    headers: {
+      'X-Pagination-Total': String(total),
+      'X-Pagination-Limit': String(limit),
+      'X-Pagination-Offset': String(offset),
+    },
+  });
 });
 
 // GET /api/invoices/settings — get invoice settings (must be before /:id to avoid conflict)
@@ -405,6 +419,197 @@ invoicesRoute.post('/:id/mark-paid', async (c) => {
   const invoice = db.prepare('SELECT * FROM invoices WHERE id = ?').get(id);
   const items = db.prepare('SELECT * FROM invoice_items WHERE invoice_id = ?').all(id);
   return c.json({ ...invoice, items });
+});
+
+// POST /api/invoices/from-timeentries — create invoice from time entries
+const FromTimeEntriesSchema = z.object({
+  projectId: z.string().uuid().optional(),
+  clientId: z.string().uuid().optional(),
+  timeEntryIds: z.array(z.string().uuid()).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  vatRate: z.string().default('19'),
+  groupBy: z.enum(['day', 'description', 'project']).default('day'),
+  manualHourlyRate: z.number().min(0).optional(),
+  issueDate: z.string().optional(),
+  dueDate: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+invoicesRoute.post('/from-timeentries', async (c) => {
+  // Accept both JSON (API) and form-encoded (HTMX) submissions
+  const contentType = c.req.header('content-type') ?? '';
+  let body: any;
+  if (contentType.includes('application/json')) {
+    body = await c.req.json().catch(() => ({}));
+  } else {
+    const form = await c.req.parseForm();
+    // Map snake_case form fields to camelCase schema
+    body = {
+      clientId: form.clientId as string || form.client_id as string || undefined,
+      projectId: form.projectId as string || form.project_id as string || undefined,
+      timeEntryIds: form.timeEntryIds
+        ? String(form.timeEntryIds).split(',').filter(Boolean)
+        : undefined,
+      startDate: form.startDate as string || undefined,
+      endDate: form.endDate as string || undefined,
+      vatRate: (form.vatRate as string || form.vat_rate as string) ?? '19',
+      groupBy: (form.groupBy as string) ?? 'day',
+      manualHourlyRate: form.manualHourlyRate
+        ? Number(form.manualHourlyRate)
+        : form.manual_hourly_rate
+          ? Number(form.manual_hourly_rate)
+          : undefined,
+      issueDate: form.issueDate as string || form.issue_date as string || undefined,
+      dueDate: form.dueDate as string || form.due_date as string || undefined,
+      notes: form.notes as string || undefined,
+    };
+  }
+  const parsed = FromTimeEntriesSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: 'Validation failed', details: parsed.error.flatten() }, 400);
+  }
+
+  const { projectId, clientId, timeEntryIds, startDate, endDate, vatRate, groupBy, manualHourlyRate, issueDate, dueDate, notes } = parsed.data;
+
+  // Build time entries query
+  let sql = `
+    SELECT te.*, p.name as project_name, p.hourly_rate, p.client_id, c.name as client_name
+    FROM time_entries te
+    JOIN projects p ON p.id = te.project_id
+    JOIN clients c ON c.id = p.client_id
+    WHERE 1=1
+  `;
+  const params: any[] = [];
+
+  if (timeEntryIds && timeEntryIds.length > 0) {
+    sql += ` AND te.id IN (${timeEntryIds.map(() => '?').join(',')})`;
+    params.push(...timeEntryIds);
+  } else {
+    if (projectId) { sql += ` AND te.project_id = ?`; params.push(projectId); }
+    if (clientId) { sql += ` AND p.client_id = ?`; params.push(clientId); }
+    if (startDate) { sql += ` AND te.date >= ?`; params.push(startDate); }
+    if (endDate) { sql += ` AND te.date <= ?`; params.push(endDate); }
+  }
+
+  const entries = db.prepare(sql).all(...params) as any[];
+  if (entries.length === 0) {
+    return c.json({ error: 'No time entries found for the given filters' }, 400);
+  }
+
+  // Determine client — either explicit or from entries
+  const clientIdFinal = clientId ?? entries[0].client_id;
+  if (!clientIdFinal) return c.json({ error: 'Client ID could not be determined' }, 400);
+
+  // Compute line items based on groupBy
+  const rate = manualHourlyRate ?? entries[0].hourly_rate;
+  let items: any[] = [];
+
+  if (groupBy === 'day') {
+    // Group by date
+    const byDate: Record<string, any[]> = {};
+    for (const e of entries) {
+      if (!byDate[e.date]) byDate[e.date] = [];
+      byDate[e.date].push(e);
+    }
+    for (const [date, group] of Object.entries(byDate)) {
+      const totalMinutes = group.reduce((s: number, e: any) => s + e.duration_minutes, 0);
+      const hours = totalMinutes / 60;
+      const net = Math.round(hours * rate * 100) / 100;
+      const vat = Math.round(net * parseFloat(vatRate) / 100 * 100) / 100;
+      items.push({
+        description: `Leistungen vom ${new Date(date + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}`,
+        quantity: Math.round(hours * 100) / 100,
+        unitPrice: rate,
+        vatRate,
+        net,
+        vat,
+        gross: Math.round((net + vat) * 100) / 100,
+      });
+    }
+  } else if (groupBy === 'description') {
+    // Group by description
+    const byDesc: Record<string, any[]> = {};
+    for (const e of entries) {
+      const key = e.description || '(ohne Beschreibung)';
+      if (!byDesc[key]) byDesc[key] = [];
+      byDesc[key].push(e);
+    }
+    for (const [desc, group] of Object.entries(byDesc)) {
+      const totalMinutes = group.reduce((s: number, e: any) => s + e.duration_minutes, 0);
+      const hours = totalMinutes / 60;
+      const net = Math.round(hours * rate * 100) / 100;
+      const vat = Math.round(net * parseFloat(vatRate) / 100 * 100) / 100;
+      items.push({
+        description: desc,
+        quantity: Math.round(hours * 100) / 100,
+        unitPrice: rate,
+        vatRate,
+        net,
+        vat,
+        gross: Math.round((net + vat) * 100) / 100,
+      });
+    }
+  } else {
+    // Group by project (default)
+    const byProject: Record<string, any[]> = {};
+    for (const e of entries) {
+      if (!byProject[e.project_id]) byProject[e.project_id] = [];
+      byProject[e.project_id].push(e);
+    }
+    for (const [pid, group] of Object.entries(byProject)) {
+      const projectName = group[0].project_name;
+      const totalMinutes = group.reduce((s: number, e: any) => s + e.duration_minutes, 0);
+      const hours = totalMinutes / 60;
+      const net = Math.round(hours * rate * 100) / 100;
+      const vat = Math.round(net * parseFloat(vatRate) / 100 * 100) / 100;
+      items.push({
+        description: `Projekt: ${projectName}`,
+        quantity: Math.round(hours * 100) / 100,
+        unitPrice: rate,
+        vatRate,
+        net,
+        vat,
+        gross: Math.round((net + vat) * 100) / 100,
+      });
+    }
+  }
+
+  // Compute totals
+  const totals = computeTotals(items, vatRate);
+
+  // Dates
+  const issueDateFinal = issueDate ?? new Date().toISOString().split('T')[0];
+  const settings = getInvoiceSettings();
+  const defaultDueDays = settings?.default_due_days ?? 14;
+  const dueDateFinal = dueDate ?? new Date(Date.now() + defaultDueDays * 86400_000).toISOString().split('T')[0];
+
+  const invoiceNumber = getNextInvoiceNumber();
+  const invoiceId = newId();
+
+  db.prepare(`
+    INSERT INTO invoices (id, client_id, invoice_number, status, issue_date, due_date, total_net, total_vat, total_gross, vat_rate, notes)
+    VALUES (?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?)
+  `).run(invoiceId, clientIdFinal, invoiceNumber, issueDateFinal, dueDateFinal, totals.totalNet, totals.totalVat, totals.totalGross, vatRate, notes ?? '');
+
+  const insertItem = db.prepare(`
+    INSERT INTO invoice_items (id, invoice_id, description, quantity, unit_price, vat_rate, net, vat, gross)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const item of items) {
+    insertItem.run(newId(), invoiceId, item.description, item.quantity, item.unitPrice, item.vatRate, item.net, item.vat, item.gross);
+  }
+
+  const invoice = db.prepare(`
+    SELECT i.*, c.name as client_name
+    FROM invoices i LEFT JOIN clients c ON c.id = i.client_id
+    WHERE i.id = ?
+  `).get(invoiceId) as any;
+  const insertedItems = db.prepare('SELECT * FROM invoice_items WHERE invoice_id = ?').all(invoiceId);
+
+  return c.json({ ...invoice, items: insertedItems, timeEntryCount: entries.length }, 201);
 });
 
 export default invoicesRoute;
