@@ -136,6 +136,13 @@ export interface InvoiceItem {
   gross_amount: number;
 }
 
+// Invoice Status Update
+export const invoiceStatusUpdateSchema = z.object({
+  status: z.enum(["sent", "paid", "cancelled"]),
+});
+
+export type InvoiceStatusUpdate = z.infer<typeof invoiceStatusUpdateSchema>;
+
 export interface AuditLog {
   id: number;
   timestamp: string;
