@@ -53,6 +53,6 @@ apiRoutes.patch("/invoices/:id/status", async (c) => {
     throw new AppError(parsed.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
   }
 
-  updateInvoiceStatus(id, parsed.data.status);
+  updateInvoiceStatus(id, parsed.data.status, "api");
   return c.json({ success: true });
 });

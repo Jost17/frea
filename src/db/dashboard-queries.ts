@@ -24,7 +24,8 @@ export function getDashboardStats(): DashboardStats {
           SELECT COALESCE(SUM(gross_amount), 0) AS total
           FROM invoices
           WHERE status IN ('sent', 'paid')
-            AND strftime('%Y-%m', invoice_date) = strftime('%Y-%m', 'now')
+            AND invoice_date >= date('now', 'start of month')
+            AND invoice_date < date('now', 'start of month', '+1 month')
         ),
         cte_clients AS (
           SELECT COUNT(*) AS cnt FROM clients WHERE archived = 0

@@ -143,6 +143,13 @@ export const invoiceStatusUpdateSchema = z.object({
 
 export type InvoiceStatusUpdate = z.infer<typeof invoiceStatusUpdateSchema>;
 
+// Invoice List Filter (GET /api/invoices?status=)
+export const invoiceFilterSchema = z.object({
+  status: z.enum(["open", "overdue", "draft", "sent", "paid", "cancelled"]).optional(),
+});
+
+export type InvoiceFilter = z.infer<typeof invoiceFilterSchema>["status"];
+
 export interface AuditLog {
   id: number;
   timestamp: string;

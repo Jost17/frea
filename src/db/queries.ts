@@ -640,14 +640,16 @@ export function getAllInvoices(status?: string): InvoiceListItem[] {
     .all();
 }
 
-const VALID_TRANSITIONS: Record<string, readonly string[]> = {
+type InvoiceStatus = Invoice["status"];
+
+const VALID_TRANSITIONS: Record<InvoiceStatus, readonly InvoiceStatus[]> = {
   draft: ["sent", "cancelled"],
   sent: ["paid", "cancelled"],
   paid: [],
   cancelled: [],
 };
 
-export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "cancelled"): void {
+export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "cancelled", source: AuditLog["source"] = "web"): void {
   const row = db
     .query<Pick<Invoice, "status">, [number]>("SELECT status FROM invoices WHERE id = ?")
     .get(id);
@@ -656,10 +658,11 @@ export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "ca
     throw new AppError("Rechnung nicht gefunden", 404);
   }
 
-  const allowed = VALID_TRANSITIONS[row.status] ?? [];
+  const currentStatus = row.status as InvoiceStatus;
+  const allowed = VALID_TRANSITIONS[currentStatus] ?? [];
   if (!allowed.includes(newStatus)) {
     throw new AppError(
-      `Statuswechsel von '${row.status}' zu '${newStatus}' nicht erlaubt`,
+      `Statuswechsel von '${currentStatus}' zu '${newStatus}' nicht erlaubt`,
       422,
     );
   }
@@ -670,5 +673,5 @@ export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "ca
     db.query("UPDATE invoices SET status = ? WHERE id = ?").run(newStatus, id);
   }
 
-  appendAuditLog("invoice", id, "status_change", { from: row.status, to: newStatus });
+  appendAuditLog("invoice", id, "status_change", { from: currentStatus, to: newStatus }, source);
 }
