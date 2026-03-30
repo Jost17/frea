@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { db } from "../db/schema";
-import { getAllInvoices, updateInvoiceStatus } from "../db/queries";
+import { getAllInvoices, getSettings, updateInvoiceStatus, updateSettings } from "../db/queries";
 import { AppError } from "../middleware/error-handler";
-import { invoiceStatusUpdateSchema } from "../validation/schemas";
+import { invoiceStatusUpdateSchema, settingsSchema } from "../validation/schemas";
 
 export const apiRoutes = new Hono();
 
@@ -21,6 +21,30 @@ apiRoutes.get("/invoices", (c) => {
   const status = c.req.query("status") || undefined;
   const invoices = getAllInvoices(status);
   return c.json(invoices);
+});
+
+// GET /api/settings/company
+apiRoutes.get("/settings/company", (c) => {
+  const settings = getSettings();
+  if (!settings) {
+    throw new AppError("Einstellungen nicht initialisiert", 500);
+  }
+  return c.json(settings);
+});
+
+// PUT /api/settings/company
+apiRoutes.put("/settings/company", async (c) => {
+  const body = await c.req.json().catch(() => {
+    throw new AppError("Ungültiger JSON-Body", 400);
+  });
+
+  const parsed = settingsSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new AppError(parsed.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+  }
+
+  updateSettings(parsed.data);
+  return c.json({ success: true });
 });
 
 // PATCH /api/invoices/:id/status

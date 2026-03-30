@@ -6,16 +6,28 @@ import { z } from "zod";
 export const settingsSchema = z.object({
   company_name: z.string().min(1, "Firma erforderlich"),
   address: z.string().default(""),
-  postal_code: z.string().default(""),
+  postal_code: z
+    .string()
+    .refine((v) => !v || /^\d{5}$/.test(v), "PLZ muss 5 Ziffern haben")
+    .default(""),
   city: z.string().default(""),
   country: z.string().default("Deutschland"),
   email: z.string().email("Gueltige E-Mail erforderlich"),
   phone: z.string().optional().default(""),
   mobile: z.string().optional().default(""),
   bank_name: z.string().default(""),
-  iban: z.string().min(1, "IBAN erforderlich"),
+  iban: z
+    .string()
+    .min(1, "IBAN erforderlich")
+    .refine((v) => /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(v), "Ungültige IBAN"),
   bic: z.string().min(1, "BIC erforderlich"),
-  tax_number: z.string().min(1, "Steuernummer erforderlich"),
+  tax_number: z
+    .string()
+    .min(1, "Steuernummer erforderlich")
+    .refine(
+      (v) => /^\d{2}\/\d{3}\/\d{5}$/.test(v) || /^\d{10,11}$/.test(v),
+      "Ungültige Steuernummer (Format: 12/345/67890 oder 12345678901)",
+    ),
   ust_id: z.string().optional().default(""),
   vat_rate: z.number().default(0.19),
   payment_days: z.number().default(28),

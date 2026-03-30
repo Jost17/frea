@@ -70,6 +70,22 @@ export function appendAuditLog(
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
+export function isOnboardingComplete(): boolean {
+  const settings = getSettings();
+  if (!settings) return false;
+
+  const companyName = settings.company_name?.trim();
+  if (!companyName || companyName === "Mein Unternehmen") return false;
+  if (!settings.address?.trim()) return false;
+  if (!settings.postal_code?.trim()) return false;
+  if (!settings.city?.trim()) return false;
+
+  const hasTaxId = settings.tax_number?.trim() || settings.ust_id?.trim();
+  if (!hasTaxId) return false;
+
+  return true;
+}
+
 export function getSettings() {
   return db
     .query<Settings, []>(
