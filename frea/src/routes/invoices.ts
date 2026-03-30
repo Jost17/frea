@@ -32,6 +32,21 @@ const UpdateInvoiceSchema = z.object({
   paidAt: z.string().optional(), // ISO timestamp when marked paid
 });
 
+// ---------------------------------------------------------------------------
+// State Machine — valid status transitions
+// ---------------------------------------------------------------------------
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  draft:     ['open', 'cancelled'],
+  open:      ['paid', 'overdue', 'cancelled'],
+  overdue:   ['paid', 'cancelled'],
+  paid:      [],            // terminal — no transitions allowed
+  cancelled: [],            // terminal — no transitions allowed
+};
+
+function isValidTransition(current: string, next: string): boolean {
+  return VALID_TRANSITIONS[current]?.includes(next) ?? false;
+}
+
 // Helper: compute totals
 function computeTotals(items: any[], vatRate: string) {
   let totalNet = 0;
@@ -241,13 +256,22 @@ invoicesRoute.patch('/:id', async (c) => {
   const values: any[] = [];
 
   if (parsed.data.status) {
+    // Enforce state machine — reject invalid transitions
+    if (!isValidTransition(existing.status, parsed.data.status)) {
+      return c.json({
+        error: 'Invalid status transition',
+        detail: `Cannot change from '${existing.status}' to '${parsed.data.status}'. Allowed: ${VALID_TRANSITIONS[existing.status]?.join(', ') || 'none'}`,
+      }, 409);
+    }
+
     updates.push('status = ?');
     values.push(parsed.data.status);
 
     // Auto-set paid_at when marked as paid
     if (parsed.data.status === 'paid') {
+      const paidAt = parsed.data.paidAt ?? new Date().toISOString();
       updates.push('paid_at = ?');
-      values.push(parsed.data.paidAt ?? new Date().toISOString());
+      values.push(paidAt);
     }
   }
   if (parsed.data.issueDate) {
@@ -283,8 +307,16 @@ invoicesRoute.patch('/:id', async (c) => {
 // DELETE /api/invoices/:id
 invoicesRoute.delete('/:id', (c) => {
   const id = c.req.param('id');
-  const existing = db.prepare('SELECT * FROM invoices WHERE id = ?').get(id);
+  const existing = db.prepare('SELECT * FROM invoices WHERE id = ?').get(id) as any;
   if (!existing) return c.json({ error: 'Not found' }, 404);
+
+  // Prevent deletion of paid or cancelled invoices (legal / audit trail)
+  if (existing.status === 'paid' || existing.status === 'cancelled') {
+    return c.json({
+      error: 'Cannot delete invoice',
+      detail: `Invoice is '${existing.status}'. Paid and cancelled invoices are kept for audit purposes.`,
+    }, 409);
+  }
 
   db.prepare('DELETE FROM invoices WHERE id = ?').run(id);
   return c.json({ success: true });
@@ -355,6 +387,14 @@ invoicesRoute.post('/:id/mark-paid', async (c) => {
 
   const existing = db.prepare('SELECT * FROM invoices WHERE id = ?').get(id) as any;
   if (!existing) return c.json({ error: 'Not found' }, 404);
+
+  // Enforce state machine
+  if (!isValidTransition(existing.status, 'paid')) {
+    return c.json({
+      error: 'Invalid status transition',
+      detail: `Cannot mark as paid from '${existing.status}'. Allowed: ${VALID_TRANSITIONS[existing.status]?.join(', ') || 'none'}`,
+    }, 409);
+  }
 
   db.prepare(`
     UPDATE invoices
