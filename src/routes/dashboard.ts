@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { html } from "hono/html";
 import type { AppEnv } from "../env";
 import { Layout } from "../templates/layout";
-import { getDashboardStats } from "../db/queries";
+import { getDashboardStats, type DashboardStats } from "../db/dashboard-queries";
 import { AppError } from "../middleware/error-handler";
 
 export const dashboardRoutes = new Hono<AppEnv>();
@@ -17,7 +17,7 @@ function formatEuro(amount: number): string {
 }
 
 dashboardRoutes.get("/", (c) => {
-  let stats;
+  let stats: DashboardStats;
   try {
     stats = getDashboardStats();
   } catch (err) {
@@ -25,11 +25,13 @@ dashboardRoutes.get("/", (c) => {
     throw new AppError("Dashboard-Daten konnten nicht geladen werden", 500);
   }
 
-  const overdueCount = c.get("overdueCount");
+  // Reuse stats value for nav badge — avoids duplicate overdue query from middleware
+  const overdueCount = stats.overdue_invoices_count;
   const isEmpty =
     stats.open_invoices_count === 0 &&
     stats.active_clients_count === 0 &&
     stats.active_projects_count === 0;
+  const hasOverdue = stats.overdue_invoices_count > 0;
 
   const content = isEmpty
     ? html`
@@ -61,11 +63,11 @@ dashboardRoutes.get("/", (c) => {
             </div>
 
             <!-- Überfällige Rechnungen -->
-            <div class="rounded-lg border ${stats.overdue_invoices_count > 0 ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"} shadow-sm p-4">
-              <p class="text-xs font-medium ${stats.overdue_invoices_count > 0 ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"} uppercase tracking-wide">Überfällig</p>
-              <p class="mt-2 text-2xl font-semibold ${stats.overdue_invoices_count > 0 ? "text-red-700 dark:text-red-300" : "text-gray-400 dark:text-gray-500"}">${stats.overdue_invoices_count}</p>
-              <p class="mt-1 text-sm ${stats.overdue_invoices_count > 0 ? "text-red-600 dark:text-red-400" : "text-gray-400 dark:text-gray-500"}">
-                ${stats.overdue_invoices_count > 0 ? "Rechnungen überfällig" : "Keine überfälligen Rechnungen"}
+            <div class="rounded-lg border ${hasOverdue ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"} shadow-sm p-4">
+              <p class="text-xs font-medium ${hasOverdue ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"} uppercase tracking-wide">Überfällig</p>
+              <p class="mt-2 text-2xl font-semibold ${hasOverdue ? "text-red-700 dark:text-red-300" : "text-gray-400 dark:text-gray-500"}">${stats.overdue_invoices_count}</p>
+              <p class="mt-1 text-sm ${hasOverdue ? "text-red-600 dark:text-red-400" : "text-gray-400 dark:text-gray-500"}">
+                ${hasOverdue ? "Rechnungen überfällig" : "Keine überfälligen Rechnungen"}
               </p>
             </div>
 
