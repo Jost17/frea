@@ -58,7 +58,7 @@ function OnboardingPage(errorMsg?: string) {
     <main id="main-content" class="w-full max-w-xl">
       <div class="mb-8 text-center">
         <h1 class="text-3xl font-bold text-text-primary">Willkommen bei FREA</h1>
-        <p class="mt-2 text-text-secondary">Bitte trage deine Firmendaten ein, um loszulegen.</p>
+        <p class="mt-2 text-text-secondary">Richte dein Freelancer-Tool in 2 Minuten ein. Du brauchst nur deine Firmendaten und Bankverbindung.</p>
       </div>
 
       ${
@@ -83,6 +83,7 @@ function OnboardingPage(errorMsg?: string) {
                 autocomplete="organization"
                 class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
+              <p class="mt-1 text-xs text-gray-500">So erscheinst du auf deinen Rechnungen.</p>
             </div>
             <div>
               <label for="address" class="block text-sm font-medium text-gray-700">Straße und Hausnummer *</label>
@@ -131,13 +132,14 @@ function OnboardingPage(errorMsg?: string) {
                 autocomplete="email"
                 class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
+              <p class="mt-1 text-xs text-gray-500">Für Rechnungsversand und Kontakt.</p>
             </div>
           </div>
         </fieldset>
 
         <fieldset>
           <legend class="mb-4 text-lg font-semibold text-gray-900">Steuerdaten</legend>
-          <p class="mb-3 text-sm text-gray-500">Mindestens eines der beiden Felder ist erforderlich.</p>
+          <p class="mb-3 text-sm text-gray-500">Mindestens Steuernummer oder Ust-IdNr. angeben.</p>
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label for="tax_number" class="block text-sm font-medium text-gray-700">Steuernummer</label>
@@ -148,6 +150,7 @@ function OnboardingPage(errorMsg?: string) {
                 placeholder="12/345/67890"
                 class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
+              <p class="mt-1 text-xs text-gray-500">Vom Finanzamt zugeteilte Nummer.</p>
             </div>
             <div>
               <label for="ust_id" class="block text-sm font-medium text-gray-700">Ust-IdNr.</label>
@@ -158,6 +161,7 @@ function OnboardingPage(errorMsg?: string) {
                 placeholder="DE123456789"
                 class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
+              <p class="mt-1 text-xs text-gray-500">Nur nötig wenn du EU-weit Rechnungen stellst.</p>
             </div>
           </div>
           <div class="mt-4 flex items-center">
@@ -172,6 +176,7 @@ function OnboardingPage(errorMsg?: string) {
               Kleinunternehmer (§19 UStG)
             </label>
           </div>
+          <p class="mt-1 ml-6 text-xs text-gray-500">Aktivieren, wenn du keine MwSt. ausweist.</p>
         </fieldset>
 
         <fieldset>
@@ -198,6 +203,7 @@ function OnboardingPage(errorMsg?: string) {
                   autocomplete="off"
                   class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm font-mono focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
+                <p class="mt-1 text-xs text-gray-500">Wird auf deinen Rechnungen abgedruckt.</p>
               </div>
               <div>
                 <label for="bic" class="block text-sm font-medium text-gray-700">BIC *</label>
