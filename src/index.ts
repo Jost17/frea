@@ -6,8 +6,8 @@ import { initializeSchema } from "./db/schema";
 import type { AppEnv } from "./env";
 import { globalErrorHandler, globalNotFoundHandler } from "./middleware/error-handler";
 import { navContextMiddleware } from "./middleware/nav-context";
+import { onboardingGuard } from "./middleware/onboarding-guard";
 import { securityHeaders } from "./middleware/security-headers";
-import { isOnboardingComplete } from "./db/queries";
 import { apiRoutes } from "./routes/api";
 import { clientRoutes } from "./routes/clients";
 import { dashboardRoutes } from "./routes/dashboard";
@@ -16,7 +16,12 @@ import { projectRoutes } from "./routes/projects";
 import { settingsRoutes } from "./routes/settings";
 import { timeRoutes } from "./routes/times";
 
-initializeSchema();
+try {
+  initializeSchema();
+} catch (err) {
+  console.error("[startup] Schema initialization failed:", err);
+  process.exit(1);
+}
 
 const app = new Hono<AppEnv>();
 
@@ -24,16 +29,7 @@ app.use("*", logger());
 app.use("*", securityHeaders);
 app.use("*", csrf());
 
-// Onboarding-Guard: redirect to /einstellungen until setup is complete
-app.use("*", async (c, next) => {
-  const path = new URL(c.req.url).pathname;
-  const isSettingsPath = path.startsWith("/einstellungen");
-  const isStaticPath = path.startsWith("/static") || path.startsWith("/api");
-  if (!isSettingsPath && !isStaticPath && !isOnboardingComplete()) {
-    return c.redirect("/einstellungen?onboarding=1");
-  }
-  return next();
-});
+app.use("*", onboardingGuard);
 
 // navContextMiddleware scoped to UI routes (executes a DB query)
 app.use("/", navContextMiddleware);
@@ -41,6 +37,7 @@ app.use("/kunden/*", navContextMiddleware);
 app.use("/projekte/*", navContextMiddleware);
 app.use("/zeiten/*", navContextMiddleware);
 app.use("/rechnungen/*", navContextMiddleware);
+app.use("/einstellungen", navContextMiddleware);
 app.use("/einstellungen/*", navContextMiddleware);
 
 app.onError(globalErrorHandler);

@@ -3,7 +3,9 @@ import { html } from "hono/html";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
 import { completeOnboarding, getSettings, isOnboardingComplete, updateSettings } from "../db/queries";
+import { invalidateOnboardingCache } from "../middleware/onboarding-guard";
 import { settingsSchema } from "../validation/schemas";
+import { ZodError } from "zod";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
 
@@ -34,7 +36,7 @@ settingsRoutes.get("/", (c) => {
       throw new AppError("Einstellungen nicht initialisiert", 500);
     }
 
-    const onboarding = c.req.query("onboarding") === "1" || !isOnboardingComplete();
+    const onboarding = !isOnboardingComplete();
     const overdueCount = c.get("overdueCount");
     return c.html(
       Layout({
@@ -323,15 +325,16 @@ settingsRoutes.post("/", async (c) => {
 
     if (firstSetup) {
       completeOnboarding();
+      invalidateOnboardingCache();
       return c.redirect("/?onboarding_done=1");
     }
 
     return c.redirect("/einstellungen?success=1");
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[settings POST] Validation error:", err);
-      throw new AppError(err.message, 400);
+    if (err instanceof ZodError) {
+      console.error("[settings POST] Validation error:", err.flatten());
+      throw new AppError("Ungültige Eingabe: " + err.issues.map((i) => i.message).join(", "), 400);
     }
-    return logAndRespond(c, err, "Einstellungen konnte nicht gespeichert werden", 500);
+    return logAndRespond(c, err, "Einstellungen konnten nicht gespeichert werden", 500);
   }
 });

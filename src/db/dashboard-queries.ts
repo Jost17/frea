@@ -1,5 +1,18 @@
 import { db } from "./schema";
 
+// ─── Overdue Count (used by nav-context middleware) ──────────────────────────
+
+export function getOverdueInvoiceCount(): number {
+  const result = db
+    .query<{ count: number }, []>(
+      `SELECT COUNT(*) as count FROM invoices
+       WHERE status IN ('draft', 'sent')
+       AND due_date < date('now')`,
+    )
+    .get();
+  return result?.count ?? 0;
+}
+
 // ─── Dashboard Aggregation ────────────────────────────────────────────────────
 
 export interface DashboardStats {
@@ -49,13 +62,10 @@ export function getDashboardStats(): DashboardStats {
     )
     .get();
 
-  // Fallback: wenn DB leer, alle Werte 0
-  return row ?? {
-    open_invoices_count: 0,
-    open_invoices_sum: 0,
-    revenue_current_month: 0,
-    active_clients_count: 0,
-    active_projects_count: 0,
-    overdue_invoices_count: 0,
-  };
+  // CTEs with COUNT(*)/COALESCE always return a row — null means a DB/schema problem
+  if (!row) {
+    throw new Error("Dashboard-Statistiken konnten nicht berechnet werden (keine Daten von DB)");
+  }
+
+  return row;
 }

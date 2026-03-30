@@ -174,9 +174,15 @@ export function initializeSchema() {
   `);
 
   // Migration: add onboarding_complete column if not present (safe for existing DBs)
-  const settingsCols = db.query<{ name: string }, []>("PRAGMA table_info(settings)").all();
-  if (!settingsCols.some((c) => c.name === "onboarding_complete")) {
-    db.run("ALTER TABLE settings ADD COLUMN onboarding_complete INTEGER DEFAULT 0");
+  try {
+    const settingsCols = db.query<{ name: string }, []>("PRAGMA table_info(settings)").all();
+    if (!settingsCols.some((c) => c.name === "onboarding_complete")) {
+      db.run("ALTER TABLE settings ADD COLUMN onboarding_complete INTEGER DEFAULT 0");
+      console.log("[migration] Added onboarding_complete column to settings");
+    }
+  } catch (err) {
+    console.error("[migration] Failed to add onboarding_complete column:", err);
+    throw new Error("Database migration failed: could not add onboarding_complete column", { cause: err });
   }
 
   // Initialize default settings if not present
