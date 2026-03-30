@@ -153,6 +153,7 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_time_entries_invoice ON time_entries(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoices_status_due ON invoices(status, due_date)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_invoices_status_date ON invoices(status, invoice_date DESC)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id)");
 

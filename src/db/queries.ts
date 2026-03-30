@@ -8,6 +8,7 @@ import type {
   Settings,
   TimeEntry,
 } from "../validation/schemas";
+import { AppError } from "../middleware/error-handler";
 import { db } from "./schema";
 
 // ─── Column Allowlists (SQL injection prevention) ─────────────────────────────
@@ -589,4 +590,88 @@ export function getInvoiceItems(invoiceId: number) {
       `SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY period_start`,
     )
     .all(invoiceId);
+}
+
+// ─── Invoice List + Status ────────────────────────────────────────────────────
+
+export interface InvoiceListItem {
+  id: number;
+  invoice_number: string;
+  client_name: string;
+  invoice_date: string;
+  due_date: string;
+  gross_amount: number;
+  status: "draft" | "sent" | "paid" | "cancelled";
+  paid_date: string | null;
+}
+
+export function getAllInvoices(status?: string): InvoiceListItem[] {
+  const base = `
+    SELECT i.id, i.invoice_number, c.name as client_name,
+           i.invoice_date, i.due_date, i.gross_amount, i.status, i.paid_date
+    FROM invoices i
+    JOIN clients c ON i.client_id = c.id`;
+
+  if (status === "open") {
+    return db
+      .query<InvoiceListItem, []>(
+        `${base} WHERE i.status IN ('draft', 'sent') ORDER BY i.invoice_date DESC`,
+      )
+      .all();
+  }
+  if (status === "overdue") {
+    return db
+      .query<InvoiceListItem, []>(
+        `${base} WHERE i.due_date < date('now') AND i.status IN ('draft', 'sent') ORDER BY i.invoice_date DESC`,
+      )
+      .all();
+  }
+  if (status) {
+    return db
+      .query<InvoiceListItem, [string]>(
+        `${base} WHERE i.status = ? ORDER BY i.invoice_date DESC`,
+      )
+      .all(status);
+  }
+  return db
+    .query<InvoiceListItem, []>(
+      `${base} ORDER BY i.invoice_date DESC`,
+    )
+    .all();
+}
+
+type InvoiceStatus = Invoice["status"];
+
+const VALID_TRANSITIONS: Record<InvoiceStatus, readonly InvoiceStatus[]> = {
+  draft: ["sent", "cancelled"],
+  sent: ["paid", "cancelled"],
+  paid: [],
+  cancelled: [],
+};
+
+export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "cancelled", source: AuditLog["source"] = "web"): void {
+  const row = db
+    .query<Pick<Invoice, "status">, [number]>("SELECT status FROM invoices WHERE id = ?")
+    .get(id);
+
+  if (!row) {
+    throw new AppError("Rechnung nicht gefunden", 404);
+  }
+
+  const currentStatus = row.status as InvoiceStatus;
+  const allowed = VALID_TRANSITIONS[currentStatus] ?? [];
+  if (!allowed.includes(newStatus)) {
+    throw new AppError(
+      `Statuswechsel von '${currentStatus}' zu '${newStatus}' nicht erlaubt`,
+      422,
+    );
+  }
+
+  if (newStatus === "paid") {
+    db.query("UPDATE invoices SET status = ?, paid_date = date('now') WHERE id = ?").run(newStatus, id);
+  } else {
+    db.query("UPDATE invoices SET status = ? WHERE id = ?").run(newStatus, id);
+  }
+
+  appendAuditLog("invoice", id, "status_change", { from: currentStatus, to: newStatus }, source);
 }

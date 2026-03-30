@@ -136,6 +136,20 @@ export interface InvoiceItem {
   gross_amount: number;
 }
 
+// Invoice Status Update
+export const invoiceStatusUpdateSchema = z.object({
+  status: z.enum(["sent", "paid", "cancelled"]),
+});
+
+export type InvoiceStatusUpdate = z.infer<typeof invoiceStatusUpdateSchema>;
+
+// Invoice List Filter (GET /api/invoices?status=)
+export const invoiceFilterSchema = z.object({
+  status: z.enum(["open", "overdue", "draft", "sent", "paid", "cancelled"]).optional(),
+});
+
+export type InvoiceFilter = z.infer<typeof invoiceFilterSchema>["status"];
+
 export interface AuditLog {
   id: number;
   timestamp: string;

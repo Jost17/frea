@@ -24,7 +24,7 @@ app.use("*", securityHeaders);
 app.use("*", csrf());
 
 // navContextMiddleware scoped to UI routes (executes a DB query)
-app.use("/", navContextMiddleware);
+// "/" excluded — dashboard computes its own stats via getDashboardStats()
 app.use("/kunden/*", navContextMiddleware);
 app.use("/projekte/*", navContextMiddleware);
 app.use("/zeiten/*", navContextMiddleware);
