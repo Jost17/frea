@@ -7,6 +7,7 @@ import type { AppEnv } from "./env";
 import { globalErrorHandler, globalNotFoundHandler } from "./middleware/error-handler";
 import { navContextMiddleware } from "./middleware/nav-context";
 import { onboardingGuard } from "./middleware/onboarding-guard";
+import { onboardingRoutes } from "./routes/onboarding";
 import { securityHeaders } from "./middleware/security-headers";
 import { apiRoutes } from "./routes/api";
 import { clientRoutes } from "./routes/clients";
@@ -43,6 +44,7 @@ app.use("/static/*", async (c, next) => {
 });
 app.use("/static/*", serveStatic({ root: "./public" }));
 
+app.route("/onboarding", onboardingRoutes);
 app.route("/", dashboardRoutes);
 app.route("/kunden", clientRoutes);
 app.route("/projekte", projectRoutes);
