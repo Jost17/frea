@@ -3,38 +3,50 @@ import { z } from "zod";
 // ─── Input Schemas (Zod) ──────────────────────────────────────────────────────
 
 // Settings
-export const settingsSchema = z.object({
-  company_name: z.string().min(1, "Firma erforderlich"),
-  address: z.string().default(""),
-  postal_code: z
-    .string()
-    .refine((v) => !v || /^\d{5}$/.test(v), "PLZ muss 5 Ziffern haben")
-    .default(""),
-  city: z.string().default(""),
-  country: z.string().default("Deutschland"),
-  email: z.string().email("Gueltige E-Mail erforderlich"),
-  phone: z.string().optional().default(""),
-  mobile: z.string().optional().default(""),
-  bank_name: z.string().default(""),
-  iban: z
-    .string()
-    .min(1, "IBAN erforderlich")
-    .refine((v) => /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(v), "Ungültige IBAN"),
-  bic: z.string().min(1, "BIC erforderlich"),
-  tax_number: z
-    .string()
-    .min(1, "Steuernummer erforderlich")
-    .refine(
-      (v) => /^\d{2}\/\d{3}\/\d{5}$/.test(v) || /^\d{10,11}$/.test(v),
-      "Ungültige Steuernummer (Format: 12/345/67890 oder 12345678901)",
-    ),
-  ust_id: z.string().optional().default(""),
-  vat_rate: z.number().default(0.19),
-  payment_days: z.number().default(28),
-  invoice_prefix: z.string().default("RE"),
-  next_invoice_number: z.number().default(1),
-  kleinunternehmer: z.number().default(0),
-});
+export const settingsSchema = z
+  .object({
+    company_name: z.string().min(1, "Firma erforderlich"),
+    address: z.string().default(""),
+    postal_code: z
+      .string()
+      .refine((v) => !v || /^\d{5}$/.test(v), "PLZ muss 5 Ziffern haben")
+      .default(""),
+    city: z.string().default(""),
+    country: z.string().default("Deutschland"),
+    email: z.string().email("Gueltige E-Mail erforderlich"),
+    phone: z.string().optional().default(""),
+    mobile: z.string().optional().default(""),
+    bank_name: z.string().default(""),
+    iban: z
+      .string()
+      .min(1, "IBAN erforderlich")
+      .refine((v) => /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(v), "Ungültige IBAN"),
+    bic: z.string().min(1, "BIC erforderlich"),
+    // Optional individually — cross-field rule: at least one of tax_number or ust_id required.
+    tax_number: z
+      .string()
+      .optional()
+      .default("")
+      .refine(
+        (v) => !v || /^\d{2}\/\d{3}\/\d{5}$/.test(v) || /^\d{10,11}$/.test(v),
+        "Ungültige Steuernummer (Format: 12/345/67890 oder 12345678901)",
+      ),
+    ust_id: z.string().optional().default(""),
+    vat_rate: z.number().default(0.19),
+    payment_days: z.number().default(28),
+    invoice_prefix: z.string().default("RE"),
+    next_invoice_number: z.number().default(1),
+    kleinunternehmer: z.number().default(0),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.tax_number?.trim() && !data.ust_id?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Steuernummer oder Ust-IdNr. ist erforderlich",
+        path: ["tax_number"],
+      });
+    }
+  });
 
 export type Settings = z.infer<typeof settingsSchema> & { id: number };
 
