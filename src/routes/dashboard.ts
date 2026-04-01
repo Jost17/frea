@@ -3,6 +3,7 @@ import { html } from "hono/html";
 import type { AppEnv } from "../env";
 import { Layout } from "../templates/layout";
 import { getDashboardStats, type DashboardStats } from "../db/dashboard-queries";
+import { isFirstTimeUser } from "../db/queries";
 import { AppError } from "../middleware/error-handler";
 
 export const dashboardRoutes = new Hono<AppEnv>();
@@ -18,8 +19,10 @@ function formatEuro(amount: number): string {
 
 dashboardRoutes.get("/", (c) => {
   let stats: DashboardStats;
+  let firstTime: boolean;
   try {
     stats = getDashboardStats();
+    firstTime = isFirstTimeUser();
   } catch (err) {
     console.error("[dashboard] Failed to load stats:", err);
     throw new AppError("Dashboard-Daten konnten nicht geladen werden", 500);
@@ -33,10 +36,32 @@ dashboardRoutes.get("/", (c) => {
     stats.active_projects_count === 0;
   const hasOverdue = stats.overdue_invoices_count > 0;
 
+  const firstTimeHint = firstTime
+    ? html`
+        <div
+          class="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4"
+          role="note"
+          aria-label="Erste Schritte"
+        >
+          <p class="text-sm font-medium text-blue-900 dark:text-blue-100">Alles eingerichtet.</p>
+          <p class="mt-1 text-sm text-blue-800 dark:text-blue-200">
+            Leg jetzt deinen ersten Kunden an — danach kannst du Projekte erstellen und Zeiten erfassen.
+          </p>
+          <a
+            href="/kunden/new"
+            class="mt-2 inline-block text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline"
+          >
+            Ersten Kunden anlegen →
+          </a>
+        </div>
+      `
+    : "";
+
   const content = isEmpty
     ? html`
         <div class="space-y-6">
           <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Dashboard</h1>
+          ${firstTimeHint}
           <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 text-center">
             <p class="text-gray-500 dark:text-gray-400 text-sm">
               Noch keine Daten vorhanden. Lege zunächst Kunden und Projekte an.

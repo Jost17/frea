@@ -223,7 +223,7 @@ function OnboardingPage(errorMsg?: string) {
         <div class="flex justify-end border-t border-gray-200 pt-6">
           <button
             type="submit"
-            class="rounded bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            class="rounded-md bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
           >
             Einrichtung abschließen
           </button>
