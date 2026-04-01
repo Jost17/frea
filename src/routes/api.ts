@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { getAllInvoices, getSettings, updateInvoiceStatus, updateSettings } from "../db/queries";
 import { db } from "../db/schema";
+import { getDashboardStats } from "../db/dashboard-queries";
 import { AppError, logAndRespond } from "../middleware/error-handler";
 import { VALID_INVOICE_FILTER_VALUES, invoiceStatusUpdateSchema, settingsSchema } from "../validation/schemas";
 
@@ -28,6 +29,16 @@ apiRoutes.get("/health", (c) => {
   } catch (err) {
     console.error("[health] DB check failed:", err);
     return c.json({ status: "error", db: "unavailable" }, 503);
+  }
+});
+
+apiRoutes.get("/dashboard/stats", (c) => {
+  try {
+    const stats = getDashboardStats();
+    return c.json(stats);
+  } catch (err) {
+    console.error("[dashboard/stats] Query failed:", err);
+    throw new AppError("Dashboard-Daten konnten nicht geladen werden", 500);
   }
 });
 

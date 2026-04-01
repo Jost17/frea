@@ -1,81 +1,34 @@
-import { AppError } from "../middleware/error-handler";
-import type {
-  AuditLog,
-  Client,
-  Invoice,
-  InvoiceCreate,
-  InvoiceItem,
-  InvoiceListItem,
-  Project,
-  Settings,
-  TimeEntry,
-} from "../validation/schemas";
-import { onboardingCompletionSchema } from "../validation/schemas";
 import { db } from "./schema";
+import type {
+  Settings,
+  Client,
+  Project,
+  TimeEntry,
+  AuditLog,
+} from "../validation/schemas";
 
 // ─── Column Allowlists (SQL injection prevention) ─────────────────────────────
 
 const SETTINGS_COLUMNS = new Set([
-  "company_name",
-  "address",
-  "postal_code",
-  "city",
-  "country",
-  "email",
-  "phone",
-  "mobile",
-  "bank_name",
-  "iban",
-  "bic",
-  "tax_number",
-  "ust_id",
-  "vat_rate",
-  "payment_days",
-  "invoice_prefix",
-  "next_invoice_number",
-  "kleinunternehmer",
+  "company_name", "address", "postal_code", "city", "country",
+  "email", "phone", "mobile", "bank_name", "iban", "bic",
+  "tax_number", "ust_id", "vat_rate", "payment_days",
+  "invoice_prefix", "next_invoice_number", "kleinunternehmer",
 ]);
 
 const CLIENT_COLUMNS = new Set([
-  "name",
-  "address",
-  "postal_code",
-  "city",
-  "country",
-  "email",
-  "phone",
-  "contact_person",
-  "vat_id",
-  "buyer_reference",
-  "notes",
+  "name", "address", "postal_code", "city", "country",
+  "email", "phone", "contact_person", "vat_id", "buyer_reference", "notes",
 ]);
 
 const PROJECT_COLUMNS = new Set([
-  "client_id",
-  "code",
-  "name",
-  "daily_rate",
-  "start_date",
-  "end_date",
-  "budget_days",
-  "service_description",
-  "contract_number",
-  "contract_date",
-  "notes",
+  "client_id", "code", "name", "daily_rate", "start_date", "end_date",
+  "budget_days", "service_description", "contract_number", "contract_date", "notes",
 ]);
 
-const TIME_ENTRY_COLUMNS = new Set(["project_id", "date", "duration", "description", "billable"]);
-
-// ─── Onboarding completion cache ─────────────────────────────────────────────
-// The onboardingGuard queries this on every request. Since the settings row only
-// changes when updateSettings() is called, we cache the result process-wide and
-// invalidate on write. This eliminates the repeated SELECT on every page load.
-
-let _onboardingCompleteCache: boolean | null = null;
-
-export function invalidateOnboardingCache(): void {
-  _onboardingCompleteCache = null;
-}
+const TIME_ENTRY_COLUMNS = new Set([
+  "project_id", "date", "duration", "description", "billable",
+]);
 
 // ─── Generic Safe Update Helper (P1-2 + P3-12) ──────────────────────────────
 
@@ -87,7 +40,9 @@ function safeUpdate(
   data: Record<string, unknown>,
   id: number,
 ): void {
-  const entries = Object.entries(data).filter(([k, v]) => v !== undefined && allowedColumns.has(k));
+  const entries = Object.entries(data).filter(
+    ([k, v]) => v !== undefined && allowedColumns.has(k),
+  );
   if (entries.length === 0) return;
   const fields = entries.map(([k]) => `${k} = ?`).join(", ");
   const values = entries.map(([, v]) => v as SQLValue);
@@ -116,23 +71,6 @@ export function isFirstTimeUser(): boolean {
   return (result?.count ?? 0) === 0;
 }
 
-export function isOnboardingComplete(): boolean {
-  if (_onboardingCompleteCache !== null) return _onboardingCompleteCache;
-
-  const settings = getSettings();
-  if (!settings) {
-    _onboardingCompleteCache = false;
-    return false;
-  }
-
-  // Single source of truth: onboardingCompletionSchema defines which fields are required.
-  // Adding a new required field to the schema automatically updates this check.
-  const complete = onboardingCompletionSchema.safeParse(settings).success;
-
-  _onboardingCompleteCache = complete;
-  return complete;
-}
-
 export function getSettings() {
   return db
     .query<Settings, []>(
@@ -148,21 +86,29 @@ export function getSettings() {
 
 export function updateSettings(data: Partial<Settings>): void {
   safeUpdate("settings", SETTINGS_COLUMNS, data as Record<string, unknown>, 1);
-  invalidateOnboardingCache();
 }
 
-// ─── Invoices (overdue count) ────────────────────────────────────────────────
-
-export function getOverdueInvoiceCount(): number {
-  const result = db
-    .query<{ count: number }, []>(
-      `SELECT COUNT(*) as count FROM invoices
-       WHERE status IN ('draft', 'sent')
-       AND due_date < date('now')`,
+export function isOnboardingComplete(): boolean {
+  const row = db
+    .query<{ onboarding_complete: number }, []>(
+      "SELECT onboarding_complete FROM settings WHERE id = 1",
     )
     .get();
-  return result?.count ?? 0;
+  if (!row) {
+    throw new Error("Settings row (id=1) not found — database may be corrupted");
+  }
+  return row.onboarding_complete === 1;
 }
+
+export function completeOnboarding(): void {
+  const result = db.query("UPDATE settings SET onboarding_complete = 1 WHERE id = 1").run();
+  if (result.changes === 0) {
+    throw new Error("Failed to mark onboarding as complete: settings row not found");
+  }
+}
+
+// ─── Invoices (overdue count) — re-exported from dashboard-queries ───────────
+export { getOverdueInvoiceCount } from "./dashboard-queries";
 
 // ─── Clients ─────────────────────────────────────────────────────────────────
 
@@ -187,9 +133,7 @@ export function getClient(id: number) {
     .get(id);
 }
 
-export function createClient(
-  data: Omit<Client, "id" | "created_at" | "archived">,
-): number | undefined {
+export function createClient(data: Omit<Client, "id" | "created_at" | "archived">): number | undefined {
   const stmt = db.query(
     `INSERT INTO clients
      (name, address, postal_code, city, country, email, phone, contact_person, vat_id, buyer_reference, notes)
@@ -218,10 +162,7 @@ export function createClient(
   return result?.id;
 }
 
-export function updateClient(
-  id: number,
-  data: Partial<Omit<Client, "id" | "created_at" | "archived">>,
-) {
+export function updateClient(id: number, data: Partial<Omit<Client, "id" | "created_at" | "archived">>) {
   safeUpdate("clients", CLIENT_COLUMNS, data as Record<string, unknown>, id);
   appendAuditLog("client", id, "update", data);
 }
@@ -279,9 +220,7 @@ export function getAllActiveProjectsWithClient() {
     .all();
 }
 
-export function createProject(
-  data: Omit<Project, "id" | "created_at" | "archived">,
-): number | undefined {
+export function createProject(data: Omit<Project, "id" | "created_at" | "archived">): number | undefined {
   const stmt = db.query(
     `INSERT INTO projects
      (client_id, code, name, daily_rate, start_date, end_date, budget_days, service_description, contract_number, contract_date, notes)
@@ -310,10 +249,7 @@ export function createProject(
   return result?.id;
 }
 
-export function updateProject(
-  id: number,
-  data: Partial<Omit<Project, "id" | "created_at" | "archived">>,
-) {
+export function updateProject(id: number, data: Partial<Omit<Project, "id" | "created_at" | "archived">>) {
   safeUpdate("projects", PROJECT_COLUMNS, data as Record<string, unknown>, id);
   appendAuditLog("project", id, "update", data);
 }
@@ -373,9 +309,7 @@ export function getAllUnbilledTimeEntries() {
     .all();
 }
 
-export function createTimeEntry(
-  data: Omit<TimeEntry, "id" | "created_at" | "invoice_id">,
-): number | undefined {
+export function createTimeEntry(data: Omit<TimeEntry, "id" | "created_at" | "invoice_id">): number | undefined {
   const stmt = db.query(
     `INSERT INTO time_entries (project_id, date, duration, description, billable)
      VALUES (?, ?, ?, ?, ?)
@@ -397,10 +331,7 @@ export function createTimeEntry(
   return result?.id;
 }
 
-export function updateTimeEntry(
-  id: number,
-  data: Partial<Omit<TimeEntry, "id" | "created_at" | "invoice_id">>,
-) {
+export function updateTimeEntry(id: number, data: Partial<Omit<TimeEntry, "id" | "created_at" | "invoice_id">>) {
   safeUpdate("time_entries", TIME_ENTRY_COLUMNS, data as Record<string, unknown>, id);
   appendAuditLog("time_entry", id, "update", data);
 }
@@ -410,212 +341,5 @@ export function deleteTimeEntry(id: number) {
   appendAuditLog("time_entry", id, "delete", null);
 }
 
-// ─── Invoices ────────────────────────────────────────────────────────────────
-
-function roundToEuro(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-export function createInvoice(
-  data: InvoiceCreate,
-  timeEntries: TimeEntry[],
-  settings: Settings,
-): number {
-  // Wrapped in transaction for atomicity (P1-1)
-  return db.transaction(() => {
-    // Batch-fetch projects to avoid N+1 (P2-7)
-    const uniqueProjectIds = [...new Set(timeEntries.map((e) => e.project_id))];
-    const placeholders = uniqueProjectIds.map(() => "?").join(",");
-    const projects = db
-      .query<Project, number[]>(
-        `SELECT id, client_id, code, name, daily_rate, start_date, end_date, budget_days,
-                service_description, contract_number, contract_date, notes, created_at, archived
-         FROM projects WHERE id IN (${placeholders})`,
-      )
-      .all(...uniqueProjectIds);
-    const projectMap = new Map(projects.map((p) => [p.id, p]));
-
-    // Calculate totals PER LINE ITEM with proper MwSt
-    let totalNet = 0;
-    let totalVat = 0;
-
-    const vatRate = settings.vat_rate;
-    const invoiceItems = timeEntries.map((entry) => {
-      const project = projectMap.get(entry.project_id);
-      if (!project) throw new Error(`Projekt ${entry.project_id} nicht gefunden`);
-
-      const netAmount = roundToEuro(entry.duration * project.daily_rate);
-      const vatAmount = roundToEuro(netAmount * vatRate);
-      const grossAmount = roundToEuro(netAmount + vatAmount);
-
-      totalNet += netAmount;
-      totalVat += vatAmount;
-
-      return { entry, project, netAmount, vatAmount, grossAmount };
-    });
-
-    // Round totals (safety)
-    totalNet = roundToEuro(totalNet);
-    totalVat = roundToEuro(totalVat);
-    const totalGross = roundToEuro(totalNet + totalVat);
-
-    // Generate invoice number
-    const nextNum = (settings.next_invoice_number || 1).toString().padStart(4, "0");
-    const invoiceNumber = `${settings.invoice_prefix}-${data.period_year}-${nextNum}`;
-
-    // Calculate due date
-    const invoiceDateObj = new Date(data.invoice_date);
-    const dueDateObj = new Date(invoiceDateObj);
-    dueDateObj.setDate(dueDateObj.getDate() + (settings.payment_days || 28));
-    const dueDate = dueDateObj.toISOString().split("T")[0];
-
-    // Create invoice record
-    const invoiceRecord = db
-      .query(
-        `INSERT INTO invoices
-         (invoice_number, client_id, project_id, invoice_date, due_date, period_month, period_year, net_amount, vat_amount, gross_amount, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')
-         RETURNING id`,
-      )
-      .get(
-        invoiceNumber,
-        data.client_id,
-        data.project_id,
-        data.invoice_date,
-        dueDate,
-        data.period_month,
-        data.period_year,
-        totalNet,
-        totalVat,
-        totalGross,
-      ) as { id: number } | undefined;
-
-    if (!invoiceRecord) throw new Error("Rechnung konnte nicht erstellt werden");
-
-    const invoiceId = invoiceRecord.id;
-
-    // Create line items
-    const insertItem = db.query(
-      `INSERT INTO invoice_items
-       (invoice_id, description, period_start, period_end, days, daily_rate, net_amount, vat_rate, vat_amount, gross_amount)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    );
-
-    for (const item of invoiceItems) {
-      insertItem.run(
-        invoiceId,
-        `${item.project.name}: ${item.entry.description || "Taetigkeit"}`,
-        data.service_period_from || item.entry.date,
-        data.service_period_to || item.entry.date,
-        item.entry.duration,
-        item.project.daily_rate,
-        item.netAmount,
-        vatRate,
-        item.vatAmount,
-        item.grossAmount,
-      );
-    }
-
-    // Link time entries to invoice
-    const linkStmt = db.query("UPDATE time_entries SET invoice_id = ? WHERE id = ?");
-    for (const entry of timeEntries) {
-      linkStmt.run(invoiceId, entry.id);
-    }
-
-    // Update next invoice number
-    db.query(
-      "UPDATE settings SET next_invoice_number = next_invoice_number + 1 WHERE id = 1",
-    ).run();
-
-    // Audit log
-    appendAuditLog("invoice", invoiceId, "create", {
-      invoice_number: invoiceNumber,
-      net_amount: totalNet,
-      gross_amount: totalGross,
-      time_entry_count: timeEntries.length,
-    });
-
-    return invoiceId;
-  })();
-}
-
-export function getInvoice(id: number) {
-  return db.query<Invoice, [number]>(`SELECT * FROM invoices WHERE id = ?`).get(id);
-}
-
-export function getInvoiceItems(invoiceId: number) {
-  return db
-    .query<InvoiceItem, [number]>(
-      `SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY period_start`,
-    )
-    .all(invoiceId);
-}
-
-// ─── Invoice List + Status ────────────────────────────────────────────────────
-
-export function getAllInvoices(status?: string): InvoiceListItem[] {
-  const base = `
-    SELECT i.id, i.invoice_number, c.name as client_name,
-           i.invoice_date, i.due_date, i.gross_amount, i.status, i.paid_date
-    FROM invoices i
-    JOIN clients c ON i.client_id = c.id`;
-
-  if (status === "open") {
-    return db
-      .query<InvoiceListItem, []>(
-        `${base} WHERE i.status IN ('draft', 'sent') ORDER BY i.invoice_date DESC`,
-      )
-      .all();
-  }
-  if (status === "overdue") {
-    return db
-      .query<InvoiceListItem, []>(
-        `${base} WHERE i.due_date < date('now') AND i.status IN ('draft', 'sent') ORDER BY i.invoice_date DESC`,
-      )
-      .all();
-  }
-  if (status) {
-    return db
-      .query<InvoiceListItem, [string]>(`${base} WHERE i.status = ? ORDER BY i.invoice_date DESC`)
-      .all(status);
-  }
-  return db.query<InvoiceListItem, []>(`${base} ORDER BY i.invoice_date DESC`).all();
-}
-
-const VALID_TRANSITIONS: Record<string, readonly string[]> = {
-  draft: ["sent", "cancelled"],
-  sent: ["paid", "cancelled"],
-  paid: [],
-  cancelled: [],
-};
-
-export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "cancelled"): void {
-  const row = db
-    .query<Pick<Invoice, "status">, [number]>("SELECT status FROM invoices WHERE id = ?")
-    .get(id);
-
-  if (!row) {
-    throw new AppError("Rechnung nicht gefunden", 404);
-  }
-
-  const allowed = VALID_TRANSITIONS[row.status] ?? [];
-  if (!allowed.includes(newStatus)) {
-    throw new AppError(`Statuswechsel von '${row.status}' zu '${newStatus}' nicht erlaubt`, 422);
-  }
-
-  // Wrap status update + audit log in a transaction: if the audit log write fails,
-  // the status change is rolled back. Required for GoBD compliance.
-  const updateWithAudit = db.transaction(() => {
-    if (newStatus === "paid") {
-      db.query("UPDATE invoices SET status = ?, paid_date = date('now') WHERE id = ?").run(
-        newStatus,
-        id,
-      );
-    } else {
-      db.query("UPDATE invoices SET status = ? WHERE id = ?").run(newStatus, id);
-    }
-    appendAuditLog("invoice", id, "status_change", { from: row.status, to: newStatus });
-  });
-
-  updateWithAudit();
-}
+// ─── Invoices — re-exported from invoice-queries ────────────────────────────
+export { createInvoice, getInvoice, getInvoiceItems, getAllInvoices, updateInvoiceStatus } from "./invoice-queries";

@@ -1,24 +1,32 @@
-import type { MiddlewareHandler } from "hono";
+import { createMiddleware } from "hono/factory";
 import { html } from "hono/html";
 import { isOnboardingComplete } from "../db/queries";
+import type { AppEnv } from "../env";
 
-const SKIP_PREFIXES = ["/onboarding", "/api/", "/static/"];
+// Cache: onboarding status changes exactly once (false → true), never reverts
+let onboardingDone = false;
 
-export const onboardingGuard: MiddlewareHandler = async (c, next) => {
-  const path = new URL(c.req.url).pathname;
+export const onboardingGuard = createMiddleware<AppEnv>(async (c, next) => {
+  if (onboardingDone) return next();
 
-  if (SKIP_PREFIXES.some((prefix) => path.startsWith(prefix))) {
-    return next();
-  }
+  const path = c.req.path;
+  const isSettingsPath = path.startsWith("/einstellungen");
+  // /static and /api are excluded: static assets need no guard,
+  // API routes (health, stats) must remain accessible during setup.
+  // NOTE: Any future API endpoint that mutates data should check onboarding individually.
+  const isExcludedPath = path.startsWith("/static") || path.startsWith("/api");
 
-  let complete: boolean;
+  if (isSettingsPath || isExcludedPath) return next();
+
   try {
-    complete = isOnboardingComplete();
+    if (!isOnboardingComplete()) {
+      return c.redirect("/einstellungen?onboarding=1");
+    }
+    onboardingDone = true;
   } catch (err) {
-    // DB failure in guard — fail CLOSED. Returning 503 prevents access to an app
-    // that can't read its own config. Users see a clear error instead of cascading
-    // failures on every subsequent DB query.
-    console.error("[onboardingGuard] DB check failed, returning 503:", err);
+    // Fail CLOSED: returning 503 prevents access to an app that can't read its config.
+    // Users see a clear error instead of cascading failures on every DB query.
+    console.error("[onboarding-guard] DB check failed, returning 503:", err);
     return c.html(
       html`<!doctype html>
         <html lang="de">
@@ -32,9 +40,10 @@ export const onboardingGuard: MiddlewareHandler = async (c, next) => {
     );
   }
 
-  if (!complete) {
-    return c.redirect("/onboarding");
-  }
-
   return next();
-};
+});
+
+/** Reset cache — call after completeOnboarding() to ensure next check reads DB */
+export function invalidateOnboardingCache(): void {
+  onboardingDone = false;
+}

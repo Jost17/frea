@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import { getSettings, updateSettings } from "../db/queries";
+import { completeOnboarding, getSettings, isOnboardingComplete, updateSettings } from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
+import { invalidateOnboardingCache } from "../middleware/onboarding-guard";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
 import { settingsSchema } from "../validation/schemas";
@@ -34,6 +35,7 @@ settingsRoutes.get("/", (c) => {
       throw new AppError("Einstellungen nicht initialisiert", 500);
     }
 
+    const onboarding = !isOnboardingComplete();
     const overdueCount = c.get("overdueCount");
     return c.html(
       Layout({
@@ -42,6 +44,22 @@ settingsRoutes.get("/", (c) => {
         overdueCount,
         children: html`
           <div class="max-w-2xl">
+            ${onboarding
+              ? html`
+                  <div
+                    class="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4"
+                    role="status"
+                  >
+                    <h2 class="mb-1 text-base font-semibold text-blue-900">
+                      Willkommen bei FREA!
+                    </h2>
+                    <p class="text-sm text-blue-700">
+                      Bitte gib zuerst deine Firmendaten ein. Diese werden auf allen Rechnungen
+                      verwendet.
+                    </p>
+                  </div>
+                `
+              : ""}
             <h1 class="mb-2 text-2xl font-semibold">Firmeneinstellungen</h1>
             <p class="mb-6 text-sm text-gray-500">
               Deine Firmendaten und Rechnungseinstellungen. Änderungen wirken sich auf neue Rechnungen aus — bereits
@@ -312,10 +330,17 @@ settingsRoutes.get("/", (c) => {
 
 settingsRoutes.post("/", async (c) => {
   try {
+    const firstSetup = !isOnboardingComplete();
     const body = await c.req.formData();
     const data = parseFormFields(body, SETTINGS_FIELDS);
     const validated = settingsSchema.parse({ ...data, country: "Deutschland", mobile: "" });
     updateSettings(validated);
+
+    if (firstSetup) {
+      completeOnboarding();
+      invalidateOnboardingCache();
+      return c.redirect("/?onboarding_done=1");
+    }
 
     return c.redirect("/einstellungen?success=1");
   } catch (err) {
