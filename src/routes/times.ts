@@ -1,19 +1,20 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import type { AppEnv } from "../env";
-import { AppError, logAndRespond } from "../middleware/error-handler";
+import { ZodError } from "zod";
 import {
+  createTimeEntry,
+  deleteTimeEntry,
   getAllActiveProjectsWithClient,
   getAllUnbilledTimeEntries,
   getTimeEntry,
-  createTimeEntry,
-  updateTimeEntry,
-  deleteTimeEntry,
   type ProjectWithClient,
+  updateTimeEntry,
 } from "../db/queries";
-import { timeEntrySchema, type TimeEntry } from "../validation/schemas";
+import type { AppEnv } from "../env";
+import { AppError, logAndRespond } from "../middleware/error-handler";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
+import { type TimeEntry, timeEntrySchema } from "../validation/schemas";
 
 export const timeRoutes = new Hono<AppEnv>();
 
@@ -50,8 +51,9 @@ timeRoutes.get("/", (c) => {
             </a>
           </div>
 
-          ${byClient.size === 0
-            ? html`
+          ${
+            byClient.size === 0
+              ? html`
                 <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
                   <p class="text-sm text-gray-600">
                     Keine Zeiteinträge vorhanden. Erstelle einen Zeiteintrag, um geleistete Stunden zu dokumentieren.
@@ -64,7 +66,7 @@ timeRoutes.get("/", (c) => {
                   </a>
                 </div>
               `
-            : html`
+              : html`
                 <p class="mb-4 text-sm text-gray-500">Hier siehst du alle noch nicht abgerechneten Zeiten.</p>
                 <div class="space-y-8">
                   ${[...byClient.entries()].map(([clientName, clientEntries]) => {
@@ -105,7 +107,8 @@ timeRoutes.get("/", (c) => {
                     `;
                   })}
                 </div>
-              `}
+              `
+          }
         `,
       }),
     );
@@ -166,14 +169,16 @@ timeRoutes.post("/", async (c) => {
     const data = parseFormFields(body, TIME_ENTRY_FIELDS);
     const validated = timeEntrySchema.parse(data);
     const id = createTimeEntry(validated);
+    if (!id) throw new AppError("Zeiteintrag konnte nicht erstellt werden", 500);
 
     return c.redirect(`/zeiten/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[times POST] Validation error:", err);
-      throw new AppError(err.message, 400);
+    if (err instanceof AppError) throw err;
+    if (err instanceof ZodError) {
+      const msg = err.issues[0]?.message ?? "Ungültige Eingabe";
+      return logAndRespond(c, err, msg, 422);
     }
-    return logAndRespond(c, err, "Eintrag konnte nicht erstellt werden", 500);
+    return logAndRespond(c, err, "Zeiteintrag konnte nicht erstellt werden", 500);
   }
 });
 
@@ -190,11 +195,12 @@ timeRoutes.post("/:id", async (c) => {
 
     return c.redirect(`/zeiten/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[times POST :id] Validation error:", err);
-      throw new AppError(err.message, 400);
+    if (err instanceof AppError) throw err;
+    if (err instanceof ZodError) {
+      const msg = err.issues[0]?.message ?? "Ungültige Eingabe";
+      return logAndRespond(c, err, msg, 422);
     }
-    return logAndRespond(c, err, "Eintrag konnte nicht aktualisiert werden", 500);
+    return logAndRespond(c, err, "Zeiteintrag konnte nicht aktualisiert werden", 500);
   }
 });
 
@@ -300,8 +306,9 @@ ${entry?.description || ""}</textarea
 
         <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
           <a href="/zeiten" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
-          ${!isNew
-            ? html`
+          ${
+            !isNew
+              ? html`
                 <form method="post" action="/zeiten/${entry.id}/delete" class="inline">
                   <button
                     type="submit"
@@ -312,7 +319,8 @@ ${entry?.description || ""}</textarea
                   </button>
                 </form>
               `
-            : ""}
+              : ""
+          }
           <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
             Speichern
           </button>

@@ -1,11 +1,18 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
+import { ZodError } from "zod";
+import {
+  createClient,
+  deleteClient,
+  getAllActiveClients,
+  getClient,
+  updateClient,
+} from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
-import { getAllActiveClients, getClient, createClient, updateClient, deleteClient } from "../db/queries";
-import { clientSchema, type Client } from "../validation/schemas";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
+import { type Client, clientSchema } from "../validation/schemas";
 
 export const clientRoutes = new Hono<AppEnv>();
 
@@ -44,8 +51,9 @@ clientRoutes.get("/", (c) => {
             </a>
           </div>
 
-          ${clients.length === 0
-            ? html`
+          ${
+            clients.length === 0
+              ? html`
                 <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
                   <p class="text-sm text-gray-600">
                     Noch keine Kunden angelegt. Erstelle deinen ersten Kunden, um Projekte und Rechnungen zuordnen zu
@@ -59,7 +67,7 @@ clientRoutes.get("/", (c) => {
                   </a>
                 </div>
               `
-            : html`
+              : html`
                 <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
                   <table class="w-full text-sm">
                     <thead class="border-b bg-gray-50">
@@ -91,7 +99,8 @@ clientRoutes.get("/", (c) => {
                     </tbody>
                   </table>
                 </div>
-              `}
+              `
+          }
         `,
       }),
     );
@@ -144,12 +153,14 @@ clientRoutes.post("/", async (c) => {
     const data = parseFormFields(body, CLIENT_FIELDS);
     const validated = clientSchema.parse({ ...data, country: "Deutschland" });
     const id = createClient(validated);
+    if (!id) throw new AppError("Kunde konnte nicht erstellt werden", 500);
 
     return c.redirect(`/kunden/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[clients POST] Validation error:", err);
-      throw new AppError(err.message, 400);
+    if (err instanceof AppError) throw err;
+    if (err instanceof ZodError) {
+      const msg = err.issues[0]?.message ?? "Ungültige Eingabe";
+      return logAndRespond(c, err, msg, 422);
     }
     return logAndRespond(c, err, "Kunde konnte nicht erstellt werden", 500);
   }
@@ -168,9 +179,10 @@ clientRoutes.post("/:id", async (c) => {
 
     return c.redirect(`/kunden/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[clients POST :id] Validation error:", err);
-      throw new AppError(err.message, 400);
+    if (err instanceof AppError) throw err;
+    if (err instanceof ZodError) {
+      const msg = err.issues[0]?.message ?? "Ungültige Eingabe";
+      return logAndRespond(c, err, msg, 422);
     }
     return logAndRespond(c, err, "Kunde konnte nicht aktualisiert werden", 500);
   }
@@ -199,8 +211,9 @@ function renderClientForm(client: Client | null) {
     <div class="max-w-2xl">
       <div class="mb-6 flex items-center justify-between">
         <h1 class="text-2xl font-semibold">${isNew ? "Neuer Kunde" : `Kunde: ${client.name}`}</h1>
-        ${!isNew
-          ? html`<form method="post" action="/kunden/${client.id}/delete" class="inline">
+        ${
+          !isNew
+            ? html`<form method="post" action="/kunden/${client.id}/delete" class="inline">
               <button
                 type="submit"
                 onclick="return confirm('Wirklich loeschen?')"
@@ -209,7 +222,8 @@ function renderClientForm(client: Client | null) {
                 Loeschen
               </button>
             </form>`
-          : ""}
+            : ""
+        }
       </div>
 
       <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">

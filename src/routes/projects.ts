@@ -1,18 +1,19 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import type { AppEnv } from "../env";
-import { AppError, logAndRespond } from "../middleware/error-handler";
+import { ZodError } from "zod";
 import {
+  createProject,
+  deleteProject,
   getAllActiveClients,
   getAllActiveProjectsWithClient,
   getProject,
-  createProject,
   updateProject,
-  deleteProject,
 } from "../db/queries";
-import { projectSchema, type Project, type Client } from "../validation/schemas";
+import type { AppEnv } from "../env";
+import { AppError, logAndRespond } from "../middleware/error-handler";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
+import { type Client, type Project, projectSchema } from "../validation/schemas";
 
 export const projectRoutes = new Hono<AppEnv>();
 
@@ -55,8 +56,9 @@ projectRoutes.get("/", (c) => {
             </a>
           </div>
 
-          ${byClient.size === 0
-            ? html`
+          ${
+            byClient.size === 0
+              ? html`
                 <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
                   <p class="text-sm text-gray-600">
                     Keine Projekte vorhanden. Lege zuerst einen Kunden an, dann kannst du ein Projekt erstellen.
@@ -69,7 +71,7 @@ projectRoutes.get("/", (c) => {
                   </a>
                 </div>
               `
-            : html`
+              : html`
                 <div class="space-y-8">
                   ${[...byClient.entries()].map(([clientName, clientProjects]) => {
                     return html`
@@ -98,7 +100,8 @@ projectRoutes.get("/", (c) => {
                     `;
                   })}
                 </div>
-              `}
+              `
+          }
         `,
       }),
     );
@@ -159,12 +162,14 @@ projectRoutes.post("/", async (c) => {
     const data = parseFormFields(body, PROJECT_FIELDS);
     const validated = projectSchema.parse(data);
     const id = createProject(validated);
+    if (!id) throw new AppError("Projekt konnte nicht erstellt werden", 500);
 
     return c.redirect(`/projekte/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[projects POST] Validation error:", err);
-      throw new AppError(err.message, 400);
+    if (err instanceof AppError) throw err;
+    if (err instanceof ZodError) {
+      const msg = err.issues[0]?.message ?? "Ungültige Eingabe";
+      return logAndRespond(c, err, msg, 422);
     }
     return logAndRespond(c, err, "Projekt konnte nicht erstellt werden", 500);
   }
@@ -183,9 +188,10 @@ projectRoutes.post("/:id", async (c) => {
 
     return c.redirect(`/projekte/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[projects POST :id] Validation error:", err);
-      throw new AppError(err.message, 400);
+    if (err instanceof AppError) throw err;
+    if (err instanceof ZodError) {
+      const msg = err.issues[0]?.message ?? "Ungültige Eingabe";
+      return logAndRespond(c, err, msg, 422);
     }
     return logAndRespond(c, err, "Projekt konnte nicht aktualisiert werden", 500);
   }
@@ -206,10 +212,7 @@ projectRoutes.post("/:id/delete", (c) => {
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function renderProjectForm(
-  project: Project | null,
-  clients: Pick<Client, "id" | "name">[],
-) {
+function renderProjectForm(project: Project | null, clients: Pick<Client, "id" | "name">[]) {
   const isNew = !project;
   const action = isNew ? "/projekte" : `/projekte/${project.id}`;
 
@@ -217,8 +220,9 @@ function renderProjectForm(
     <div class="max-w-2xl">
       <div class="mb-6 flex items-center justify-between">
         <h1 class="text-2xl font-semibold">${isNew ? "Neues Projekt" : `Projekt: ${project.name}`}</h1>
-        ${!isNew
-          ? html`<form method="post" action="/projekte/${project.id}/delete" class="inline">
+        ${
+          !isNew
+            ? html`<form method="post" action="/projekte/${project.id}/delete" class="inline">
               <button
                 type="submit"
                 onclick="return confirm('Wirklich loeschen?')"
@@ -227,7 +231,8 @@ function renderProjectForm(
                 Loeschen
               </button>
             </form>`
-          : ""}
+            : ""
+        }
       </div>
 
       <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">
