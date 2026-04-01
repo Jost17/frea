@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+// ─── IBAN Checksum (ISO 13616 MOD-97) ───────────────────────────────────────
+
+function isValidIban(iban: string): boolean {
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(iban)) return false;
+  // Move first 4 chars to end, convert letters to digits (A=10, B=11, ..., Z=35)
+  const rearranged = iban.slice(4) + iban.slice(0, 4);
+  const numeric = rearranged.replace(/[A-Z]/g, (ch) => String(ch.charCodeAt(0) - 55));
+  // MOD-97 on large number (process in chunks to avoid BigInt dependency)
+  let remainder = 0;
+  for (const digit of numeric) {
+    remainder = (remainder * 10 + Number(digit)) % 97;
+  }
+  return remainder === 1;
+}
+
 // ─── Input Schemas (Zod) ──────────────────────────────────────────────────────
 
 // Settings
@@ -20,7 +35,7 @@ export const settingsSchema = z
     iban: z
       .string()
       .min(1, "IBAN erforderlich")
-      .refine((v) => /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(v), "Ungültige IBAN"),
+      .refine((v) => isValidIban(v), "Ungültige IBAN (Prüfziffer stimmt nicht)"),
     bic: z.string().min(1, "BIC erforderlich"),
     // Optional individually — cross-field rule: at least one of tax_number or ust_id required.
     tax_number: z
@@ -176,3 +191,47 @@ export interface AuditLog {
   changes: string | null;
   source: "web" | "api";
 }
+
+// ─── Invoice List (moved from queries.ts for type colocation) ───────────────
+
+export interface InvoiceListItem {
+  id: number;
+  invoice_number: string;
+  client_name: string;
+  invoice_date: string;
+  due_date: string;
+  gross_amount: number;
+  status: Invoice["status"];
+  paid_date: string | null;
+}
+
+export const VALID_INVOICE_FILTER_VALUES = new Set([
+  "open",
+  "overdue",
+  "draft",
+  "sent",
+  "paid",
+  "cancelled",
+]);
+
+// ─── Onboarding Completion Schema (single source of truth for guard + wizard) ─
+
+const DEFAULT_COMPANY_NAME = "Mein Unternehmen";
+
+export const onboardingCompletionSchema = z.object({
+  company_name: z
+    .string()
+    .min(1)
+    .refine((v) => v !== DEFAULT_COMPANY_NAME),
+  address: z.string().min(1),
+  postal_code: z.string().refine((v) => /^\d{5}$/.test(v)),
+  city: z.string().min(1),
+  email: z.string().email(),
+  iban: z.string().min(1).refine((v) => isValidIban(v)),
+  bic: z.string().min(1),
+  tax_number: z.string().optional().default(""),
+  ust_id: z.string().optional().default(""),
+}).refine(
+  (data) => !!(data.tax_number?.trim() || data.ust_id?.trim()),
+  { message: "Steuernummer oder Ust-IdNr. erforderlich" },
+);

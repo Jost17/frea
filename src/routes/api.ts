@@ -1,17 +1,19 @@
 import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
+import { getConnInfo } from "hono/bun";
 import { getAllInvoices, getSettings, updateInvoiceStatus, updateSettings } from "../db/queries";
 import { db } from "../db/schema";
 import { AppError, logAndRespond } from "../middleware/error-handler";
-import { invoiceStatusUpdateSchema, settingsSchema } from "../validation/schemas";
+import { VALID_INVOICE_FILTER_VALUES, invoiceStatusUpdateSchema, settingsSchema } from "../validation/schemas";
 
 export const apiRoutes = new Hono();
 
 // Guard: all API endpoints are localhost-only (no auth layer in this single-user app).
-// Requests from external hosts are rejected. Adjust when multi-user support is added.
+// Uses socket-level remote address — NOT the spoofable Host header.
 const requireLocalhost: MiddlewareHandler = async (c, next) => {
-  const host = c.req.header("host") ?? "";
-  if (!host.startsWith("localhost") && !host.startsWith("127.") && !host.startsWith("[::1]")) {
+  const info = getConnInfo(c);
+  const addr = info.remote.address ?? "";
+  if (addr !== "127.0.0.1" && addr !== "::1" && addr !== "localhost") {
     return c.json({ error: "Forbidden" }, 403);
   }
   return next();
@@ -31,14 +33,15 @@ apiRoutes.get("/health", (c) => {
 
 // GET /api/invoices?status=open|overdue|draft|sent|paid|cancelled
 apiRoutes.get("/invoices", (c) => {
-  try {
-    const status = c.req.query("status") || undefined;
-    const invoices = getAllInvoices(status);
-    return c.json(invoices);
-  } catch (err) {
-    console.error("[api] GET /invoices failed:", err);
-    throw err;
+  const status = c.req.query("status") || undefined;
+  if (status && !VALID_INVOICE_FILTER_VALUES.has(status)) {
+    throw new AppError(
+      `Ungültiger Status-Filter '${status}'. Erlaubt: ${[...VALID_INVOICE_FILTER_VALUES].join(", ")}`,
+      400,
+    );
   }
+  const invoices = getAllInvoices(status);
+  return c.json(invoices);
 });
 
 // GET /api/settings/company

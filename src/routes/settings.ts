@@ -1,9 +1,8 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import { ZodError } from "zod";
 import { getSettings, updateSettings } from "../db/queries";
 import type { AppEnv } from "../env";
-import { AppError, logAndRespond } from "../middleware/error-handler";
+import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
 import { settingsSchema } from "../validation/schemas";
@@ -320,11 +319,6 @@ settingsRoutes.post("/", async (c) => {
 
     return c.redirect("/einstellungen?success=1");
   } catch (err) {
-    if (err instanceof AppError) throw err;
-    if (err instanceof ZodError) {
-      const msg = err.issues[0]?.message ?? "Ungültige Eingabe";
-      return logAndRespond(c, err, msg, 422);
-    }
-    return logAndRespond(c, err, "Einstellungen konnten nicht gespeichert werden", 500);
+    return handleMutationError(c, err, "Einstellungen konnten nicht gespeichert werden");
   }
 });

@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
+import { z } from "zod";
+import { updateSettings } from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
-import { updateSettings } from "../db/queries";
 import { parseFormFields } from "../utils/form-parser";
-import { z } from "zod";
 
 export const onboardingRoutes = new Hono<AppEnv>();
 
@@ -22,6 +22,9 @@ const ONBOARDING_FIELDS = {
   kleinunternehmer: "bool",
 } as const;
 
+// Wizard-specific schema with German user-facing messages.
+// Required fields MUST match onboardingCompletionSchema in schemas.ts (used by the guard).
+// SYNC WITH: src/validation/schemas.ts onboardingCompletionSchema
 const onboardingSchema = z.object({
   company_name: z
     .string()

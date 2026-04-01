@@ -5,10 +5,12 @@ import type {
   Invoice,
   InvoiceCreate,
   InvoiceItem,
+  InvoiceListItem,
   Project,
   Settings,
   TimeEntry,
 } from "../validation/schemas";
+import { onboardingCompletionSchema } from "../validation/schemas";
 import { db } from "./schema";
 
 // ─── Column Allowlists (SQL injection prevention) ─────────────────────────────
@@ -123,18 +125,9 @@ export function isOnboardingComplete(): boolean {
     return false;
   }
 
-  const companyName = settings.company_name?.trim();
-  const complete =
-    !!companyName &&
-    companyName !== "Mein Unternehmen" &&
-    !!settings.address?.trim() &&
-    !!settings.postal_code?.trim() &&
-    !!settings.city?.trim() &&
-    // email, iban, bic are required by onboardingSchema — mirror that here
-    !!settings.email?.trim() &&
-    !!settings.iban?.trim() &&
-    !!settings.bic?.trim() &&
-    !!(settings.tax_number?.trim() || settings.ust_id?.trim());
+  // Single source of truth: onboardingCompletionSchema defines which fields are required.
+  // Adding a new required field to the schema automatically updates this check.
+  const complete = onboardingCompletionSchema.safeParse(settings).success;
 
   _onboardingCompleteCache = complete;
   return complete;
@@ -559,17 +552,6 @@ export function getInvoiceItems(invoiceId: number) {
 }
 
 // ─── Invoice List + Status ────────────────────────────────────────────────────
-
-export interface InvoiceListItem {
-  id: number;
-  invoice_number: string;
-  client_name: string;
-  invoice_date: string;
-  due_date: string;
-  gross_amount: number;
-  status: "draft" | "sent" | "paid" | "cancelled";
-  paid_date: string | null;
-}
 
 export function getAllInvoices(status?: string): InvoiceListItem[] {
   const base = `
