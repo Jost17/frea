@@ -42,7 +42,11 @@ settingsRoutes.get("/", (c) => {
         overdueCount,
         children: html`
           <div class="max-w-2xl">
-            <h1 class="mb-6 text-2xl font-semibold">Firmeneinstellungen</h1>
+            <h1 class="mb-2 text-2xl font-semibold">Firmeneinstellungen</h1>
+            <p class="mb-6 text-sm text-gray-500">
+              Deine Firmendaten und Rechnungseinstellungen. Änderungen wirken sich auf neue Rechnungen aus — bereits
+              erstellte Rechnungen bleiben unverändert.
+            </p>
             <form
               method="post"
               action="/einstellungen"
@@ -179,21 +183,27 @@ settingsRoutes.get("/", (c) => {
                       step="0.01"
                       value="${settings.vat_rate}"
                       class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                      aria-describedby="vat-rate-hint"
                     />
+                    <p id="vat-rate-hint" class="mt-1 text-xs text-gray-500">Standard ist 19%. Nur ändern bei Sonderfällen (z.B. 7% für bestimmte Leistungen).</p>
                   </div>
 
-                  <div class="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="kleinunternehmer"
-                      name="kleinunternehmer"
-                      value="1"
-                      ${settings.kleinunternehmer === 1 ? "checked" : ""}
-                      class="h-4 w-4 rounded border-gray-300"
-                    />
-                    <label for="kleinunternehmer" class="ml-2 text-sm font-medium text-gray-700"
-                      >Kleinunternehmer (\u00A719 UStG)</label
-                    >
+                  <div>
+                    <div class="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="kleinunternehmer"
+                        name="kleinunternehmer"
+                        value="1"
+                        ${settings.kleinunternehmer === 1 ? "checked" : ""}
+                        class="h-4 w-4 rounded border-gray-300"
+                        aria-describedby="kleinunternehmer-hint"
+                      />
+                      <label for="kleinunternehmer" class="ml-2 text-sm font-medium text-gray-700"
+                        >Kleinunternehmer (\u00A719 UStG)</label
+                      >
+                    </div>
+                    <p id="kleinunternehmer-hint" class="mt-1 text-xs text-gray-500">Nach §19 UStG wird keine MwSt. ausgewiesen. Auf Rechnungen erscheint ein Hinweistext.</p>
                   </div>
                 </div>
               </fieldset>
@@ -251,7 +261,7 @@ settingsRoutes.get("/", (c) => {
                   <div class="grid grid-cols-2 gap-4">
                     <div>
                       <label for="invoice_prefix" class="block text-sm font-medium text-gray-700"
-                        >Praefix</label
+                        >Rechnungspräfix</label
                       >
                       <input
                         type="text"
@@ -259,7 +269,9 @@ settingsRoutes.get("/", (c) => {
                         name="invoice_prefix"
                         value="${settings.invoice_prefix}"
                         class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                        aria-describedby="prefix-hint"
                       />
+                      <p id="prefix-hint" class="mt-1 text-xs text-gray-500">Wird der Rechnungsnummer vorangestellt (z.B. RE-2026-001).</p>
                     </div>
                     <div>
                       <label for="payment_days" class="block text-sm font-medium text-gray-700"
@@ -272,7 +284,9 @@ settingsRoutes.get("/", (c) => {
                         min="0"
                         value="${settings.payment_days}"
                         class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                        aria-describedby="payment-days-hint"
                       />
+                      <p id="payment-days-hint" class="mt-1 text-xs text-gray-500">Frist in Tagen, die dein Kunde zum Bezahlen hat. Standard: 28 Tage.</p>
                     </div>
                   </div>
                 </div>
