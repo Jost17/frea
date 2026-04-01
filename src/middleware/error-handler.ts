@@ -1,6 +1,7 @@
 import type { Context, ErrorHandler, NotFoundHandler } from "hono";
 import { html } from "hono/html";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { ZodError } from "zod";
 import { Layout } from "../templates/layout";
 
 // Shared error class for typed errors across all routes
@@ -27,6 +28,19 @@ export function logAndRespond(
   const eid = generateErrorId();
   console.error(`[${eid}] ${userMessage}:`, error);
   return c.text(`${userMessage} (${eid})`, status);
+}
+
+/**
+ * Shared error handler for form mutation routes (POST create/update).
+ * Catches ZodError (422), AppError (re-throw), and unknown errors (500).
+ */
+export function handleMutationError(c: Context, err: unknown, fallbackMsg: string): Response {
+  if (err instanceof AppError) throw err;
+  if (err instanceof ZodError) {
+    const msg = err.issues[0]?.message ?? "Ungültige Eingabe";
+    return logAndRespond(c, err, msg, 422);
+  }
+  return logAndRespond(c, err, fallbackMsg, 500);
 }
 
 export const globalErrorHandler: ErrorHandler = (err, c) => {

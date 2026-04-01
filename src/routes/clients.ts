@@ -1,11 +1,17 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
+import {
+  createClient,
+  deleteClient,
+  getAllActiveClients,
+  getClient,
+  updateClient,
+} from "../db/queries";
 import type { AppEnv } from "../env";
-import { AppError, logAndRespond } from "../middleware/error-handler";
-import { getAllActiveClients, getClient, createClient, updateClient, deleteClient } from "../db/queries";
-import { clientSchema, type Client } from "../validation/schemas";
+import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
+import { type Client, clientSchema } from "../validation/schemas";
 
 export const clientRoutes = new Hono<AppEnv>();
 
@@ -38,15 +44,29 @@ clientRoutes.get("/", (c) => {
             <h1 class="text-2xl font-semibold">Kunden</h1>
             <a
               href="/kunden/new"
-              class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               + Neuer Kunde
             </a>
           </div>
 
-          ${clients.length === 0
-            ? html`<p class="text-gray-500">Keine Kunden gefunden.</p>`
-            : html`
+          ${
+            clients.length === 0
+              ? html`
+                <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
+                  <p class="text-sm text-gray-600">
+                    Noch keine Kunden angelegt. Erstelle deinen ersten Kunden, um Projekte und Rechnungen zuordnen zu
+                    können.
+                  </p>
+                  <a
+                    href="/kunden/new"
+                    class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Neuen Kunden anlegen
+                  </a>
+                </div>
+              `
+              : html`
                 <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
                   <table class="w-full text-sm">
                     <thead class="border-b bg-gray-50">
@@ -78,7 +98,8 @@ clientRoutes.get("/", (c) => {
                     </tbody>
                   </table>
                 </div>
-              `}
+              `
+          }
         `,
       }),
     );
@@ -131,14 +152,11 @@ clientRoutes.post("/", async (c) => {
     const data = parseFormFields(body, CLIENT_FIELDS);
     const validated = clientSchema.parse({ ...data, country: "Deutschland" });
     const id = createClient(validated);
+    if (!id) throw new AppError("Kunde konnte nicht erstellt werden", 500);
 
     return c.redirect(`/kunden/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[clients POST] Validation error:", err);
-      throw new AppError(err.message, 400);
-    }
-    return logAndRespond(c, err, "Kunde konnte nicht erstellt werden", 500);
+    return handleMutationError(c, err, "Kunde konnte nicht erstellt werden");
   }
 });
 
@@ -155,11 +173,7 @@ clientRoutes.post("/:id", async (c) => {
 
     return c.redirect(`/kunden/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[clients POST :id] Validation error:", err);
-      throw new AppError(err.message, 400);
-    }
-    return logAndRespond(c, err, "Kunde konnte nicht aktualisiert werden", 500);
+    return handleMutationError(c, err, "Kunde konnte nicht aktualisiert werden");
   }
 });
 
@@ -186,8 +200,9 @@ function renderClientForm(client: Client | null) {
     <div class="max-w-2xl">
       <div class="mb-6 flex items-center justify-between">
         <h1 class="text-2xl font-semibold">${isNew ? "Neuer Kunde" : `Kunde: ${client.name}`}</h1>
-        ${!isNew
-          ? html`<form method="post" action="/kunden/${client.id}/delete" class="inline">
+        ${
+          !isNew
+            ? html`<form method="post" action="/kunden/${client.id}/delete" class="inline">
               <button
                 type="submit"
                 onclick="return confirm('Wirklich loeschen?')"
@@ -196,7 +211,8 @@ function renderClientForm(client: Client | null) {
                 Loeschen
               </button>
             </form>`
-          : ""}
+            : ""
+        }
       </div>
 
       <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">
@@ -209,7 +225,9 @@ function renderClientForm(client: Client | null) {
             required
             value="${client?.name || ""}"
             class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            aria-describedby="name-hint"
           />
+          <p id="name-hint" class="mt-1 text-xs text-gray-500">Firmenname oder Name der Person.</p>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
@@ -277,29 +295,35 @@ function renderClientForm(client: Client | null) {
             name="contact_person"
             value="${client?.contact_person || ""}"
             class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            aria-describedby="contact-person-hint"
           />
+          <p id="contact-person-hint" class="mt-1 text-xs text-gray-500">Optional. Erscheint auf der Rechnung als Kontaktperson.</p>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="vat_id" class="block text-sm font-medium text-gray-700">Ust-IdNr.</label>
+            <label for="vat_id" class="block text-sm font-medium text-gray-700">USt-IdNr. (Kunde)</label>
             <input
               type="text"
               id="vat_id"
               name="vat_id"
               value="${client?.vat_id || ""}"
               class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              aria-describedby="vat-id-hint"
             />
+            <p id="vat-id-hint" class="mt-1 text-xs text-gray-500">Für innergemeinschaftliche Leistungen (Reverse Charge).</p>
           </div>
           <div>
-            <label for="buyer_reference" class="block text-sm font-medium text-gray-700">Bestellreferenz</label>
+            <label for="buyer_reference" class="block text-sm font-medium text-gray-700">Käuferreferenz</label>
             <input
               type="text"
               id="buyer_reference"
               name="buyer_reference"
               value="${client?.buyer_reference || ""}"
               class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              aria-describedby="buyer-ref-hint"
             />
+            <p id="buyer-ref-hint" class="mt-1 text-xs text-gray-500">Leitweg-ID oder Bestellnummer — nur nötig, wenn dein Kunde das verlangt.</p>
           </div>
         </div>
 
@@ -310,14 +334,16 @@ function renderClientForm(client: Client | null) {
             name="notes"
             rows="3"
             class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            aria-describedby="notes-hint"
           >
 ${client?.notes || ""}</textarea
           >
+          <p id="notes-hint" class="mt-1 text-xs text-gray-500">Interne Notizen — werden nicht auf Rechnungen gedruckt.</p>
         </div>
 
         <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
           <a href="/kunden" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
-          <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+          <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
             Speichern
           </button>
         </div>

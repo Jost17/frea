@@ -1,19 +1,19 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import type { AppEnv } from "../env";
-import { AppError, logAndRespond } from "../middleware/error-handler";
 import {
+  createTimeEntry,
+  deleteTimeEntry,
   getAllActiveProjectsWithClient,
   getAllUnbilledTimeEntries,
   getTimeEntry,
-  createTimeEntry,
-  updateTimeEntry,
-  deleteTimeEntry,
   type ProjectWithClient,
+  updateTimeEntry,
 } from "../db/queries";
-import { timeEntrySchema, type TimeEntry } from "../validation/schemas";
+import type { AppEnv } from "../env";
+import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
+import { type TimeEntry, timeEntrySchema } from "../validation/schemas";
 
 export const timeRoutes = new Hono<AppEnv>();
 
@@ -44,15 +44,29 @@ timeRoutes.get("/", (c) => {
             <h1 class="text-2xl font-semibold">Zeiteintraege</h1>
             <a
               href="/zeiten/new"
-              class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               + Neuer Zeiteintrag
             </a>
           </div>
 
-          ${byClient.size === 0
-            ? html`<p class="text-gray-500">Keine Zeiteintraege gefunden.</p>`
-            : html`
+          ${
+            byClient.size === 0
+              ? html`
+                <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
+                  <p class="text-sm text-gray-600">
+                    Keine Zeiteinträge vorhanden. Erstelle einen Zeiteintrag, um geleistete Stunden zu dokumentieren.
+                  </p>
+                  <a
+                    href="/zeiten/new"
+                    class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Zeit erfassen
+                  </a>
+                </div>
+              `
+              : html`
+                <p class="mb-4 text-sm text-gray-500">Hier siehst du alle noch nicht abgerechneten Zeiten.</p>
                 <div class="space-y-8">
                   ${[...byClient.entries()].map(([clientName, clientEntries]) => {
                     return html`
@@ -92,7 +106,8 @@ timeRoutes.get("/", (c) => {
                     `;
                   })}
                 </div>
-              `}
+              `
+          }
         `,
       }),
     );
@@ -153,14 +168,11 @@ timeRoutes.post("/", async (c) => {
     const data = parseFormFields(body, TIME_ENTRY_FIELDS);
     const validated = timeEntrySchema.parse(data);
     const id = createTimeEntry(validated);
+    if (!id) throw new AppError("Zeiteintrag konnte nicht erstellt werden", 500);
 
     return c.redirect(`/zeiten/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[times POST] Validation error:", err);
-      throw new AppError(err.message, 400);
-    }
-    return logAndRespond(c, err, "Eintrag konnte nicht erstellt werden", 500);
+    return handleMutationError(c, err, "Zeiteintrag konnte nicht erstellt werden");
   }
 });
 
@@ -177,11 +189,7 @@ timeRoutes.post("/:id", async (c) => {
 
     return c.redirect(`/zeiten/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[times POST :id] Validation error:", err);
-      throw new AppError(err.message, 400);
-    }
-    return logAndRespond(c, err, "Eintrag konnte nicht aktualisiert werden", 500);
+    return handleMutationError(c, err, "Zeiteintrag konnte nicht aktualisiert werden");
   }
 });
 
@@ -239,7 +247,7 @@ function renderTimeForm(entry: TimeEntry | null, allProjects: ProjectWithClient[
             />
           </div>
           <div>
-            <label for="duration" class="block text-sm font-medium text-gray-700">Stunden *</label>
+            <label for="duration" class="block text-sm font-medium text-gray-700">Dauer *</label>
             <input
               type="number"
               id="duration"
@@ -250,7 +258,9 @@ function renderTimeForm(entry: TimeEntry | null, allProjects: ProjectWithClient[
               step="0.25"
               value="${entry?.duration || ""}"
               class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              aria-describedby="duration-hint"
             />
+            <p id="duration-hint" class="mt-1 text-xs text-gray-500">Dauer in Stunden (z.B. 8 für einen ganzen Tag, 4.5 für einen halben).</p>
           </div>
         </div>
 
@@ -261,26 +271,33 @@ function renderTimeForm(entry: TimeEntry | null, allProjects: ProjectWithClient[
             name="description"
             rows="3"
             class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            aria-describedby="description-hint"
           >
 ${entry?.description || ""}</textarea
           >
+          <p id="description-hint" class="mt-1 text-xs text-gray-500">Kurze Beschreibung der Tätigkeit. Erscheint auf der Rechnung.</p>
         </div>
 
-        <div class="flex items-center">
-          <input
-            type="checkbox"
-            id="billable"
-            name="billable"
-            ${entry?.billable === 1 ? "checked" : ""}
-            class="h-4 w-4 rounded border-gray-300"
-          />
-          <label for="billable" class="ml-2 text-sm font-medium text-gray-700">Abrechenbar</label>
+        <div>
+          <div class="flex items-center">
+            <input
+              type="checkbox"
+              id="billable"
+              name="billable"
+              ${entry?.billable === 1 ? "checked" : ""}
+              class="h-4 w-4 rounded border-gray-300"
+              aria-describedby="billable-hint"
+            />
+            <label for="billable" class="ml-2 text-sm font-medium text-gray-700">Abrechenbar</label>
+          </div>
+          <p id="billable-hint" class="mt-1 text-xs text-gray-500">Deaktivieren für interne Aufgaben, die nicht in Rechnung gestellt werden.</p>
         </div>
 
         <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
           <a href="/zeiten" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
-          ${!isNew
-            ? html`
+          ${
+            !isNew
+              ? html`
                 <form method="post" action="/zeiten/${entry.id}/delete" class="inline">
                   <button
                     type="submit"
@@ -291,8 +308,9 @@ ${entry?.description || ""}</textarea
                   </button>
                 </form>
               `
-            : ""}
-          <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+              : ""
+          }
+          <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
             Speichern
           </button>
         </div>

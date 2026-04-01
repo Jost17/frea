@@ -66,6 +66,11 @@ export function appendAuditLog(
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
+export function isFirstTimeUser(): boolean {
+  const result = db.query<{ count: number }, []>("SELECT COUNT(*) as count FROM clients").get();
+  return (result?.count ?? 0) === 0;
+}
+
 export function getSettings() {
   return db
     .query<Settings, []>(
@@ -337,4 +342,4 @@ export function deleteTimeEntry(id: number) {
 }
 
 // ─── Invoices — re-exported from invoice-queries ────────────────────────────
-export { createInvoice, getInvoice, getInvoiceItems } from "./invoice-queries";
+export { createInvoice, getInvoice, getInvoiceItems, getAllInvoices, updateInvoiceStatus } from "./invoice-queries";

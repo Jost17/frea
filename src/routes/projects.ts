@@ -1,18 +1,18 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import type { AppEnv } from "../env";
-import { AppError, logAndRespond } from "../middleware/error-handler";
 import {
+  createProject,
+  deleteProject,
   getAllActiveClients,
   getAllActiveProjectsWithClient,
   getProject,
-  createProject,
   updateProject,
-  deleteProject,
 } from "../db/queries";
-import { projectSchema, type Project, type Client } from "../validation/schemas";
+import type { AppEnv } from "../env";
+import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
+import { type Client, type Project, projectSchema } from "../validation/schemas";
 
 export const projectRoutes = new Hono<AppEnv>();
 
@@ -49,15 +49,28 @@ projectRoutes.get("/", (c) => {
             <h1 class="text-2xl font-semibold">Projekte</h1>
             <a
               href="/projekte/new"
-              class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               + Neues Projekt
             </a>
           </div>
 
-          ${byClient.size === 0
-            ? html`<p class="text-gray-500">Keine Kunden gefunden. Bitte zuerst einen Kunden anlegen.</p>`
-            : html`
+          ${
+            byClient.size === 0
+              ? html`
+                <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
+                  <p class="text-sm text-gray-600">
+                    Keine Projekte vorhanden. Lege zuerst einen Kunden an, dann kannst du ein Projekt erstellen.
+                  </p>
+                  <a
+                    href="/projekte/new"
+                    class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Neues Projekt anlegen
+                  </a>
+                </div>
+              `
+              : html`
                 <div class="space-y-8">
                   ${[...byClient.entries()].map(([clientName, clientProjects]) => {
                     return html`
@@ -86,7 +99,8 @@ projectRoutes.get("/", (c) => {
                     `;
                   })}
                 </div>
-              `}
+              `
+          }
         `,
       }),
     );
@@ -147,14 +161,11 @@ projectRoutes.post("/", async (c) => {
     const data = parseFormFields(body, PROJECT_FIELDS);
     const validated = projectSchema.parse(data);
     const id = createProject(validated);
+    if (!id) throw new AppError("Projekt konnte nicht erstellt werden", 500);
 
     return c.redirect(`/projekte/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[projects POST] Validation error:", err);
-      throw new AppError(err.message, 400);
-    }
-    return logAndRespond(c, err, "Projekt konnte nicht erstellt werden", 500);
+    return handleMutationError(c, err, "Projekt konnte nicht erstellt werden");
   }
 });
 
@@ -171,11 +182,7 @@ projectRoutes.post("/:id", async (c) => {
 
     return c.redirect(`/projekte/${id}`);
   } catch (err) {
-    if (err instanceof Error) {
-      console.error("[projects POST :id] Validation error:", err);
-      throw new AppError(err.message, 400);
-    }
-    return logAndRespond(c, err, "Projekt konnte nicht aktualisiert werden", 500);
+    return handleMutationError(c, err, "Projekt konnte nicht aktualisiert werden");
   }
 });
 
@@ -194,10 +201,7 @@ projectRoutes.post("/:id/delete", (c) => {
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function renderProjectForm(
-  project: Project | null,
-  clients: Pick<Client, "id" | "name">[],
-) {
+function renderProjectForm(project: Project | null, clients: Pick<Client, "id" | "name">[]) {
   const isNew = !project;
   const action = isNew ? "/projekte" : `/projekte/${project.id}`;
 
@@ -205,8 +209,9 @@ function renderProjectForm(
     <div class="max-w-2xl">
       <div class="mb-6 flex items-center justify-between">
         <h1 class="text-2xl font-semibold">${isNew ? "Neues Projekt" : `Projekt: ${project.name}`}</h1>
-        ${!isNew
-          ? html`<form method="post" action="/projekte/${project.id}/delete" class="inline">
+        ${
+          !isNew
+            ? html`<form method="post" action="/projekte/${project.id}/delete" class="inline">
               <button
                 type="submit"
                 onclick="return confirm('Wirklich loeschen?')"
@@ -215,7 +220,8 @@ function renderProjectForm(
                 Loeschen
               </button>
             </form>`
-          : ""}
+            : ""
+        }
       </div>
 
       <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">
@@ -236,7 +242,7 @@ function renderProjectForm(
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="code" class="block text-sm font-medium text-gray-700">Code *</label>
+            <label for="code" class="block text-sm font-medium text-gray-700">Kürzel *</label>
             <input
               type="text"
               id="code"
@@ -244,7 +250,9 @@ function renderProjectForm(
               required
               value="${project?.code || ""}"
               class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              aria-describedby="code-hint"
             />
+            <p id="code-hint" class="mt-1 text-xs text-gray-500">Internes Projektkürzel (z.B. PROJ-001). Erscheint in der Zeiterfassung.</p>
           </div>
           <div>
             <label for="name" class="block text-sm font-medium text-gray-700">Name *</label>
@@ -261,7 +269,7 @@ function renderProjectForm(
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="daily_rate" class="block text-sm font-medium text-gray-700">Tageshonorar *</label>
+            <label for="daily_rate" class="block text-sm font-medium text-gray-700">Tagessatz *</label>
             <input
               type="number"
               id="daily_rate"
@@ -271,7 +279,9 @@ function renderProjectForm(
               step="0.01"
               value="${project?.daily_rate || ""}"
               class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              aria-describedby="daily-rate-hint"
             />
+            <p id="daily-rate-hint" class="mt-1 text-xs text-gray-500">Dein Tagessatz in Euro (netto). Wird für die Rechnungsberechnung verwendet.</p>
           </div>
           <div>
             <label for="budget_days" class="block text-sm font-medium text-gray-700">Budget (Tage)</label>
@@ -283,7 +293,9 @@ function renderProjectForm(
               step="0.5"
               value="${project?.budget_days || ""}"
               class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              aria-describedby="budget-hint"
             />
+            <p id="budget-hint" class="mt-1 text-xs text-gray-500">Geplante Anzahl Arbeitstage. Optional — hilft bei der Auslastungsübersicht.</p>
           </div>
         </div>
 
@@ -317,9 +329,11 @@ function renderProjectForm(
             name="service_description"
             rows="3"
             class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            aria-describedby="service-desc-hint"
           >
 ${project?.service_description || ""}</textarea
           >
+          <p id="service-desc-hint" class="mt-1 text-xs text-gray-500">Was du lieferst. Wird auf die Rechnung übernommen.</p>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
@@ -331,7 +345,9 @@ ${project?.service_description || ""}</textarea
               name="contract_number"
               value="${project?.contract_number || ""}"
               class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              aria-describedby="contract-number-hint"
             />
+            <p id="contract-number-hint" class="mt-1 text-xs text-gray-500">Optional. Referenz zum Rahmenvertrag.</p>
           </div>
           <div>
             <label for="contract_date" class="block text-sm font-medium text-gray-700">Vertragsdatum</label>
@@ -359,7 +375,7 @@ ${project?.notes || ""}</textarea
 
         <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
           <a href="/projekte" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
-          <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+          <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
             Speichern
           </button>
         </div>

@@ -29,14 +29,23 @@ invoiceRoutes.get("/", (c) => {
             <h1 class="text-2xl font-semibold">Rechnungen</h1>
             <a
               href="/rechnungen/create"
-              class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               + Neue Rechnung
             </a>
           </div>
 
-          <div class="rounded-lg border border-gray-200 bg-white p-6">
-            <p class="text-gray-500">Rechnungsverwaltung folgt in Kürze.</p>
+          <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
+            <p class="text-sm text-gray-600">
+              Noch keine Rechnungen erstellt. Erfasse zuerst Zeiten für ein Projekt, dann kannst du eine Rechnung
+              generieren.
+            </p>
+            <a
+              href="/rechnungen/create"
+              class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Neue Rechnung erstellen
+            </a>
           </div>
         `,
       }),
@@ -147,7 +156,7 @@ invoiceRoutes.get("/create", (c) => {
 
               <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
                 <a href="/rechnungen" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
-                <button type="submit" class="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                   Vorschau
                 </button>
               </div>
