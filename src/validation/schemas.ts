@@ -133,6 +133,7 @@ export const invoiceCreateSchema = z.object({
   po_number: z.string().optional().default(""),
   service_period_from: z.string().optional().default(""),
   service_period_to: z.string().optional().default(""),
+  reverse_charge: z.boolean().optional().default(false),
 });
 
 export type InvoiceCreate = z.infer<typeof invoiceCreateSchema>;
@@ -157,7 +158,9 @@ export interface Invoice {
   service_period_from: string | null;
   service_period_to: string | null;
   paid_date: string | null;
+  paid_amount: number;
   reminder_level: number;
+  reverse_charge: number;
   created_at: string;
 }
 
@@ -218,20 +221,24 @@ export const VALID_INVOICE_FILTER_VALUES = new Set([
 
 const DEFAULT_COMPANY_NAME = "Mein Unternehmen";
 
-export const onboardingCompletionSchema = z.object({
-  company_name: z
-    .string()
-    .min(1)
-    .refine((v) => v !== DEFAULT_COMPANY_NAME),
-  address: z.string().min(1),
-  postal_code: z.string().refine((v) => /^\d{5}$/.test(v)),
-  city: z.string().min(1),
-  email: z.string().email(),
-  iban: z.string().min(1).refine((v) => isValidIban(v)),
-  bic: z.string().min(1),
-  tax_number: z.string().optional().default(""),
-  ust_id: z.string().optional().default(""),
-}).refine(
-  (data) => !!(data.tax_number?.trim() || data.ust_id?.trim()),
-  { message: "Steuernummer oder Ust-IdNr. erforderlich" },
-);
+export const onboardingCompletionSchema = z
+  .object({
+    company_name: z
+      .string()
+      .min(1)
+      .refine((v) => v !== DEFAULT_COMPANY_NAME),
+    address: z.string().min(1),
+    postal_code: z.string().refine((v) => /^\d{5}$/.test(v)),
+    city: z.string().min(1),
+    email: z.string().email(),
+    iban: z
+      .string()
+      .min(1)
+      .refine((v) => isValidIban(v)),
+    bic: z.string().min(1),
+    tax_number: z.string().optional().default(""),
+    ust_id: z.string().optional().default(""),
+  })
+  .refine((data) => !!(data.tax_number?.trim() || data.ust_id?.trim()), {
+    message: "Steuernummer oder Ust-IdNr. erforderlich",
+  });

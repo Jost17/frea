@@ -182,7 +182,25 @@ export function initializeSchema() {
     }
   } catch (err) {
     console.error("[migration] Failed to add onboarding_complete column:", err);
-    throw new Error("Database migration failed: could not add onboarding_complete column", { cause: err });
+    throw new Error("Database migration failed: could not add onboarding_complete column", {
+      cause: err,
+    });
+  }
+
+  // Migration: add reverse_charge and paid_amount to invoices
+  try {
+    const invoiceCols = db.query<{ name: string }, []>("PRAGMA table_info(invoices)").all();
+    if (!invoiceCols.some((c) => c.name === "reverse_charge")) {
+      db.run("ALTER TABLE invoices ADD COLUMN reverse_charge INTEGER DEFAULT 0");
+      console.log("[migration] Added reverse_charge column to invoices");
+    }
+    if (!invoiceCols.some((c) => c.name === "paid_amount")) {
+      db.run("ALTER TABLE invoices ADD COLUMN paid_amount REAL DEFAULT 0");
+      console.log("[migration] Added paid_amount column to invoices");
+    }
+  } catch (err) {
+    console.error("[migration] Failed to add invoice columns:", err);
+    throw new Error("Database migration failed: could not add invoice columns", { cause: err });
   }
 
   // Initialize default settings if not present
