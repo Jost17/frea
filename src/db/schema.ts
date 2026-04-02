@@ -33,6 +33,7 @@ export function initializeSchema() {
       invoice_prefix TEXT DEFAULT 'RE',
       next_invoice_number INTEGER DEFAULT 1,
       kleinunternehmer INTEGER DEFAULT 0,
+      invoice_layout_config TEXT DEFAULT '{}',
       CHECK (id = 1)
     )
   `);
@@ -183,6 +184,17 @@ export function initializeSchema() {
   } catch (err) {
     console.error("[migration] Failed to add onboarding_complete column:", err);
     throw new Error("Database migration failed: could not add onboarding_complete column", { cause: err });
+  }
+
+  // Migration: add invoice_layout_config to settings
+  try {
+    const settingsCols = db.query<{ name: string }, []>("PRAGMA table_info(settings)").all();
+    if (!settingsCols.some((c) => c.name === "invoice_layout_config")) {
+      db.run("ALTER TABLE settings ADD COLUMN invoice_layout_config TEXT DEFAULT '{}'");
+      console.log("[migration] Added invoice_layout_config column to settings");
+    }
+  } catch (err) {
+    console.error("[migration] Failed to add invoice_layout_config column:", err);
   }
 
   // Initialize default settings if not present

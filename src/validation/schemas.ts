@@ -52,6 +52,7 @@ export const settingsSchema = z
     invoice_prefix: z.string().default("RE"),
     next_invoice_number: z.number().default(1),
     kleinunternehmer: z.number().default(0),
+    invoice_layout_config: z.string().default("{}"),
   })
   .superRefine((data, ctx) => {
     if (!data.tax_number?.trim() && !data.ust_id?.trim()) {
