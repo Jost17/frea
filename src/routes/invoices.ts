@@ -428,6 +428,16 @@ invoiceRoutes.post("/create", async (c) => {
       throw new AppError("Keine unberechneten Zeiteinträge für dieses Projekt", 400);
     }
 
+    // Filter to only selected time entry IDs
+    const selectedEntryIds = validated.time_entry_ids;
+    if (selectedEntryIds.length === 0) {
+      throw new AppError("Bitte wähle mindestens einen Zeiteintrag aus", 400);
+    }
+    const selectedEntries = unbilledEntries.filter((e) => selectedEntryIds.includes(e.id));
+    if (selectedEntries.length === 0) {
+      throw new AppError("Keine gültigen Zeiteinträge ausgewählt", 400);
+    }
+
     // Validate Reverse Charge eligibility
     if (validated.reverse_charge) {
       if (!settings.ust_id) {
@@ -443,7 +453,7 @@ invoiceRoutes.post("/create", async (c) => {
       {
         client_id: validated.client_id,
         project_id: validated.project_id,
-        time_entry_ids: [],
+        time_entry_ids: selectedEntryIds,
         invoice_date: validated.invoice_date,
         period_month: validated.period_month,
         period_year: validated.period_year,
@@ -452,7 +462,7 @@ invoiceRoutes.post("/create", async (c) => {
         service_period_to: validated.service_period_to,
         reverse_charge: validated.reverse_charge,
       },
-      unbilledEntries,
+      selectedEntries,
       settings,
       { reverseCharge: validated.reverse_charge },
     );
