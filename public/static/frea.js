@@ -100,6 +100,14 @@ if (!window.__freaListenersAttached) {
     }
   });
 
+  // Toggle all time entry checkboxes for a project
+  window.toggleAllEntries = function(selectAllCheckbox, projectId) {
+    var checkboxes = document.querySelectorAll('input.entry-checkbox[data-project="' + projectId + '"]');
+    checkboxes.forEach(function(cb) {
+      cb.checked = selectAllCheckbox.checked;
+    });
+  };
+
   // Respect OS preference changes (only if no manual theme set)
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
     var hasManualTheme = false;

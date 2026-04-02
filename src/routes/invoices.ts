@@ -311,18 +311,40 @@ invoiceRoutes.get("/create", (c) => {
                                 </div>
 
                                 <div class="border-t border-gray-200 pt-4">
-                                  <p class="text-sm font-medium text-gray-700 mb-2">Abzurechnende Zeiteinträge</p>
+                                  <div class="flex items-center justify-between mb-2">
+                                    <p class="text-sm font-medium text-gray-700">Abzurechnende Zeiteinträge</p>
+                                    <label class="flex items-center gap-2 text-sm text-gray-600">
+                                      <input
+                                        type="checkbox"
+                                        id="select-all-${project.id}"
+                                        onchange="toggleAllEntries(this, ${project.id})"
+                                        checked
+                                        class="rounded border-gray-300"
+                                      />
+                                      Alle auswählen
+                                    </label>
+                                  </div>
                                   <div class="space-y-1 max-h-40 overflow-y-auto bg-gray-50 rounded p-2">
                                     ${unbilledEntries.map((entry) => {
                                       const days = entry.duration / 8;
                                       const net = days * project.daily_rate;
                                       return html`
                                         <div class="flex justify-between items-center text-sm py-1 border-b border-gray-100 last:border-0">
-                                          <span class="text-gray-700">
-                                            ${formatDate(entry.date)} · ${entry.duration.toFixed(1)}h
-                                            ${entry.description ? `— ${entry.description}` : ""}
-                                          </span>
-                                          <span class="text-gray-500 font-medium">${formatCurrency(net)}</span>
+                                          <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                                            <input
+                                              type="checkbox"
+                                              name="time_entry_ids"
+                                              value="${entry.id}"
+                                              checked
+                                              class="entry-checkbox rounded border-gray-300"
+                                              data-project="${project.id}"
+                                            />
+                                            <span class="text-gray-700">
+                                              ${formatDate(entry.date)} · ${entry.duration.toFixed(1)}h
+                                              ${entry.description ? `— ${entry.description}` : ""}
+                                            </span>
+                                          </label>
+                                          <span class="text-gray-500 font-medium ml-4">${formatCurrency(net)}</span>
                                         </div>
                                       `;
                                     })}
