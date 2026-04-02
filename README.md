@@ -1,36 +1,36 @@
-# FREA — Freelancer Invoicing Tool
+# FREA — Freelancer-Rechnungstool
 
-German freelancer invoicing tool. Runs locally, stores everything in SQLite, generates §14 UStG-compliant invoices.
+Deutsches Rechnungstool für Freelancer. Läuft lokal, speichert alle Daten in SQLite und erzeugt Rechnungen gemäß §14 UStG.
 
-## Stack
+## Technologiestack
 
-- **Runtime:** Bun
+- **Laufzeit:** Bun
 - **Server:** Hono (Port 3114)
-- **DB:** SQLite via `bun:sqlite` — kein ORM, prepared statements
+- **Datenbank:** SQLite über `bun:sqlite` — kein ORM, nur prepared statements
 - **Frontend:** HTMX + Tailwind v4 — kein React, kein SPA
-- **Validation:** Zod
+- **Validierung:** Zod
 
-## Features
+## Funktionsumfang
 
-- **Stammdaten** — Unternehmensname, Bankverbindung, Steuernummer, MwSt-Satz
+- **Stammdaten** — Firmenname, Bankverbindung, Steuernummer, MwSt-Satz
 - **Kunden** — CRUD mit Kontaktdaten, USt-ID, Käuferreferenz
 - **Projekte** — Tagessatz, Budget, Leistungsbeschreibung, Vertragsnummer
 - **Zeiterfassung** — Einträge pro Projekt und Tag, abrechenbar/nicht abrechenbar
-- **Rechnungen** — Automatische Nummerierung, MwSt pro Position, Status-Tracking (Entwurf → Versendet → Bezahlt)
+- **Rechnungen** — Automatische Nummerierung, MwSt pro Position, Status-Verlauf (Entwurf → Versendet → Bezahlt)
 - **Dashboard** — KPI-Übersicht, offene Posten, Umsatz
 
 ## Compliance
 
 - **§14 UStG** — Alle Pflichtangaben auf Rechnungen
-- **MwSt per Position** — Niemals auf Gesamtsumme berechnen
-- **GoBD** — Append-only Audit Log, trigger-geschützt gegen Änderungen
-- **WCAG 2.1 AA** — Barrierefreie UI, Kontrast ≥ 4.5:1, Fokusringe, semantisches HTML
-- **EU-only** — Keine US-CDNs, keine externen Fonts, HTMX self-hosted (ADR-001)
+- **MwSt pro Position** — Niemals auf der Gesamtsumme berechnen
+- **GoBD** — Append-only Audit-Log, durch Trigger gegen Änderungen geschützt
+- **WCAG 2.1 AA** — Barrierefreie Oberfläche, Kontrast ≥ 4.5:1, Fokusringe, semantisches HTML
+- **Nur EU-Dienste** — Keine US-CDNs, keine externen Fonts, HTMX self-hosted (ADR-001)
 
-## Quickstart
+## Schnellstart
 
 ```bash
-# Dependencies installieren
+# Abhängigkeiten installieren
 bun install
 
 # Datenbank initialisieren
@@ -40,23 +40,23 @@ bun run db:setup
 bun run dev
 ```
 
-App läuft auf `http://localhost:3114`.
+Die Anwendung läuft auf `http://localhost:3114`.
 
 ## Konfiguration
 
-Stammdaten werden über die UI unter `/einstellungen` gepflegt und in der SQLite-Datenbank gespeichert.
+Stammdaten werden über die Oberfläche unter `/einstellungen` gepflegt und in der SQLite-Datenbank gespeichert.
 
 Optionale Umgebungsvariablen (Vorlage: `.env.example`):
 
 ```bash
-# DB-Pfad (Standard: ./data/frea.db)
+# Datenbankpfad (Standard: ./data/frea.db)
 FREA_DB_PATH="/custom/path/frea.db"
 
 # Server-Port (Standard: 3114)
 PORT=3114
 ```
 
-## Scripts
+## Skripte
 
 | Befehl | Beschreibung |
 |--------|-------------|
@@ -65,10 +65,10 @@ PORT=3114
 | `bun run db:setup` | Datenbank initialisieren |
 | `bun test` | Tests ausführen |
 | `bun run typecheck` | TypeScript-Typen prüfen |
-| `bun run lint` | Biome Linter |
+| `bun run lint` | Biome-Linter |
 | `bun run check` | Biome Lint + Format |
 
-## DB-Schema
+## Datenbankschema
 
 ```
 settings        — Stammdaten (1 Zeile)
@@ -80,14 +80,14 @@ invoice_items   — Rechnungspositionen (MwSt pro Position)
 audit_log       — GoBD Audit Trail (append-only)
 ```
 
-## Entwicklung
+## Projektstruktur
 
 ```
 src/
   db/           — Schema, Queries, Setup
   routes/       — Hono-Routes (dashboard, clients, projects, times, invoices, settings, api)
   templates/    — HTMX-Templates (tagged template literals)
-  middleware/   — Error handling, Security headers, Nav context
+  middleware/   — Error-Handling, Security-Header, Nav-Kontext
   validation/   — Zod-Schemas
 public/
   static/       — Self-hosted HTMX, Tailwind CSS
@@ -95,6 +95,6 @@ docs/
   adr/          — Architecture Decision Records
 ```
 
-## License
+## Lizenz
 
-Private — nicht für öffentliche Nutzung freigegeben.
+Privat — nicht für öffentliche Nutzung freigegeben.
