@@ -31,16 +31,38 @@ export function logAndRespond(
 }
 
 /**
+ * Renders a user-friendly HTML error alert for form mutations.
+ * Shows the error message in a styled alert box with retry instructions.
+ */
+function renderFormError(message: string, errorId?: string): string {
+  return `<div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4" role="alert">
+    <div class="flex items-center gap-2">
+      <svg class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <p class="text-sm font-medium text-red-800">${message}</p>
+    </div>
+    ${errorId ? `<p class="mt-1 text-xs text-red-600">Fehler-ID: ${errorId}</p>` : ""}
+    <p class="mt-2 text-xs text-red-700">Bitte korrigiere die Eingabe und versuche es erneut.</p>
+  </div>`;
+}
+
+/**
  * Shared error handler for form mutation routes (POST create/update).
  * Catches ZodError (422), AppError (re-throw), and unknown errors (500).
+ * Returns HTML error alerts for user-friendly display.
  */
 export function handleMutationError(c: Context, err: unknown, fallbackMsg: string): Response {
   if (err instanceof AppError) throw err;
   if (err instanceof ZodError) {
+    const eid = generateErrorId();
     const msg = err.issues[0]?.message ?? "Ungültige Eingabe";
-    return logAndRespond(c, err, msg, 422);
+    console.error(`[${eid}] Validation error:`, err);
+    return c.html(renderFormError(msg, eid), 422);
   }
-  return logAndRespond(c, err, fallbackMsg, 500);
+  const eid = generateErrorId();
+  console.error(`[${eid}] ${fallbackMsg}:`, err);
+  return c.html(renderFormError(fallbackMsg, eid), 500);
 }
 
 export const globalErrorHandler: ErrorHandler = (err, c) => {

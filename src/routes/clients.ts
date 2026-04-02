@@ -154,7 +154,7 @@ clientRoutes.post("/", async (c) => {
     const id = createClient(validated);
     if (!id) throw new AppError("Kunde konnte nicht erstellt werden", 500);
 
-    return c.redirect(`/kunden/${id}`);
+    return c.redirect(`/kunden/${id}`, 303, { "X-Toast-Message": "Kunde gespeichert" });
   } catch (err) {
     return handleMutationError(c, err, "Kunde konnte nicht erstellt werden");
   }
@@ -171,20 +171,20 @@ clientRoutes.post("/:id", async (c) => {
     const validated = clientSchema.parse({ ...data, country: "Deutschland" });
     updateClient(id, validated);
 
-    return c.redirect(`/kunden/${id}`);
+    return c.redirect(`/kunden/${id}`, 303, { "X-Toast-Message": "Kunde aktualisiert" });
   } catch (err) {
     return handleMutationError(c, err, "Kunde konnte nicht aktualisiert werden");
   }
 });
 
-// Delete client
+// Delete client (soft delete = archive)
 clientRoutes.post("/:id/delete", (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
     if (Number.isNaN(id)) throw new AppError("Ungueltige Kunden-ID", 400);
 
     deleteClient(id);
-    return c.redirect("/kunden");
+    return c.redirect("/kunden", 303, { "X-Toast-Message": "Kunde archiviert" });
   } catch (err) {
     return logAndRespond(c, err, "Kunde konnte nicht geloescht werden", 500);
   }

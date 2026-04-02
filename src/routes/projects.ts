@@ -163,7 +163,7 @@ projectRoutes.post("/", async (c) => {
     const id = createProject(validated);
     if (!id) throw new AppError("Projekt konnte nicht erstellt werden", 500);
 
-    return c.redirect(`/projekte/${id}`);
+    return c.redirect(`/projekte/${id}`, 303, { "X-Toast-Message": "Projekt gespeichert" });
   } catch (err) {
     return handleMutationError(c, err, "Projekt konnte nicht erstellt werden");
   }
@@ -180,20 +180,20 @@ projectRoutes.post("/:id", async (c) => {
     const validated = projectSchema.parse(data);
     updateProject(id, validated);
 
-    return c.redirect(`/projekte/${id}`);
+    return c.redirect(`/projekte/${id}`, 303, { "X-Toast-Message": "Projekt aktualisiert" });
   } catch (err) {
     return handleMutationError(c, err, "Projekt konnte nicht aktualisiert werden");
   }
 });
 
-// Delete project
+// Delete project (soft delete = archive)
 projectRoutes.post("/:id/delete", (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
     if (Number.isNaN(id)) throw new AppError("Ungueltige Projekt-ID", 400);
 
     deleteProject(id);
-    return c.redirect("/projekte");
+    return c.redirect("/projekte", 303, { "X-Toast-Message": "Projekt archiviert" });
   } catch (err) {
     return logAndRespond(c, err, "Projekt konnte nicht geloescht werden", 500);
   }

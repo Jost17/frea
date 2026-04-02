@@ -333,16 +333,16 @@ settingsRoutes.post("/", async (c) => {
     const firstSetup = !isOnboardingComplete();
     const body = await c.req.formData();
     const data = parseFormFields(body, SETTINGS_FIELDS);
-    const validated = settingsSchema.parse({ ...data, country: "Deutschland", mobile: "" });
+    const validated = settingsSchema.parse({ ...data, country: "Deutschland" });
     updateSettings(validated);
 
     if (firstSetup) {
       completeOnboarding();
       invalidateOnboardingCache();
-      return c.redirect("/?onboarding_done=1");
+      return c.redirect("/?onboarding_done=1", 303, { "X-Toast-Message": "Einrichtung abgeschlossen!" });
     }
 
-    return c.redirect("/einstellungen?success=1");
+    return c.redirect("/einstellungen?success=1", 303, { "X-Toast-Message": "Einstellungen gespeichert" });
   } catch (err) {
     return handleMutationError(c, err, "Einstellungen konnten nicht gespeichert werden");
   }

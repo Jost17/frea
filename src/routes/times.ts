@@ -170,7 +170,7 @@ timeRoutes.post("/", async (c) => {
     const id = createTimeEntry(validated);
     if (!id) throw new AppError("Zeiteintrag konnte nicht erstellt werden", 500);
 
-    return c.redirect(`/zeiten/${id}`);
+    return c.redirect(`/zeiten/${id}`, 303, { "X-Toast-Message": "Zeiteintrag gespeichert" });
   } catch (err) {
     return handleMutationError(c, err, "Zeiteintrag konnte nicht erstellt werden");
   }
@@ -187,7 +187,7 @@ timeRoutes.post("/:id", async (c) => {
     const validated = timeEntrySchema.parse(data);
     updateTimeEntry(id, validated);
 
-    return c.redirect(`/zeiten/${id}`);
+    return c.redirect(`/zeiten/${id}`, 303, { "X-Toast-Message": "Zeiteintrag aktualisiert" });
   } catch (err) {
     return handleMutationError(c, err, "Zeiteintrag konnte nicht aktualisiert werden");
   }
@@ -200,7 +200,7 @@ timeRoutes.post("/:id/delete", (c) => {
     if (Number.isNaN(id)) throw new AppError("Ungueltige Eintrag-ID", 400);
 
     deleteTimeEntry(id);
-    return c.redirect("/zeiten");
+    return c.redirect("/zeiten", 303, { "X-Toast-Message": "Zeiteintrag geloescht" });
   } catch (err) {
     return logAndRespond(c, err, "Eintrag konnte nicht geloescht werden", 500);
   }
