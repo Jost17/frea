@@ -10,6 +10,7 @@ import {
 } from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
+import { EmptyState } from "../templates/components/empty-state";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
 import { type Client, type Project, projectSchema } from "../validation/schemas";
@@ -57,19 +58,11 @@ projectRoutes.get("/", (c) => {
 
           ${
             byClient.size === 0
-              ? html`
-                <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
-                  <p class="text-sm text-gray-600">
-                    Keine Projekte vorhanden. Lege zuerst einen Kunden an, dann kannst du ein Projekt erstellen.
-                  </p>
-                  <a
-                    href="/projekte/new"
-                    class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                  >
-                    Neues Projekt anlegen
-                  </a>
-                </div>
-              `
+              ? EmptyState({
+                  message: "Keine Projekte vorhanden. Lege zuerst einen Kunden an, dann kannst du ein Projekt erstellen.",
+                  actionHref: "/projekte/new",
+                  actionLabel: "Neues Projekt anlegen",
+                })
               : html`
                 <div class="space-y-8">
                   ${[...byClient.entries()].map(([clientName, clientProjects]) => {

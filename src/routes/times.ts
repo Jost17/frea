@@ -11,6 +11,7 @@ import {
 } from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
+import { EmptyState } from "../templates/components/empty-state";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
 import { type TimeEntry, timeEntrySchema } from "../validation/schemas";
@@ -52,19 +53,11 @@ timeRoutes.get("/", (c) => {
 
           ${
             byClient.size === 0
-              ? html`
-                <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
-                  <p class="text-sm text-gray-600">
-                    Keine Zeiteinträge vorhanden. Erstelle einen Zeiteintrag, um geleistete Stunden zu dokumentieren.
-                  </p>
-                  <a
-                    href="/zeiten/new"
-                    class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                  >
-                    Zeit erfassen
-                  </a>
-                </div>
-              `
+              ? EmptyState({
+                  message: "Keine Zeiteinträge vorhanden. Erstelle einen Zeiteintrag, um geleistete Stunden zu dokumentieren.",
+                  actionHref: "/zeiten/new",
+                  actionLabel: "Zeit erfassen",
+                })
               : html`
                 <p class="mb-4 text-sm text-gray-500">Hier siehst du alle noch nicht abgerechneten Zeiten.</p>
                 <div class="space-y-8">

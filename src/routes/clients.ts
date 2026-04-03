@@ -9,6 +9,7 @@ import {
 } from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
+import { EmptyState } from "../templates/components/empty-state";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
 import { type Client, clientSchema } from "../validation/schemas";
@@ -52,20 +53,11 @@ clientRoutes.get("/", (c) => {
 
           ${
             clients.length === 0
-              ? html`
-                <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
-                  <p class="text-sm text-gray-600">
-                    Noch keine Kunden angelegt. Erstelle deinen ersten Kunden, um Projekte und Rechnungen zuordnen zu
-                    können.
-                  </p>
-                  <a
-                    href="/kunden/new"
-                    class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                  >
-                    Neuen Kunden anlegen
-                  </a>
-                </div>
-              `
+              ? EmptyState({
+                  message: "Noch keine Kunden angelegt. Erstelle deinen ersten Kunden, um Projekte und Rechnungen zuordnen zu können.",
+                  actionHref: "/kunden/new",
+                  actionLabel: "Neuen Kunden anlegen",
+                })
               : html`
                 <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
                   <table class="w-full text-sm">
