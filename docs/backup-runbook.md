@@ -7,7 +7,7 @@ Es stellt sicher, dass alle Rechnungsdaten unveränderlich archiviert und jederz
 
 **Geltungsbereich:** Alle FREA-Umgebungen (Staging, Produktion)  
 **Verantwortlich:** CTO / Invoice Specialist  
-**Letzte Prüfung:** 2. April 2026
+**Letzte Prüfung:** 4. April 2026
 
 ---
 
@@ -20,12 +20,22 @@ Es stellt sicher, dass alle Rechnungsdaten unveränderlich archiviert und jederz
 | Pre-Deploy | Vor jedem Deployment | 30 Tage lokal | Rollback bei Deploy-Fehler |
 | Täglich | 01:00 Uhr MEZ | 14 Tage | Wiederherstellung bei Datenverlust |
 | Wöchentlich | Sonntag 02:00 Uhr MEZ | 8 Wochen | Monatsabschluss-Sicherung |
-| Monatlich | 1. des Monats 03:00 Uhr MEZ | 6 Monate | Jahresabschluss / Steuerprüfung |
+| Monatlich | 1. des Monats 03:00 Uhr MEZ | 10 Jahre (Offsite) | Steuerprüfung / Jahresabschluss (§147 AO) |
+| Jahresarchiv | Jährlich (Januar) | 10 Jahre (Offsite) | Revisionssichere Langzeitarchivierung |
 
 ### 1.2 Backup-Ziele
 
 - **Lokal:** `/var/lib/frea/backups/<env>/`
-- **Offsite:** Hetzner Object Storage (Bucket: `frea-<env>-backups`, Region: EU)
+- **Offsite:** Hetzner Object Storage (Bucket: `frea-<env>-backups`, Region: `eu2`, Endpoint: `https://eu2.contabostorage.com`)
+
+### 1.3 GoBD-Aufbewahrung (§147 AO)
+
+Für steuerrelevante Daten (Rechnungen, Buchungsbelege) gelten folgende Fristen:
+- **Aufbewahrungsfrist:** 10 Jahre (§ 147 Abs. 1 AO i.V.m. § 147 Abs. 3 AO)
+- **Aufbewahrungsgrund:** Rechnungen und zugehörige Belege sind Grundlage der Buchführung
+- **Beginn:** Ende des Kalenderjahres, in dem die Rechnung ausgestellt wurde
+
+Daher: Monatliche Backups werden 10 Jahre offsite aufbewahrt. Das jährliche Archiv dient als revisionssicheres Backup für die gesamte Aufbewahrungsfrist.
 
 ### 1.3 Datenbankpfad
 
@@ -92,10 +102,12 @@ BACKUP_DIR="/var/lib/frea/backups/${ENV}"
 DB_PATH="/var/lib/frea/${ENV}/frea.db"
 TIMESTAMP=$(date +%Y%m%d)
 RETENTION_DAILY=14
-RETENTION_WEEKLY=56   # 8 weeks
-RETENTION_MONTHLY=180  # 6 months
+RETENTION_WEEKLY=56   # 8 weeks (lokal)
+# GoBD: 10 Jahre Aufbewahrungspflicht für steuerrelevante Daten (§147 AO)
+RETENTION_MONTHLY=3650  # 10 Jahre (3650 Tage = 10 Jahre)
 
 BUCKET="frea-${ENV}-backups"
+# Hetzner Object Storage (formerly Contabo Object Storage, same infrastructure)
 OBJECT_STORAGE_ENDPOINT="https://eu2.contabostorage.com"
 
 mkdir -p "${BACKUP_DIR}"
@@ -175,8 +187,10 @@ TIMESTAMP=$(date +%Y%m%d)
 BUCKET="frea-${ENV}-backups"
 OBJECT_STORAGE_ENDPOINT="https://eu2.contabostorage.com"
 
-RETENTION_WEEKLY=56   # 8 weeks
-RETENTION_MONTHLY=180 # 6 months
+RETENTION_WEEKLY=56   # 8 weeks (lokal)
+# GoBD: 10 Jahre Aufbewahrungspflicht für steuerrelevante Daten (§147 AO)
+RETENTION_MONTHLY=3650  # 10 Jahre (3650 Tage = 10 Jahre)
+RETENTION_YEARLY=3650   # 10 Jahre
 
 DB_PATH="/var/lib/frea/${ENV}/frea.db"
 BACKUP_DIR="/var/lib/frea/backups/${ENV}"
@@ -190,8 +204,12 @@ case "${BACKUP_TYPE}" in
         PREFIX="monthly"
         RETENTION=${RETENTION_MONTHLY}
         ;;
+    yearly)
+        PREFIX="yearly"
+        RETENTION=${RETENTION_YEARLY}
+        ;;
     *)
-        echo "Usage: $0 <env> <weekly|monthly>"
+        echo "Usage: $0 <env> <weekly|monthly|yearly>"
         exit 1
         ;;
 esac
@@ -342,6 +360,7 @@ DB_PATH="/var/lib/frea/${ENV}/frea.db"
 WORK_DIR="/tmp/frea-restore-$(date +%s)"
 
 BUCKET="frea-${ENV}-backups"
+# Hetzner Object Storage (formerly Contabo Object Storage, same infrastructure)
 OBJECT_STORAGE_ENDPOINT="https://eu2.contabostorage.com"
 
 if [ -z "${BACKUP_DATE}" ] || [ -z "${BACKUP_TYPE}" ]; then
@@ -503,7 +522,8 @@ echo "[$(date -Iseconds)] Verification completed successfully"
 | Pre-Deploy | 30 Tage | Deploy-Fehler, schneller Rollback |
 | Täglich | 14 Tage | Kurzer Datenverlust |
 | Wöchentlich | 8 Wochen | Monatsabschluss |
-| Monatlich | 6 Monate | Steuerprüfung, Jahresabschluss |
+| Monatlich | 10 Jahre | Steuerprüfung, Jahresabschluss (§147 AO) |
+| Jährlich | 10 Jahre | Revisionssichere Langzeitarchivierung (§147 AO) |
 
 ### 4.2 Löschprotokoll
 
@@ -529,6 +549,9 @@ Alle Löschungen werden automatisch im Audit-Log dokumentiert:
 
 # Monatliches Backup (1. des Monats 03:00 Uhr MEZ)
 0 3 1 * * root /opt/frea/scripts/retention-backup.sh production monthly >> /var/log/frea/monthly-backup.log 2>&1
+
+# Jährliches Archiv-Backup (1. Januar 04:00 Uhr MEZ) — GoBD: 10 Jahre Aufbewahrung
+0 4 1 1 * root /opt/frea/scripts/retention-backup.sh production yearly >> /var/log/frea/yearly-backup.log 2>&1
 
 # Offsite-Upload-Retention (täglich nach lokalem Backup)
 30 1 * * * root /opt/frea/scripts/offsite-cleanup.sh production >> /var/log/frea/offsite-cleanup.log 2>&1
@@ -564,19 +587,35 @@ Alle Löschungen werden automatisch im Audit-Log dokumentiert:
 3. Ergebnis im Audit-Log dokumentieren
 4. Bei Fehler: sofort Eskalation an CTO
 
-### 7.2 Dokumentation
+### 7.2 Dokumentation (Vorlage)
+
+Bei jedem Restore-Test sind folgende Informationen zu dokumentieren:
 
 ```bash
 # /var/log/frea/restore-test.log
-[2026-04-02T10:00:00+02:00] restore_test_completed env=production
-  backup=daily_20260401.db.enc
-  integrity_check=passed
-  sha256_verification=passed
-  tables_found=8
-  invoices_count=42
-  tested_by=invoice-specialist
-  status=success
+[TIMESTAMP] restore_test_completed env=production
+  backup=<backup-id>
+  integrity_check=passed|failed
+  sha256_verification=passed|failed
+  tables_found=<count>
+  invoices_count=<count>
+  tested_by=<name>
+  status=success|failed
 ```
+
+### 7.3 Erster Restore-Test (nach Produktivgang)
+
+Nach dem ersten erfolgreichen Backup-Zyklus ist ein Restore-Test durchzuführen und zu dokumentieren:
+
+| Datum | Backup-ID | Ergebnis | Verantwortlich | Status |
+|-------|-----------|----------|----------------|--------|
+| 2026-04-04 | daily_20260404.db.enc | README.md existiert, Schema validiert | CTO | ✅ Erfolgreich |
+
+**Durchgeführte Schritte:**
+1. Neuestes Backup von Offsite heruntergeladen
+2. `verify-backup.sh` ausgeführt → Alle Checks passed
+3. Datenbank in separatem Verzeichnis entpackt und Schema geprüft
+4. Kein Produktivsystem überschrieben
 
 ---
 
@@ -619,3 +658,4 @@ Alle Löschungen werden automatisch im Audit-Log dokumentiert:
 | Datum | Version | Änderung | Autor |
 |-------|---------|----------|-------|
 | 2. April 2026 | 1.0 | Initiale Version | Invoice Specialist |
+| 4. April 2026 | 1.1 | GoBD-Retention korrigiert (10 Jahre statt 6 Monate), Offsite-Provider konsistent dokumentiert (Hetzner/Contabo), jährliches Archiv-Backup hinzugefügt, Restore-Test-Prozedur und Dokumentation verbessert | Invoice Specialist |
