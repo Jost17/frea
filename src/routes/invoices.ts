@@ -8,7 +8,7 @@ import {
   getInvoice,
   getInvoiceItems,
 } from "../db/queries";
-
+import { EmptyState } from "../templates/components/empty-state";
 import { Layout } from "../templates/layout";
 
 export const invoiceRoutes = new Hono<AppEnv>();
@@ -35,18 +35,12 @@ invoiceRoutes.get("/", (c) => {
             </a>
           </div>
 
-          <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
-            <p class="text-sm text-gray-600">
-              Noch keine Rechnungen erstellt. Erfasse zuerst Zeiten für ein Projekt, dann kannst du eine Rechnung
-              generieren.
-            </p>
-            <a
-              href="/rechnungen/create"
-              class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              Neue Rechnung erstellen
-            </a>
-          </div>
+          ${EmptyState({
+            message:
+              "Noch keine Rechnungen erstellt. Erfasse zuerst Zeiten für ein Projekt, dann kannst du eine Rechnung generieren.",
+            actionHref: "/rechnungen/create",
+            actionLabel: "Neue Rechnung erstellen",
+          })}
         `,
       }),
     );
