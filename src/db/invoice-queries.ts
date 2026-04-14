@@ -37,17 +37,21 @@ export function createInvoice(
       .all(...uniqueProjectIds);
     const projectMap = new Map(projects.map((p) => [p.id, p]));
 
+    // Determine effective VAT rate: 0 for Kleinunternehmer or reverse charge
+    const isKleinunternehmer = Boolean(settings.kleinunternehmer);
+    const isReverseCharge = Boolean(data.reverse_charge);
+    const effectiveVatRate = isKleinunternehmer || isReverseCharge ? 0 : settings.vat_rate;
+
     // Calculate totals PER LINE ITEM with proper MwSt
     let totalNet = 0;
     let totalVat = 0;
 
-    const vatRate = settings.vat_rate;
     const invoiceItems = timeEntries.map((entry) => {
       const project = projectMap.get(entry.project_id);
       if (!project) throw new Error(`Projekt ${entry.project_id} nicht gefunden`);
 
       const netAmount = roundToEuro(entry.duration * project.daily_rate);
-      const vatAmount = roundToEuro(netAmount * vatRate);
+      const vatAmount = roundToEuro(netAmount * effectiveVatRate);
       const grossAmount = roundToEuro(netAmount + vatAmount);
 
       totalNet += netAmount;
@@ -75,8 +79,10 @@ export function createInvoice(
     const invoiceRecord = db
       .query(
         `INSERT INTO invoices
-         (invoice_number, client_id, project_id, invoice_date, due_date, period_month, period_year, net_amount, vat_amount, gross_amount, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')
+         (invoice_number, client_id, project_id, invoice_date, due_date, period_month, period_year,
+          net_amount, vat_amount, gross_amount, status, po_number,
+          service_period_from, service_period_to, reverse_charge)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?)
          RETURNING id`,
       )
       .get(
@@ -90,6 +96,10 @@ export function createInvoice(
         totalNet,
         totalVat,
         totalGross,
+        data.po_number || null,
+        data.service_period_from || null,
+        data.service_period_to || null,
+        data.reverse_charge || 0,
       ) as { id: number } | undefined;
 
     if (!invoiceRecord) throw new Error("Rechnung konnte nicht erstellt werden");
@@ -112,7 +122,7 @@ export function createInvoice(
         item.entry.duration,
         item.project.daily_rate,
         item.netAmount,
-        vatRate,
+        effectiveVatRate,
         item.vatAmount,
         item.grossAmount,
       );
@@ -134,6 +144,9 @@ export function createInvoice(
       invoice_number: invoiceNumber,
       net_amount: totalNet,
       gross_amount: totalGross,
+      vat_rate: effectiveVatRate,
+      is_kleinunternehmer: isKleinunternehmer,
+      is_reverse_charge: isReverseCharge,
       time_entry_count: timeEntries.length,
     });
 
