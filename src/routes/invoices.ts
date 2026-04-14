@@ -1,20 +1,96 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import { getInvoice, getInvoiceItems } from "../db/invoice-queries";
-import { getClient, getSettings } from "../db/queries";
+import {
+  createInvoice,
+  getAllInvoices,
+  getInvoice,
+  getInvoiceItems,
+  updateInvoiceStatus,
+} from "../db/invoice-queries";
+import {
+  getActiveProjectsForClient,
+  getAllActiveClients,
+  getClient,
+  getSettings,
+  getTimeEntriesForProject,
+} from "../db/queries";
+import type { TimeEntry } from "../validation/schemas";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
-import { EmptyState } from "../templates/components/empty-state";
+import {
+  renderInvoiceClientSelection,
+  renderInvoiceList,
+  renderInvoiceProjectSelection,
+  type InvoiceCreateEntryPreview,
+  type InvoiceCreateProjectPreview,
+} from "../templates/invoice-pages";
+import { renderInvoiceDetailPage } from "../templates/invoice-detail";
 import { Layout } from "../templates/layout";
+import { invoiceCreateSchema } from "../validation/schemas";
 
 export const invoiceRoutes = new Hono<AppEnv>();
+
+function roundToEuro(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function computeProjectPreviews(
+  clientId: number,
+  vatRate: number,
+  isKleinunternehmer: boolean,
+): InvoiceCreateProjectPreview[] {
+  const projects = getActiveProjectsForClient(clientId);
+  const effectiveVatRate = isKleinunternehmer ? 0 : vatRate;
+
+  return projects.map((project) => {
+    const entries = getTimeEntriesForProject(project.id);
+
+    const unbilledEntries: InvoiceCreateEntryPreview[] = entries.map((entry) => {
+      const netAmount = roundToEuro(entry.duration * project.daily_rate);
+      const vatAmount = roundToEuro(netAmount * effectiveVatRate);
+      const grossAmount = roundToEuro(netAmount + vatAmount);
+      return {
+        id: entry.id,
+        date: entry.date,
+        duration: entry.duration,
+        description: entry.description || "",
+        netAmount,
+        vatAmount,
+        grossAmount,
+      };
+    });
+
+    const totalDays = roundToEuro(
+      unbilledEntries.reduce((sum, e) => sum + e.duration, 0),
+    );
+    const netAmount = roundToEuro(
+      unbilledEntries.reduce((sum, e) => sum + e.netAmount, 0),
+    );
+    const vatAmount = roundToEuro(
+      unbilledEntries.reduce((sum, e) => sum + e.vatAmount, 0),
+    );
+    const grossAmount = roundToEuro(
+      unbilledEntries.reduce((sum, e) => sum + e.grossAmount, 0),
+    );
+
+    return {
+      project,
+      unbilledEntries,
+      totalDays,
+      netAmount,
+      vatAmount,
+      grossAmount,
+    };
+  });
+}
 
 // List all invoices
 invoiceRoutes.get("/", (c) => {
   try {
     const overdueCount = c.get("overdueCount");
+    const invoices = getAllInvoices();
+    const now = new Date().toISOString().split("T")[0];
 
-    // For now, just show creation interface
     return c.html(
       Layout({
         title: "Rechnungen",
@@ -30,13 +106,7 @@ invoiceRoutes.get("/", (c) => {
               + Neue Rechnung
             </a>
           </div>
-
-          ${EmptyState({
-            message:
-              "Noch keine Rechnungen erstellt. Erfasse zuerst Zeiten für ein Projekt, dann kannst du eine Rechnung generieren.",
-            actionHref: "/rechnungen/create",
-            actionLabel: "Neue Rechnung erstellen",
-          })}
+          ${renderInvoiceList(invoices, now)}
         `,
       }),
     );
@@ -45,114 +115,69 @@ invoiceRoutes.get("/", (c) => {
   }
 });
 
-// Create invoice (select time entries)
+// Step 1: Select client
 invoiceRoutes.get("/create", (c) => {
   try {
     const overdueCount = c.get("overdueCount");
-    const settings = getSettings();
+    const clientIdParam = c.req.query("client_id");
 
-    if (!settings) {
-      throw new AppError("Firmeneinstellungen nicht initialisiert", 500);
+    // Step 2: If client_id provided, show project + time entry selection
+    if (clientIdParam) {
+      const clientId = parseInt(clientIdParam, 10);
+      if (Number.isNaN(clientId)) {
+        throw new AppError("Ungültige Kunden-ID", 400);
+      }
+
+      const client = getClient(clientId);
+      if (!client) {
+        throw new AppError("Kunde nicht gefunden", 404);
+      }
+
+      const settings = getSettings();
+      if (!settings) {
+        throw new AppError("Firmeneinstellungen nicht initialisiert", 500);
+      }
+
+      const isKleinunternehmer = Boolean(settings.kleinunternehmer);
+      const today = new Date().toISOString().split("T")[0];
+      const dueDate = new Date(
+        Date.now() + (settings.payment_days || 28) * 24 * 60 * 60 * 1000,
+      )
+        .toISOString()
+        .split("T")[0];
+
+      const projectPreviews = computeProjectPreviews(
+        clientId,
+        settings.vat_rate,
+        isKleinunternehmer,
+      );
+
+      return c.html(
+        Layout({
+          title: "Neue Rechnung",
+          activeNav: "rechnungen",
+          overdueCount,
+          children: renderInvoiceProjectSelection({
+            client,
+            projectPreviews,
+            today,
+            dueDate,
+            vatRate: settings.vat_rate,
+            isKleinunternehmer,
+          }),
+        }),
+      );
     }
+
+    // Step 1: Show client selection
+    const clients = getAllActiveClients();
 
     return c.html(
       Layout({
         title: "Neue Rechnung",
         activeNav: "rechnungen",
         overdueCount,
-        children: html`
-          <div class="max-w-3xl">
-            <h1 class="mb-6 text-2xl font-semibold">Neue Rechnung erstellen</h1>
-
-            <form method="post" action="/rechnungen/create" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label for="invoice_date" class="block text-sm font-medium text-gray-700">Rechnungsdatum *</label>
-                  <input
-                    type="date"
-                    id="invoice_date"
-                    name="invoice_date"
-                    required
-                    value="${new Date().toISOString().split("T")[0]}"
-                    class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label for="period_month" class="block text-sm font-medium text-gray-700">Abrechnungsmonat *</label>
-                  <input
-                    type="number"
-                    id="period_month"
-                    name="period_month"
-                    required
-                    min="1"
-                    max="12"
-                    value="${new Date().getMonth() + 1}"
-                    class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label for="period_year" class="block text-sm font-medium text-gray-700">Abrechnungsjahr *</label>
-                <input
-                  type="number"
-                  id="period_year"
-                  name="period_year"
-                  required
-                  min="2000"
-                  max="2099"
-                  value="${new Date().getFullYear()}"
-                  class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label for="po_number" class="block text-sm font-medium text-gray-700">Bestellnummer</label>
-                  <input
-                    type="text"
-                    id="po_number"
-                    name="po_number"
-                    class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label for="service_period_from" class="block text-sm font-medium text-gray-700">Leistungszeitraum von</label>
-                  <input
-                    type="date"
-                    id="service_period_from"
-                    name="service_period_from"
-                    class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label for="service_period_to" class="block text-sm font-medium text-gray-700">Leistungszeitraum bis</label>
-                <input
-                  type="date"
-                  id="service_period_to"
-                  name="service_period_to"
-                  class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div class="border-t border-gray-200 pt-6">
-                <h2 class="mb-4 font-semibold text-gray-900">Abrechenbare Zeiteinträge</h2>
-                <p class="mb-4 text-sm text-gray-600">Diese werden nach Projekt gruppiert. Wähle die Einträge aus, die abgerechnet werden sollen.</p>
-
-                ${/* Placeholder for time entry selection */ html``}
-              </div>
-
-              <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
-                <a href="/rechnungen" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
-                <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                  Vorschau
-                </button>
-              </div>
-            </form>
-          </div>
-        `,
+        children: renderInvoiceClientSelection(clients),
       }),
     );
   } catch (err) {
@@ -161,7 +186,76 @@ invoiceRoutes.get("/create", (c) => {
   }
 });
 
-// View invoice
+// POST: Create invoice
+invoiceRoutes.post("/create", async (c) => {
+  try {
+    const body = await c.req.parseBody();
+    const formData = body instanceof FormData ? body : new FormData();
+
+    const timeEntryIds: number[] = [];
+    const rawIds = formData.getAll("time_entry_ids");
+    for (const raw of rawIds) {
+      if (typeof raw === "string") {
+        const parsed = parseInt(raw, 10);
+        if (!Number.isNaN(parsed)) {
+          timeEntryIds.push(parsed);
+        }
+      }
+    }
+
+    const rawData = {
+      client_id: formData.get("client_id"),
+      project_id: formData.get("project_id"),
+      time_entry_ids: timeEntryIds,
+      invoice_date: formData.get("invoice_date"),
+      period_month: formData.get("period_month"),
+      period_year: formData.get("period_year"),
+      po_number: formData.get("po_number") || "",
+      service_period_from: formData.get("service_period_from") || "",
+      service_period_to: formData.get("service_period_to") || "",
+      reverse_charge: 0,
+    };
+
+    const parsed = invoiceCreateSchema.safeParse(rawData);
+    if (!parsed.success) {
+      const errors = parsed.error.issues.map((i) => i.message).join(", ");
+      return c.text(`Validierungsfehler: ${errors}`, 400);
+    }
+
+    const settings = getSettings();
+    if (!settings) {
+      throw new AppError("Firmeneinstellungen nicht initialisiert", 500);
+    }
+
+    if (timeEntryIds.length === 0) {
+      return c.text("Keine Zeiteinträge ausgewählt", 400);
+    }
+
+    const timeEntries = timeEntryIds
+      .map((id) => {
+        const entries = getTimeEntriesForProject(parsed.data.project_id);
+        return entries.find((e) => e.id === id);
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== undefined);
+
+    if (timeEntries.length !== timeEntryIds.length) {
+      return c.text("Einige Zeiteinträge wurden zwischenzeitig abgerechnet", 400);
+    }
+
+    const invoiceId = createInvoice(
+      parsed.data,
+      timeEntries as TimeEntry[],
+      settings,
+    );
+
+    return c.redirect(`/rechnungen/${invoiceId}`);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    return logAndRespond(c, err, "Fehler beim Erstellen der Rechnung", 500);
+  }
+});
+
+// View invoice detail
 invoiceRoutes.get("/:id", (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
@@ -177,106 +271,49 @@ invoiceRoutes.get("/:id", (c) => {
     if (!client || !settings) throw new AppError("Daten fehlen", 500);
 
     const overdueCount = c.get("overdueCount");
+    const now = new Date().toISOString().split("T")[0];
+    const isOverdue = invoice.status === "sent" && invoice.due_date < now;
 
     return c.html(
       Layout({
         title: `Rechnung ${invoice.invoice_number}`,
         activeNav: "rechnungen",
         overdueCount,
-        children: html`
-          <div class="max-w-4xl">
-            <div class="mb-6 flex items-center justify-between">
-              <h1 class="text-2xl font-semibold">Rechnung ${invoice.invoice_number}</h1>
-              <span class="text-sm font-medium text-gray-600">Status: ${invoice.status}</span>
-            </div>
-
-            <div class="rounded-lg border border-gray-200 bg-white p-8">
-              <!-- Header -->
-              <div class="mb-8 grid grid-cols-2 gap-8">
-                <div>
-                  <p class="font-semibold text-gray-900">${settings.company_name}</p>
-                  <p class="text-sm text-gray-600">${settings.address || ""}${settings.postal_code ? `, ${settings.postal_code}` : ""}</p>
-                  <p class="text-sm text-gray-600">${settings.city || ""}</p>
-                  <p class="mt-2 text-sm text-gray-600">
-                    ${settings.email || ""}<br />
-                    ${settings.phone || ""}
-                  </p>
-                </div>
-                <div class="text-right">
-                  <p class="text-sm text-gray-600">Rechnungsnummer: ${invoice.invoice_number}</p>
-                  <p class="text-sm text-gray-600">Rechnungsdatum: ${invoice.invoice_date}</p>
-                  <p class="text-sm text-gray-600">Fälligkeitsdatum: ${invoice.due_date}</p>
-                </div>
-              </div>
-
-              <!-- Customer -->
-              <div class="mb-8 border-t border-gray-200 pt-6">
-                <p class="text-sm font-semibold text-gray-700 uppercase">Rechnungsempfänger</p>
-                <p class="font-semibold text-gray-900">${client.name}</p>
-                <p class="text-sm text-gray-600">${client.address || ""}${client.postal_code ? `, ${client.postal_code}` : ""}</p>
-                <p class="text-sm text-gray-600">${client.city || ""}</p>
-              </div>
-
-              <!-- Items table -->
-              <div class="mb-8">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr class="border-b border-gray-300">
-                      <th class="px-4 py-2 text-left font-semibold text-gray-700">Beschreibung</th>
-                      <th class="px-4 py-2 text-right font-semibold text-gray-700">Tage/Std.</th>
-                      <th class="px-4 py-2 text-right font-semibold text-gray-700">Satz</th>
-                      <th class="px-4 py-2 text-right font-semibold text-gray-700">Netto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${items.map((item) => {
-                      return html`
-                        <tr class="border-b border-gray-100">
-                          <td class="px-4 py-2 text-gray-900">${item.description}</td>
-                          <td class="px-4 py-2 text-right text-gray-600">${item.days.toFixed(1)}</td>
-                          <td class="px-4 py-2 text-right text-gray-600">${item.daily_rate.toFixed(2)} €</td>
-                          <td class="px-4 py-2 text-right font-medium text-gray-900">${item.net_amount.toFixed(2)} €</td>
-                        </tr>
-                      `;
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <!-- Totals -->
-              <div class="mb-8 flex justify-end">
-                <div class="w-64 space-y-2 border-t border-gray-200 pt-4">
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">Nettosumme:</span>
-                    <span class="font-medium text-gray-900">${invoice.net_amount.toFixed(2)} €</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">MwSt (${(settings.vat_rate * 100).toFixed(0)}%):</span>
-                    <span class="font-medium text-gray-900">${invoice.vat_amount.toFixed(2)} €</span>
-                  </div>
-                  <div class="flex justify-between border-t border-gray-200 pt-2 text-lg">
-                    <span class="font-semibold text-gray-900">Gesamtbetrag:</span>
-                    <span class="font-bold text-gray-900">${invoice.gross_amount.toFixed(2)} €</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Footer -->
-              <div class="border-t border-gray-200 pt-6 text-xs text-gray-500">
-                <p>Zahlungsbedingungen: Netto ${settings.payment_days} Tage</p>
-                ${settings.bank_name ? html`<p>Kontoinhaber: ${settings.bank_name}</p>` : ""}
-                ${settings.iban ? html`<p>IBAN: ${settings.iban}</p>` : ""}
-                ${settings.bic ? html`<p>BIC: ${settings.bic}</p>` : ""}
-                ${settings.tax_number ? html`<p>Steuernummer: ${settings.tax_number}</p>` : ""}
-                ${settings.ust_id ? html`<p>Ust-IdNr.: ${settings.ust_id}</p>` : ""}
-              </div>
-            </div>
-          </div>
-        `,
+        children: renderInvoiceDetailPage({
+          invoice,
+          items,
+          client,
+          settings,
+          isOverdue,
+        }),
       }),
     );
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "Rechnung konnte nicht geladen werden", 500);
+  }
+});
+
+// POST: Update invoice status (sent/paid)
+invoiceRoutes.post("/:id/status", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
+
+    const body = await c.req.parseBody();
+    const status = typeof body === "object" && body !== null
+      ? (body as Record<string, unknown>).status
+      : undefined;
+
+    if (status !== "sent" && status !== "paid" && status !== "cancelled") {
+      return c.text("Ungültiger Status", 400);
+    }
+
+    updateInvoiceStatus(id, status as "sent" | "paid" | "cancelled");
+
+    return c.redirect(`/rechnungen/${id}`);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    return logAndRespond(c, err, "Status konnte nicht aktualisiert werden", 500);
   }
 });
