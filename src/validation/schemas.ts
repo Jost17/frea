@@ -133,6 +133,7 @@ export const invoiceCreateSchema = z.object({
   po_number: z.string().optional().default(""),
   service_period_from: z.string().optional().default(""),
   service_period_to: z.string().optional().default(""),
+  reverse_charge: z.number().optional().default(0),
 });
 
 export type InvoiceCreate = z.infer<typeof invoiceCreateSchema>;
@@ -158,6 +159,8 @@ export interface Invoice {
   service_period_to: string | null;
   paid_date: string | null;
   reminder_level: number;
+  reminder_date: string | null;
+  reverse_charge: number;
   created_at: string;
 }
 

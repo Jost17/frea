@@ -1,3 +1,4 @@
+import { OPEN_INVOICE_STATUSES_SQL, overdueInvoiceWhere } from "./invoice-status";
 import { db } from "./schema";
 
 // ─── Overdue Count (used by nav-context middleware) ──────────────────────────
@@ -6,8 +7,7 @@ export function getOverdueInvoiceCount(): number {
   const result = db
     .query<{ count: number }, []>(
       `SELECT COUNT(*) as count FROM invoices
-       WHERE status IN ('draft', 'sent')
-       AND due_date < date('now')`,
+       WHERE ${overdueInvoiceWhere()}`,
     )
     .get();
   return result?.count ?? 0;
@@ -31,7 +31,7 @@ export function getDashboardStats(): DashboardStats {
         cte_open_inv AS (
           SELECT COUNT(*) AS cnt, COALESCE(SUM(gross_amount), 0) AS total
           FROM invoices
-          WHERE status IN ('draft', 'sent')
+          WHERE ${OPEN_INVOICE_STATUSES_SQL}
         ),
         cte_revenue AS (
           SELECT COALESCE(SUM(gross_amount), 0) AS total
@@ -48,8 +48,7 @@ export function getDashboardStats(): DashboardStats {
         cte_overdue AS (
           SELECT COUNT(*) AS cnt
           FROM invoices
-          WHERE status IN ('draft', 'sent')
-            AND due_date < date('now')
+          WHERE ${overdueInvoiceWhere()}
         )
       SELECT
         cte_open_inv.cnt        AS open_invoices_count,

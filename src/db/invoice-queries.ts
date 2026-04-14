@@ -1,7 +1,16 @@
-import { db } from "./schema";
 import { AppError } from "../middleware/error-handler";
-import type { Settings, Project, TimeEntry, InvoiceCreate, Invoice, InvoiceItem, InvoiceListItem } from "../validation/schemas";
+import type {
+  Invoice,
+  InvoiceCreate,
+  InvoiceItem,
+  InvoiceListItem,
+  Project,
+  Settings,
+  TimeEntry,
+} from "../validation/schemas";
+import { OPEN_INVOICE_STATUSES_SQL, overdueInvoiceWhere } from "./invoice-status";
 import { appendAuditLog } from "./queries";
+import { db } from "./schema";
 
 // ─── Invoices ────────────────────────────────────────────────────────────────
 
@@ -9,7 +18,11 @@ function roundToEuro(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], settings: Settings): number {
+export function createInvoice(
+  data: InvoiceCreate,
+  timeEntries: TimeEntry[],
+  settings: Settings,
+): number {
   // Wrapped in transaction for atomicity (P1-1)
   return db.transaction(() => {
     // Batch-fetch projects to avoid N+1 (P2-7)
@@ -112,7 +125,9 @@ export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], set
     }
 
     // Update next invoice number
-    db.query("UPDATE settings SET next_invoice_number = next_invoice_number + 1 WHERE id = 1").run();
+    db.query(
+      "UPDATE settings SET next_invoice_number = next_invoice_number + 1 WHERE id = 1",
+    ).run();
 
     // Audit log
     appendAuditLog("invoice", invoiceId, "create", {
@@ -127,11 +142,7 @@ export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], set
 }
 
 export function getInvoice(id: number) {
-  return db
-    .query<Invoice, [number]>(
-      `SELECT * FROM invoices WHERE id = ?`,
-    )
-    .get(id);
+  return db.query<Invoice, [number]>(`SELECT * FROM invoices WHERE id = ?`).get(id);
 }
 
 export function getInvoiceItems(invoiceId: number) {
@@ -154,14 +165,14 @@ export function getAllInvoices(status?: string): InvoiceListItem[] {
   if (status === "open") {
     return db
       .query<InvoiceListItem, []>(
-        `${base} WHERE i.status IN ('draft', 'sent') ORDER BY i.invoice_date DESC`,
+        `${base} WHERE i.${OPEN_INVOICE_STATUSES_SQL} ORDER BY i.invoice_date DESC`,
       )
       .all();
   }
   if (status === "overdue") {
     return db
       .query<InvoiceListItem, []>(
-        `${base} WHERE i.due_date < date('now') AND i.status IN ('draft', 'sent') ORDER BY i.invoice_date DESC`,
+        `${base} WHERE ${overdueInvoiceWhere("i")} ORDER BY i.invoice_date DESC`,
       )
       .all();
   }
