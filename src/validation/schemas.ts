@@ -63,7 +63,24 @@ export const settingsSchema = z
     }
   });
 
-export type Settings = z.infer<typeof settingsSchema> & { id: number };
+export type Settings = z.infer<typeof settingsSchema> & { id: number; invoice_layout_config?: string };
+
+// ─── Invoice Layout Config ─────────────────────────────────────────────────────
+
+export const invoiceLayoutConfigSchema = z.object({
+  accent_color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Akzentfarbe muss Hex-Format (#RRGGBB) haben")
+    .default("#2563eb"),
+  font_size: z.enum(["sm", "md", "lg"]).default("md"),
+  paper_size: z.enum(["a4", "letter"]).default("a4"),
+  show_logo: z.boolean().default(false),
+  show_payment_terms: z.boolean().default(true),
+  show_bank_details: z.boolean().default(true),
+  show_tax_number: z.boolean().default(true),
+});
+
+export type InvoiceLayoutConfig = z.infer<typeof invoiceLayoutConfigSchema>;
 
 // Clients
 export const clientSchema = z.object({

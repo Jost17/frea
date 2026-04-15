@@ -42,6 +42,11 @@ bun run dev
 
 Die Anwendung läuft auf `http://localhost:3114`.
 
+## Zentrale Betriebsdoku
+
+- Serverstart, Healthcheck und Troubleshooting: `docs/runbook-local-server.md`
+- Deployment-Flow (Lokal/Staging/Produktion): `docs/deployment-workflow.md`
+
 ## Konfiguration
 
 Stammdaten werden über die Oberfläche unter `/einstellungen` gepflegt und in der SQLite-Datenbank gespeichert.

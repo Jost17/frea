@@ -1,15 +1,93 @@
-import { db } from "./schema";
 import { AppError } from "../middleware/error-handler";
-import type { Settings, Project, TimeEntry, InvoiceCreate, Invoice, InvoiceItem, InvoiceListItem } from "../validation/schemas";
-import { appendAuditLog } from "./queries";
+import type {
+  Invoice,
+  InvoiceCreate,
+  InvoiceItem,
+  InvoiceListItem,
+  Project,
+  Settings,
+  TimeEntry,
+} from "../validation/schemas";
+import { OPEN_INVOICE_STATUSES_SQL, overdueInvoiceWhere } from "./invoice-status";
+import { appendAuditLog, getActiveProjectsForClient, getTimeEntriesForProject } from "./queries";
+import { db } from "./schema";
 
-// ─── Invoices ────────────────────────────────────────────────────────────────
+// ─── Money / Rounding ────────────────────────────────────────────────────────
 
-function roundToEuro(value: number): number {
+/**
+ * Kaufmännische Rundung to 2 decimals. Single source of truth — never
+ * duplicate this rule elsewhere, financial correctness depends on it.
+ */
+export function roundToEuro(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], settings: Settings): number {
+// ─── Invoice Preview (used by the create wizard) ─────────────────────────────
+
+export interface InvoiceCreateEntryPreview {
+  id: number;
+  date: string;
+  duration: number;
+  description: string;
+  netAmount: number;
+  vatAmount: number;
+  grossAmount: number;
+}
+
+export interface InvoiceCreateProjectPreview {
+  project: Omit<Project, "created_at" | "archived">;
+  unbilledEntries: InvoiceCreateEntryPreview[];
+  totalDays: number;
+  netAmount: number;
+  vatAmount: number;
+  grossAmount: number;
+}
+
+/**
+ * Compute invoice previews for all active projects of a client.
+ * Returns one preview per project with its unbilled time entries and
+ * per-line VAT math (MwSt pro Position, dann Summe — project rule).
+ */
+export function computeProjectPreviews(
+  clientId: number,
+  vatRate: number,
+  isKleinunternehmer: boolean,
+): InvoiceCreateProjectPreview[] {
+  const projects = getActiveProjectsForClient(clientId);
+  const effectiveVatRate = isKleinunternehmer ? 0 : vatRate;
+
+  return projects.map((project) => {
+    const entries = getTimeEntriesForProject(project.id);
+
+    const unbilledEntries: InvoiceCreateEntryPreview[] = entries.map((entry) => {
+      const netAmount = roundToEuro(entry.duration * project.daily_rate);
+      const vatAmount = roundToEuro(netAmount * effectiveVatRate);
+      const grossAmount = roundToEuro(netAmount + vatAmount);
+      return {
+        id: entry.id,
+        date: entry.date,
+        duration: entry.duration,
+        description: entry.description || "",
+        netAmount,
+        vatAmount,
+        grossAmount,
+      };
+    });
+
+    const totalDays = roundToEuro(unbilledEntries.reduce((sum, e) => sum + e.duration, 0));
+    const netAmount = roundToEuro(unbilledEntries.reduce((sum, e) => sum + e.netAmount, 0));
+    const vatAmount = roundToEuro(unbilledEntries.reduce((sum, e) => sum + e.vatAmount, 0));
+    const grossAmount = roundToEuro(unbilledEntries.reduce((sum, e) => sum + e.grossAmount, 0));
+
+    return { project, unbilledEntries, totalDays, netAmount, vatAmount, grossAmount };
+  });
+}
+
+export function createInvoice(
+  data: InvoiceCreate,
+  timeEntries: TimeEntry[],
+  settings: Settings,
+): number {
   // Wrapped in transaction for atomicity (P1-1)
   return db.transaction(() => {
     // Batch-fetch projects to avoid N+1 (P2-7)
@@ -24,17 +102,20 @@ export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], set
       .all(...uniqueProjectIds);
     const projectMap = new Map(projects.map((p) => [p.id, p]));
 
+    // Determine effective VAT rate: 0 for Kleinunternehmer
+    const isKleinunternehmer = Boolean(settings.kleinunternehmer);
+    const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
+
     // Calculate totals PER LINE ITEM with proper MwSt
     let totalNet = 0;
     let totalVat = 0;
 
-    const vatRate = settings.vat_rate;
     const invoiceItems = timeEntries.map((entry) => {
       const project = projectMap.get(entry.project_id);
       if (!project) throw new Error(`Projekt ${entry.project_id} nicht gefunden`);
 
       const netAmount = roundToEuro(entry.duration * project.daily_rate);
-      const vatAmount = roundToEuro(netAmount * vatRate);
+      const vatAmount = roundToEuro(netAmount * effectiveVatRate);
       const grossAmount = roundToEuro(netAmount + vatAmount);
 
       totalNet += netAmount;
@@ -62,8 +143,10 @@ export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], set
     const invoiceRecord = db
       .query(
         `INSERT INTO invoices
-         (invoice_number, client_id, project_id, invoice_date, due_date, period_month, period_year, net_amount, vat_amount, gross_amount, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')
+         (invoice_number, client_id, project_id, invoice_date, due_date, period_month, period_year,
+          net_amount, vat_amount, gross_amount, status, po_number,
+          service_period_from, service_period_to)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)
          RETURNING id`,
       )
       .get(
@@ -77,6 +160,9 @@ export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], set
         totalNet,
         totalVat,
         totalGross,
+        data.po_number || null,
+        data.service_period_from || null,
+        data.service_period_to || null,
       ) as { id: number } | undefined;
 
     if (!invoiceRecord) throw new Error("Rechnung konnte nicht erstellt werden");
@@ -99,7 +185,7 @@ export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], set
         item.entry.duration,
         item.project.daily_rate,
         item.netAmount,
-        vatRate,
+        effectiveVatRate,
         item.vatAmount,
         item.grossAmount,
       );
@@ -112,13 +198,17 @@ export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], set
     }
 
     // Update next invoice number
-    db.query("UPDATE settings SET next_invoice_number = next_invoice_number + 1 WHERE id = 1").run();
+    db.query(
+      "UPDATE settings SET next_invoice_number = next_invoice_number + 1 WHERE id = 1",
+    ).run();
 
     // Audit log
     appendAuditLog("invoice", invoiceId, "create", {
       invoice_number: invoiceNumber,
       net_amount: totalNet,
       gross_amount: totalGross,
+      vat_rate: effectiveVatRate,
+      is_kleinunternehmer: isKleinunternehmer,
       time_entry_count: timeEntries.length,
     });
 
@@ -127,11 +217,7 @@ export function createInvoice(data: InvoiceCreate, timeEntries: TimeEntry[], set
 }
 
 export function getInvoice(id: number) {
-  return db
-    .query<Invoice, [number]>(
-      `SELECT * FROM invoices WHERE id = ?`,
-    )
-    .get(id);
+  return db.query<Invoice, [number]>(`SELECT * FROM invoices WHERE id = ?`).get(id);
 }
 
 export function getInvoiceItems(invoiceId: number) {
@@ -154,14 +240,14 @@ export function getAllInvoices(status?: string): InvoiceListItem[] {
   if (status === "open") {
     return db
       .query<InvoiceListItem, []>(
-        `${base} WHERE i.status IN ('draft', 'sent') ORDER BY i.invoice_date DESC`,
+        `${base} WHERE i.${OPEN_INVOICE_STATUSES_SQL} ORDER BY i.invoice_date DESC`,
       )
       .all();
   }
   if (status === "overdue") {
     return db
       .query<InvoiceListItem, []>(
-        `${base} WHERE i.due_date < date('now') AND i.status IN ('draft', 'sent') ORDER BY i.invoice_date DESC`,
+        `${base} WHERE ${overdueInvoiceWhere("i")} ORDER BY i.invoice_date DESC`,
       )
       .all();
   }
