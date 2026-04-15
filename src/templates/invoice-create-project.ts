@@ -1,118 +1,20 @@
 import { html } from "hono/html";
-import type { Client, InvoiceListItem, Project } from "../validation/schemas";
-import { formatCurrency, formatDate, statusBadge } from "./invoice-shared";
+import type { InvoiceCreateProjectPreview } from "../db/invoice-queries";
+import type { Client } from "../validation/schemas";
+import { EmptyState } from "./components/empty-state";
+import { formatCurrency, formatDate } from "./invoice-shared";
 
-export interface InvoiceCreateEntryPreview {
-  id: number;
-  date: string;
-  duration: number;
-  description: string;
-  netAmount: number;
-  vatAmount: number;
-  grossAmount: number;
-}
-
-export interface InvoiceCreateProjectPreview {
-  project: Omit<Project, "created_at" | "archived">;
-  unbilledEntries: InvoiceCreateEntryPreview[];
-  totalDays: number;
-  netAmount: number;
-  vatAmount: number;
-  grossAmount: number;
-}
-
-export function renderInvoiceList(invoices: InvoiceListItem[], now: string) {
-  if (invoices.length === 0) {
-    return html`
-      <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
-        <p class="text-sm text-gray-600">
-          Noch keine Rechnungen erstellt. Erfasse zuerst Zeiten für ein Projekt, dann kannst du eine Rechnung generieren.
-        </p>
-        <a href="/rechnungen/create" class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-          Neue Rechnung erstellen
-        </a>
-      </div>
-    `;
-  }
-
-  return html`
-    <div class="rounded-lg border border-gray-200 bg-white overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-4 py-3 text-left font-semibold text-gray-700">Rechnungsnummer</th>
-            <th class="px-4 py-3 text-left font-semibold text-gray-700">Kunde</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-700">Betrag</th>
-            <th class="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-700">Rechnungsdatum</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-700">Fällig</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-          ${invoices.map((inv) => {
-            const isOverdue = inv.status === "sent" && inv.due_date < now;
-            return html`
-              <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3">
-                  <a href="/rechnungen/${inv.id}" class="font-medium text-blue-600 hover:underline">${inv.invoice_number}</a>
-                </td>
-                <td class="px-4 py-3 text-gray-600">${inv.client_name}</td>
-                <td class="px-4 py-3 text-right font-medium text-gray-900">${formatCurrency(inv.gross_amount)}</td>
-                <td class="px-4 py-3 text-center">${statusBadge(inv.status)}</td>
-                <td class="px-4 py-3 text-right text-gray-600">${formatDate(inv.invoice_date)}</td>
-                <td class="px-4 py-3 text-right text-gray-600 ${isOverdue ? "text-red-600 font-medium" : ""}">${formatDate(inv.due_date)}${isOverdue ? " ⚠" : ""}</td>
-              </tr>
-            `;
-          })}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-export function renderInvoiceClientSelection(clients: Omit<Client, "created_at" | "archived">[]) {
-  if (clients.length === 0) {
-    return html`
-      <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
-        <p class="text-sm text-gray-600">Bitte erstelle zuerst einen Kunden und ein Projekt mit Zeiteinträgen.</p>
-        <a href="/kunden/new" class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Neuen Kunden erstellen</a>
-      </div>
-    `;
-  }
-
-  return html`
-    <div class="max-w-2xl">
-      <h1 class="mb-6 text-2xl font-semibold">Neue Rechnung erstellen</h1>
-      <p class="mb-6 text-sm text-gray-600">Wähle den Kunden, für den du eine Rechnung erstellen möchtest.</p>
-
-      <div class="space-y-3">
-        ${clients.map(
-          (client) => html`
-            <a href="/rechnungen/create?client_id=${client.id}" class="block rounded-lg border border-gray-200 bg-white p-4 hover:border-blue-500 hover:bg-blue-50 transition">
-              <div class="flex justify-between items-center">
-                <div>
-                  <p class="font-semibold text-gray-900">${client.name}</p>
-                  <p class="text-sm text-gray-500">${client.city || "—"}</p>
-                </div>
-                <span class="text-gray-400">→</span>
-              </div>
-            </a>
-          `,
-        )}
-      </div>
-    </div>
-  `;
-}
-
-export function renderInvoiceProjectSelection(args: {
+export interface RenderInvoiceProjectSelectionArgs {
   client: Client;
   projectPreviews: InvoiceCreateProjectPreview[];
   today: string;
-  dueDate: string;
+  paymentDays: number;
   vatRate: number;
   isKleinunternehmer: boolean;
-}) {
-  const { client, projectPreviews, today, dueDate, vatRate, isKleinunternehmer } = args;
+}
+
+export function renderInvoiceProjectSelection(args: RenderInvoiceProjectSelectionArgs) {
+  const { client, projectPreviews, today, paymentDays, vatRate, isKleinunternehmer } = args;
 
   return html`
     <div class="max-w-3xl">
@@ -122,11 +24,9 @@ export function renderInvoiceProjectSelection(args: {
 
       ${
         projectPreviews.length === 0
-          ? html`
-            <div class="rounded-lg border border-gray-200 bg-white p-8 text-center">
-              <p class="text-sm text-gray-600">Für diesen Kunden gibt es keine aktiven Projekte.</p>
-            </div>
-          `
+          ? EmptyState({
+              message: "Für diesen Kunden gibt es keine aktiven Projekte.",
+            })
           : html`
             <div class="space-y-4">
               ${projectPreviews.map((preview) => {
@@ -169,16 +69,14 @@ export function renderInvoiceProjectSelection(args: {
                                 <input type="number" name="period_year" value="${new Date().getFullYear()}" min="2000" max="2099" required class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" />
                               </div>
 
-                              <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                  <label class="block text-sm font-medium text-gray-700 mb-1">Bestellnummer (optional)</label>
-                                  <input type="text" name="po_number" placeholder="z.B. PO-2026-001" class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-                                </div>
-                                <div>
-                                  <label class="block text-sm font-medium text-gray-700 mb-1">Fällig am</label>
-                                  <input type="date" name="due_date" value="${dueDate}" class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-                                </div>
+                              <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Bestellnummer (optional)</label>
+                                <input type="text" name="po_number" placeholder="z.B. PO-2026-001" class="block w-full rounded border border-gray-300 px-3 py-2 text-sm" />
                               </div>
+
+                              <p class="text-xs text-gray-500">
+                                Fälligkeit: Rechnungsdatum + ${paymentDays} Tage (aus den Stammdaten).
+                              </p>
 
                               <div class="grid grid-cols-2 gap-4">
                                 <div>

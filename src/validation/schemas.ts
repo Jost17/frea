@@ -68,7 +68,10 @@ export type Settings = z.infer<typeof settingsSchema> & { id: number; invoice_la
 // ─── Invoice Layout Config ─────────────────────────────────────────────────────
 
 export const invoiceLayoutConfigSchema = z.object({
-  accent_color: z.string().default("#2563eb"),
+  accent_color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Akzentfarbe muss Hex-Format (#RRGGBB) haben")
+    .default("#2563eb"),
   font_size: z.enum(["sm", "md", "lg"]).default("md"),
   paper_size: z.enum(["a4", "letter"]).default("a4"),
   show_logo: z.boolean().default(false),
@@ -147,7 +150,6 @@ export const invoiceCreateSchema = z.object({
   po_number: z.string().optional().default(""),
   service_period_from: z.string().optional().default(""),
   service_period_to: z.string().optional().default(""),
-  reverse_charge: z.number().optional().default(0),
 });
 
 export type InvoiceCreate = z.infer<typeof invoiceCreateSchema>;
@@ -173,8 +175,6 @@ export interface Invoice {
   service_period_to: string | null;
   paid_date: string | null;
   reminder_level: number;
-  reminder_date: string | null;
-  reverse_charge: number;
   created_at: string;
 }
 

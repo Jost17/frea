@@ -1,3 +1,5 @@
+import { html } from "hono/html";
+import type { HtmlEscapedString } from "hono/utils/html";
 import {
   type InvoiceLayoutConfig,
   invoiceLayoutConfigSchema,
@@ -12,15 +14,17 @@ export function formatDate(dateStr: string): string {
   return new Intl.DateTimeFormat("de-DE").format(new Date(`${dateStr}T00:00:00`));
 }
 
-export function statusBadge(status: string): string {
-  const map: Record<string, { label: string; className: string }> = {
-    draft: { label: "Entwurf", className: "bg-gray-100 text-gray-700" },
-    sent: { label: "Versendet", className: "bg-blue-100 text-blue-700" },
-    paid: { label: "Bezahlt", className: "bg-green-100 text-green-700" },
-    cancelled: { label: "Storniert", className: "bg-red-100 text-red-700" },
-  };
-  const selected = map[status] ?? { label: status, className: "bg-gray-100 text-gray-700" };
-  return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${selected.className}">${selected.label}</span>`;
+const STATUS_BADGE_MAP: Record<string, { label: string; className: string }> = {
+  draft: { label: "Entwurf", className: "bg-gray-100 text-gray-700" },
+  sent: { label: "Versendet", className: "bg-blue-100 text-blue-700" },
+  paid: { label: "Bezahlt", className: "bg-green-100 text-green-700" },
+  cancelled: { label: "Storniert", className: "bg-red-100 text-red-700" },
+};
+
+export function statusBadge(status: string): HtmlEscapedString | Promise<HtmlEscapedString> {
+  const fallback = { label: status, className: "bg-gray-100 text-gray-700" };
+  const { label, className } = STATUS_BADGE_MAP[status] ?? fallback;
+  return html`<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${className}">${label}</span>`;
 }
 
 export function parseInvoiceLayoutConfig(settings: Settings): InvoiceLayoutConfig {
@@ -28,7 +32,11 @@ export function parseInvoiceLayoutConfig(settings: Settings): InvoiceLayoutConfi
   try {
     const parsed = JSON.parse(raw) as unknown;
     return invoiceLayoutConfigSchema.parse(parsed);
-  } catch {
+  } catch (err) {
+    console.warn(
+      "[invoice-shared] Invalid invoice_layout_config, falling back to defaults:",
+      err,
+    );
     return invoiceLayoutConfigSchema.parse({});
   }
 }

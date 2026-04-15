@@ -9,13 +9,78 @@ import type {
   TimeEntry,
 } from "../validation/schemas";
 import { OPEN_INVOICE_STATUSES_SQL, overdueInvoiceWhere } from "./invoice-status";
-import { appendAuditLog } from "./queries";
+import { appendAuditLog, getActiveProjectsForClient, getTimeEntriesForProject } from "./queries";
 import { db } from "./schema";
 
-// ─── Invoices ────────────────────────────────────────────────────────────────
+// ─── Money / Rounding ────────────────────────────────────────────────────────
 
-function roundToEuro(value: number): number {
+/**
+ * Kaufmännische Rundung to 2 decimals. Single source of truth — never
+ * duplicate this rule elsewhere, financial correctness depends on it.
+ */
+export function roundToEuro(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+// ─── Invoice Preview (used by the create wizard) ─────────────────────────────
+
+export interface InvoiceCreateEntryPreview {
+  id: number;
+  date: string;
+  duration: number;
+  description: string;
+  netAmount: number;
+  vatAmount: number;
+  grossAmount: number;
+}
+
+export interface InvoiceCreateProjectPreview {
+  project: Omit<Project, "created_at" | "archived">;
+  unbilledEntries: InvoiceCreateEntryPreview[];
+  totalDays: number;
+  netAmount: number;
+  vatAmount: number;
+  grossAmount: number;
+}
+
+/**
+ * Compute invoice previews for all active projects of a client.
+ * Returns one preview per project with its unbilled time entries and
+ * per-line VAT math (MwSt pro Position, dann Summe — project rule).
+ */
+export function computeProjectPreviews(
+  clientId: number,
+  vatRate: number,
+  isKleinunternehmer: boolean,
+): InvoiceCreateProjectPreview[] {
+  const projects = getActiveProjectsForClient(clientId);
+  const effectiveVatRate = isKleinunternehmer ? 0 : vatRate;
+
+  return projects.map((project) => {
+    const entries = getTimeEntriesForProject(project.id);
+
+    const unbilledEntries: InvoiceCreateEntryPreview[] = entries.map((entry) => {
+      const netAmount = roundToEuro(entry.duration * project.daily_rate);
+      const vatAmount = roundToEuro(netAmount * effectiveVatRate);
+      const grossAmount = roundToEuro(netAmount + vatAmount);
+      return {
+        id: entry.id,
+        date: entry.date,
+        duration: entry.duration,
+        description: entry.description || "",
+        netAmount,
+        vatAmount,
+        grossAmount,
+      };
+    });
+
+    const totalDays = roundToEuro(unbilledEntries.reduce((sum, e) => sum + e.duration, 0));
+    const netAmount = roundToEuro(unbilledEntries.reduce((sum, e) => sum + e.netAmount, 0));
+    const vatAmount = roundToEuro(unbilledEntries.reduce((sum, e) => sum + e.vatAmount, 0));
+    const grossAmount = roundToEuro(unbilledEntries.reduce((sum, e) => sum + e.grossAmount, 0));
+
+    return { project, unbilledEntries, totalDays, netAmount, vatAmount, grossAmount };
+  });
 }
 
 export function createInvoice(
@@ -37,10 +102,9 @@ export function createInvoice(
       .all(...uniqueProjectIds);
     const projectMap = new Map(projects.map((p) => [p.id, p]));
 
-    // Determine effective VAT rate: 0 for Kleinunternehmer or reverse charge
+    // Determine effective VAT rate: 0 for Kleinunternehmer
     const isKleinunternehmer = Boolean(settings.kleinunternehmer);
-    const isReverseCharge = Boolean(data.reverse_charge);
-    const effectiveVatRate = isKleinunternehmer || isReverseCharge ? 0 : settings.vat_rate;
+    const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
 
     // Calculate totals PER LINE ITEM with proper MwSt
     let totalNet = 0;
@@ -81,8 +145,8 @@ export function createInvoice(
         `INSERT INTO invoices
          (invoice_number, client_id, project_id, invoice_date, due_date, period_month, period_year,
           net_amount, vat_amount, gross_amount, status, po_number,
-          service_period_from, service_period_to, reverse_charge)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?)
+          service_period_from, service_period_to)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)
          RETURNING id`,
       )
       .get(
@@ -99,7 +163,6 @@ export function createInvoice(
         data.po_number || null,
         data.service_period_from || null,
         data.service_period_to || null,
-        data.reverse_charge || 0,
       ) as { id: number } | undefined;
 
     if (!invoiceRecord) throw new Error("Rechnung konnte nicht erstellt werden");
@@ -146,7 +209,6 @@ export function createInvoice(
       gross_amount: totalGross,
       vat_rate: effectiveVatRate,
       is_kleinunternehmer: isKleinunternehmer,
-      is_reverse_charge: isReverseCharge,
       time_entry_count: timeEntries.length,
     });
 

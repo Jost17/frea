@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
 import {
+  computeProjectPreviews,
   createInvoice,
   getAllInvoices,
   getInvoice,
@@ -8,81 +9,36 @@ import {
   updateInvoiceStatus,
 } from "../db/invoice-queries";
 import {
-  getActiveProjectsForClient,
   getAllActiveClients,
   getClient,
+  getProject,
   getSettings,
   getTimeEntriesForProject,
 } from "../db/queries";
-import type { TimeEntry } from "../validation/schemas";
 import type { AppEnv } from "../env";
-import { AppError, logAndRespond } from "../middleware/error-handler";
-import {
-  renderInvoiceClientSelection,
-  renderInvoiceList,
-  renderInvoiceProjectSelection,
-  type InvoiceCreateEntryPreview,
-  type InvoiceCreateProjectPreview,
-} from "../templates/invoice-pages";
+import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
+import { renderInvoiceClientSelection } from "../templates/invoice-create-client";
+import { renderInvoiceProjectSelection } from "../templates/invoice-create-project";
 import { renderInvoiceDetailPage } from "../templates/invoice-detail";
+import { renderInvoiceList } from "../templates/invoice-list";
 import { Layout } from "../templates/layout";
-import { invoiceCreateSchema } from "../validation/schemas";
+import { parseFormFields } from "../utils/form-parser";
+import { invoiceCreateSchema, invoiceStatusUpdateSchema } from "../validation/schemas";
 
 export const invoiceRoutes = new Hono<AppEnv>();
 
-function roundToEuro(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-function computeProjectPreviews(
-  clientId: number,
-  vatRate: number,
-  isKleinunternehmer: boolean,
-): InvoiceCreateProjectPreview[] {
-  const projects = getActiveProjectsForClient(clientId);
-  const effectiveVatRate = isKleinunternehmer ? 0 : vatRate;
-
-  return projects.map((project) => {
-    const entries = getTimeEntriesForProject(project.id);
-
-    const unbilledEntries: InvoiceCreateEntryPreview[] = entries.map((entry) => {
-      const netAmount = roundToEuro(entry.duration * project.daily_rate);
-      const vatAmount = roundToEuro(netAmount * effectiveVatRate);
-      const grossAmount = roundToEuro(netAmount + vatAmount);
-      return {
-        id: entry.id,
-        date: entry.date,
-        duration: entry.duration,
-        description: entry.description || "",
-        netAmount,
-        vatAmount,
-        grossAmount,
-      };
-    });
-
-    const totalDays = roundToEuro(
-      unbilledEntries.reduce((sum, e) => sum + e.duration, 0),
-    );
-    const netAmount = roundToEuro(
-      unbilledEntries.reduce((sum, e) => sum + e.netAmount, 0),
-    );
-    const vatAmount = roundToEuro(
-      unbilledEntries.reduce((sum, e) => sum + e.vatAmount, 0),
-    );
-    const grossAmount = roundToEuro(
-      unbilledEntries.reduce((sum, e) => sum + e.grossAmount, 0),
-    );
-
-    return {
-      project,
-      unbilledEntries,
-      totalDays,
-      netAmount,
-      vatAmount,
-      grossAmount,
-    };
-  });
-}
+// Form fields parsed as strings/ints — client_id/project_id are ints, rest
+// are passed through to Zod where the schema refines them.
+const INVOICE_CREATE_FIELDS = {
+  client_id: "int",
+  project_id: "int",
+  invoice_date: "string",
+  period_month: "int",
+  period_year: "int",
+  po_number: "string",
+  service_period_from: "string",
+  service_period_to: "string",
+} as const;
 
 // List all invoices
 invoiceRoutes.get("/", (c) => {
@@ -140,11 +96,6 @@ invoiceRoutes.get("/create", (c) => {
 
       const isKleinunternehmer = Boolean(settings.kleinunternehmer);
       const today = new Date().toISOString().split("T")[0];
-      const dueDate = new Date(
-        Date.now() + (settings.payment_days || 28) * 24 * 60 * 60 * 1000,
-      )
-        .toISOString()
-        .split("T")[0];
 
       const projectPreviews = computeProjectPreviews(
         clientId,
@@ -161,7 +112,7 @@ invoiceRoutes.get("/create", (c) => {
             client,
             projectPreviews,
             today,
-            dueDate,
+            paymentDays: settings.payment_days || 28,
             vatRate: settings.vat_rate,
             isKleinunternehmer,
           }),
@@ -189,69 +140,68 @@ invoiceRoutes.get("/create", (c) => {
 // POST: Create invoice
 invoiceRoutes.post("/create", async (c) => {
   try {
-    const body = await c.req.parseBody();
-    const formData = body instanceof FormData ? body : new FormData();
+    const formData = await c.req.formData();
 
+    // time_entry_ids is multi-value and must be parsed separately from
+    // the scalar fields handled by parseFormFields.
     const timeEntryIds: number[] = [];
-    const rawIds = formData.getAll("time_entry_ids");
-    for (const raw of rawIds) {
+    for (const raw of formData.getAll("time_entry_ids")) {
       if (typeof raw === "string") {
         const parsed = parseInt(raw, 10);
-        if (!Number.isNaN(parsed)) {
+        if (Number.isInteger(parsed) && parsed > 0) {
           timeEntryIds.push(parsed);
         }
       }
     }
 
-    const rawData = {
-      client_id: formData.get("client_id"),
-      project_id: formData.get("project_id"),
-      time_entry_ids: timeEntryIds,
-      invoice_date: formData.get("invoice_date"),
-      period_month: formData.get("period_month"),
-      period_year: formData.get("period_year"),
-      po_number: formData.get("po_number") || "",
-      service_period_from: formData.get("service_period_from") || "",
-      service_period_to: formData.get("service_period_to") || "",
-      reverse_charge: 0,
-    };
-
-    const parsed = invoiceCreateSchema.safeParse(rawData);
-    if (!parsed.success) {
-      const errors = parsed.error.issues.map((i) => i.message).join(", ");
-      return c.text(`Validierungsfehler: ${errors}`, 400);
+    if (timeEntryIds.length === 0) {
+      throw new AppError("Keine Zeiteinträge ausgewählt", 400);
     }
+
+    const fields = parseFormFields(formData, INVOICE_CREATE_FIELDS);
+    const data = invoiceCreateSchema.parse({ ...fields, time_entry_ids: timeEntryIds });
 
     const settings = getSettings();
     if (!settings) {
       throw new AppError("Firmeneinstellungen nicht initialisiert", 500);
     }
 
-    if (timeEntryIds.length === 0) {
-      return c.text("Keine Zeiteinträge ausgewählt", 400);
+    // Verify project belongs to the selected client — prevents cross-client
+    // spoofing where a crafted POST could mismatch client_id and project_id.
+    const project = getProject(data.project_id);
+    if (!project || project.client_id !== data.client_id) {
+      throw new AppError("Projekt gehört nicht zum ausgewählten Kunden", 400);
     }
 
-    const timeEntries = timeEntryIds
-      .map((id) => {
-        const entries = getTimeEntriesForProject(parsed.data.project_id);
-        return entries.find((e) => e.id === id);
-      })
-      .filter((e): e is NonNullable<typeof e> => e !== undefined);
+    // Single DB query (was N+1 before) — hoisted out of the id-to-entry loop.
+    const projectEntries = getTimeEntriesForProject(data.project_id);
+    const entryMap = new Map(projectEntries.map((e) => [e.id, e]));
 
-    if (timeEntries.length !== timeEntryIds.length) {
-      return c.text("Einige Zeiteinträge wurden zwischenzeitig abgerechnet", 400);
+    // Explicit missing-list gives useful diagnostics instead of a silent drop.
+    const missingIds = data.time_entry_ids.filter((id) => !entryMap.has(id));
+    if (missingIds.length > 0) {
+      console.error(
+        `[invoices POST /create] time_entry_ids not in project ${data.project_id} (or already billed):`,
+        missingIds,
+      );
+      throw new AppError(
+        `Zeiteinträge nicht auffindbar oder bereits abgerechnet: ${missingIds.join(", ")}. Bitte Seite neu laden.`,
+        400,
+      );
     }
 
-    const invoiceId = createInvoice(
-      parsed.data,
-      timeEntries as TimeEntry[],
-      settings,
-    );
+    // getTimeEntriesForProject returns Omit<TimeEntry, "created_at">, so
+    // pad with an empty created_at to satisfy createInvoice's TimeEntry[] input.
+    const timeEntries = data.time_entry_ids.map((id) => ({
+      ...entryMap.get(id)!,
+      created_at: "",
+    }));
+
+    const invoiceId = createInvoice(data, timeEntries, settings);
 
     return c.redirect(`/rechnungen/${invoiceId}`);
   } catch (err) {
-    if (err instanceof AppError) throw err;
-    return logAndRespond(c, err, "Fehler beim Erstellen der Rechnung", 500);
+    return handleMutationError(c, err, "Rechnung konnte nicht erstellt werden");
   }
 });
 
@@ -294,22 +244,23 @@ invoiceRoutes.get("/:id", (c) => {
   }
 });
 
-// POST: Update invoice status (sent/paid)
+// POST: Update invoice status (sent/paid/cancelled)
 invoiceRoutes.post("/:id/status", async (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
     if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
 
     const body = await c.req.parseBody();
-    const status = typeof body === "object" && body !== null
-      ? (body as Record<string, unknown>).status
-      : undefined;
-
-    if (status !== "sent" && status !== "paid" && status !== "cancelled") {
-      return c.text("Ungültiger Status", 400);
+    const parsed = invoiceStatusUpdateSchema.safeParse({
+      status: typeof body === "object" && body !== null
+        ? (body as Record<string, unknown>).status
+        : undefined,
+    });
+    if (!parsed.success) {
+      return logAndRespond(c, parsed.error, "Ungültiger Status", 422);
     }
 
-    updateInvoiceStatus(id, status as "sent" | "paid" | "cancelled");
+    updateInvoiceStatus(id, parsed.data.status);
 
     return c.redirect(`/rechnungen/${id}`);
   } catch (err) {

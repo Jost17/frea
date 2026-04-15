@@ -20,8 +20,7 @@ export function renderInvoiceDetailPage(args: {
   const config = parseInvoiceLayoutConfig(settings);
 
   const isKleinunternehmer = Boolean(settings.kleinunternehmer);
-  const isReverseCharge = Boolean(invoice.reverse_charge);
-  const effectiveVatRate = isKleinunternehmer || isReverseCharge ? 0 : settings.vat_rate;
+  const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
   const accent = config.accent_color;
 
   return html`
@@ -147,9 +146,7 @@ export function renderInvoiceDetailPage(args: {
             ${
               isKleinunternehmer
                 ? html`<p class="text-sm text-green-700 italic">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</p>`
-                : isReverseCharge
-                  ? html`<p class="text-sm text-gray-600 italic">Steuerschuldnerschaft des Leistungsempfängers (§13b UStG).</p>`
-                  : ""
+                : ""
             }
             <div class="flex justify-between border-t border-gray-200 pt-2 text-lg">
               <span class="font-semibold text-gray-900">Gesamtbetrag:</span>

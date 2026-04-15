@@ -112,8 +112,6 @@ export function initializeSchema() {
       service_period_to TEXT,
       paid_date TEXT,
       reminder_level INTEGER DEFAULT 0,
-      reminder_date TEXT,
-      reverse_charge INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
@@ -185,22 +183,6 @@ export function initializeSchema() {
   } catch (err) {
     console.error("[migration] Failed to add onboarding_complete column:", err);
     throw new Error("Database migration failed: could not add onboarding_complete column", { cause: err });
-  }
-
-  // Migration: add reverse_charge and reminder_date to invoices if not present
-  try {
-    const invoiceCols = db.query<{ name: string }, []>("PRAGMA table_info(invoices)").all();
-    if (!invoiceCols.some((c) => c.name === "reverse_charge")) {
-      db.run("ALTER TABLE invoices ADD COLUMN reverse_charge INTEGER DEFAULT 0");
-      console.log("[migration] Added reverse_charge column to invoices");
-    }
-    if (!invoiceCols.some((c) => c.name === "reminder_date")) {
-      db.run("ALTER TABLE invoices ADD COLUMN reminder_date TEXT");
-      console.log("[migration] Added reminder_date column to invoices");
-    }
-  } catch (err) {
-    console.error("[migration] Failed to add invoice columns:", err);
-    throw new Error("Database migration failed: could not add invoice columns", { cause: err });
   }
 
   // Initialize default settings if not present

@@ -1,10 +1,11 @@
 import { Hono } from "hono";
-import { z } from "zod";
+import { ZodError } from "zod";
 import { updateSettings } from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, logAndRespond } from "../middleware/error-handler";
 import { OnboardingPage } from "../templates/onboarding-page";
 import { parseFormFields } from "../utils/form-parser";
+import { onboardingCompletionSchema } from "../validation/schemas";
 
 export const onboardingRoutes = new Hono<AppEnv>();
 
@@ -22,26 +23,6 @@ const ONBOARDING_FIELDS = {
   kleinunternehmer: "bool",
 } as const;
 
-const onboardingSchema = z.object({
-  company_name: z
-    .string()
-    .min(1, "Firmenname erforderlich")
-    .refine((v) => v !== "Mein Unternehmen", "Bitte einen echten Firmennamen eingeben"),
-  address: z.string().min(1, "Straße erforderlich"),
-  postal_code: z.string().refine((v) => /^\d{5}$/.test(v), "PLZ muss 5 Ziffern haben"),
-  city: z.string().min(1, "Stadt erforderlich"),
-  email: z.string().email("Gültige E-Mail erforderlich"),
-  tax_number: z.string().optional().default(""),
-  ust_id: z.string().optional().default(""),
-  iban: z
-    .string()
-    .min(1, "IBAN erforderlich")
-    .refine((v) => /^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(v), "Ungültige IBAN"),
-  bic: z.string().min(1, "BIC erforderlich"),
-  bank_name: z.string().optional().default(""),
-  kleinunternehmer: z.number().default(0),
-});
-
 onboardingRoutes.get("/", (c) => {
   return c.html(OnboardingPage({}));
 });
@@ -51,20 +32,28 @@ onboardingRoutes.post("/", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, ONBOARDING_FIELDS);
 
-    const parsed = onboardingSchema.safeParse(data);
+    const parsed = onboardingCompletionSchema.safeParse(data);
     if (!parsed.success) {
       const firstError = parsed.error.issues[0]?.message ?? "Ungültige Eingabe";
+      console.warn("[onboarding POST] Validation failed:", parsed.error.issues);
       return c.html(OnboardingPage({ errorMsg: firstError }), 422);
     }
 
-    const { tax_number, ust_id } = parsed.data;
-    if (!tax_number && !ust_id) {
-      return c.html(OnboardingPage({ errorMsg: "Steuernummer oder Ust-IdNr. ist erforderlich" }), 422);
-    }
+    // Merge validated onboarding fields with the additional bank_name and
+    // kleinunternehmer fields that the wizard captures but the completion
+    // schema doesn't cover.
+    updateSettings({
+      ...parsed.data,
+      bank_name: typeof data.bank_name === "string" ? data.bank_name : "",
+      kleinunternehmer: typeof data.kleinunternehmer === "number" ? data.kleinunternehmer : 0,
+    });
 
-    updateSettings(parsed.data);
     return c.redirect("/");
   } catch (err) {
+    if (err instanceof ZodError) {
+      const msg = err.issues[0]?.message ?? "Ungültige Eingabe";
+      return c.html(OnboardingPage({ errorMsg: msg }), 422);
+    }
     if (err instanceof AppError) {
       return c.html(OnboardingPage({ errorMsg: err.message }), 422);
     }
