@@ -333,7 +333,7 @@ settingsRoutes.post("/", async (c) => {
     const firstSetup = !isOnboardingComplete();
     const body = await c.req.formData();
     const data = parseFormFields(body, SETTINGS_FIELDS);
-    const validated = settingsSchema.parse({ ...data, country: "Deutschland", mobile: "" });
+    const validated = settingsSchema.parse({ ...data, country: "Deutschland" });
     updateSettings(validated);
 
     if (firstSetup) {
