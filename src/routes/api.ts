@@ -26,9 +26,22 @@ export const apiRoutes = new Hono();
 
 // Guard: all API endpoints are localhost-only (no auth layer in this single-user app).
 // Uses socket-level remote address — NOT the spoofable Host header.
+// getConnInfo requires a Bun server context (c.env.incoming) that is not available
+// when tests call app.fetch() directly. In that case we fail-open in test mode
+// (NODE_ENV=test) and fail-closed (403) in every other environment.
 const requireLocalhost: MiddlewareHandler = async (c, next) => {
-  const info = getConnInfo(c);
-  const addr = info.remote.address ?? "";
+  let addr: string;
+  try {
+    const info = getConnInfo(c);
+    addr = info.remote.address ?? "";
+  } catch (err) {
+    if (process.env.NODE_ENV === "test") {
+      console.warn("[requireLocalhost] getConnInfo nicht verfügbar (Test-Kontext) — Guard übersprungen");
+      return next();
+    }
+    console.error("[requireLocalhost] getConnInfo fehlgeschlagen:", err);
+    return c.json({ error: "Forbidden" }, 403);
+  }
   if (addr !== "127.0.0.1" && addr !== "::1" && addr !== "localhost") {
     return c.json({ error: "Forbidden" }, 403);
   }
