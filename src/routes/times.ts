@@ -159,8 +159,9 @@ timeRoutes.post("/", async (c) => {
   try {
     const body = await c.req.formData();
     const data = parseFormFields(body, TIME_ENTRY_FIELDS);
-    const validated = timeEntrySchema.parse(data);
-    const id = createTimeEntry(validated);
+    const result = timeEntrySchema.safeParse(data);
+    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    const id = createTimeEntry(result.data);
     if (!id) throw new AppError("Zeiteintrag konnte nicht erstellt werden", 500);
 
     return c.redirect(`/zeiten/${id}`);
@@ -177,8 +178,9 @@ timeRoutes.post("/:id", async (c) => {
 
     const body = await c.req.formData();
     const data = parseFormFields(body, TIME_ENTRY_FIELDS);
-    const validated = timeEntrySchema.parse(data);
-    updateTimeEntry(id, validated);
+    const result = timeEntrySchema.safeParse(data);
+    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    updateTimeEntry(id, result.data);
 
     return c.redirect(`/zeiten/${id}`);
   } catch (err) {

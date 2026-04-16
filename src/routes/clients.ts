@@ -142,8 +142,9 @@ clientRoutes.post("/", async (c) => {
   try {
     const body = await c.req.formData();
     const data = parseFormFields(body, CLIENT_FIELDS);
-    const validated = clientSchema.parse({ ...data, country: "Deutschland" });
-    const id = createClient(validated);
+    const result = clientSchema.safeParse({ ...data, country: "Deutschland" });
+    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    const id = createClient(result.data);
     if (!id) throw new AppError("Kunde konnte nicht erstellt werden", 500);
 
     return c.redirect(`/kunden/${id}`);
@@ -160,8 +161,9 @@ clientRoutes.post("/:id", async (c) => {
 
     const body = await c.req.formData();
     const data = parseFormFields(body, CLIENT_FIELDS);
-    const validated = clientSchema.parse({ ...data, country: "Deutschland" });
-    updateClient(id, validated);
+    const result = clientSchema.safeParse({ ...data, country: "Deutschland" });
+    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    updateClient(id, result.data);
 
     return c.redirect(`/kunden/${id}`);
   } catch (err) {
