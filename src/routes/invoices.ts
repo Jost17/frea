@@ -159,7 +159,9 @@ invoiceRoutes.post("/create", async (c) => {
     }
 
     const fields = parseFormFields(formData, INVOICE_CREATE_FIELDS);
-    const data = invoiceCreateSchema.parse({ ...fields, time_entry_ids: timeEntryIds });
+    const parseResult = invoiceCreateSchema.safeParse({ ...fields, time_entry_ids: timeEntryIds });
+    if (!parseResult.success) throw new AppError(parseResult.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    const data = parseResult.data;
 
     const settings = getSettings();
     if (!settings) {
