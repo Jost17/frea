@@ -29,8 +29,8 @@ export const settingsSchema = z
     city: z.string().default(""),
     country: z.string().default("Deutschland"),
     email: z.string().email("Gueltige E-Mail erforderlich"),
-    phone: z.string().optional().default(""),
-    mobile: z.string().optional().default(""),
+    phone: z.string().optional(),
+    mobile: z.string().optional(),
     bank_name: z.string().default(""),
     iban: z
       .string()
@@ -46,7 +46,7 @@ export const settingsSchema = z
         (v) => !v || /^\d{2}\/\d{3}\/\d{5}$/.test(v) || /^\d{10,11}$/.test(v),
         "Ungültige Steuernummer (Format: 12/345/67890 oder 12345678901)",
       ),
-    ust_id: z.string().optional().default(""),
+    ust_id: z.string().optional(),
     vat_rate: z.number().default(0.19),
     payment_days: z.number().default(28),
     invoice_prefix: z.string().default("RE"),

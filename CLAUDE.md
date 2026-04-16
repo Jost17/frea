@@ -42,6 +42,13 @@ German freelancer invoicing tool — managed by Paperclip agents.
 
 Full details: `docs/adr/001-eu-compliance.md`
 
+## Git Workflow (enforced — Board decision)
+
+15. **Branch von `main`** — Feature-Branches ausschließlich von `main` abzweigen. Keine Branches von halbfertigen Feature-Branches. Immer: `git checkout main && git pull && git checkout -b feat/...`
+16. **PR-Größenlimits** — Soft-Limit 400 LOC, Hard-Limit 1.000 LOC diff.
+    - 400–1.000 LOC: Review erfordert explizite Begründung warum kein Split möglich war
+    - Über 1.000 LOC: Automatisch abgelehnt — erst splitten, dann einreichen
+
 ## Reference
 
 Reference implementation (read-only): `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/freelancer_tool/`
