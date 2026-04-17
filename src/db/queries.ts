@@ -1,34 +1,59 @@
+import type { AuditLog, Client, Project, Settings, TimeEntry } from "../validation/schemas";
 import { db } from "./schema";
-import type {
-  Settings,
-  Client,
-  Project,
-  TimeEntry,
-  AuditLog,
-} from "../validation/schemas";
 
 // ─── Column Allowlists (SQL injection prevention) ─────────────────────────────
 
 const SETTINGS_COLUMNS = new Set([
-  "company_name", "address", "postal_code", "city", "country",
-  "email", "phone", "mobile", "bank_name", "iban", "bic",
-  "tax_number", "ust_id", "vat_rate", "payment_days",
-  "invoice_prefix", "next_invoice_number", "kleinunternehmer",
+  "company_name",
+  "address",
+  "postal_code",
+  "city",
+  "country",
+  "email",
+  "phone",
+  "mobile",
+  "bank_name",
+  "iban",
+  "bic",
+  "tax_number",
+  "ust_id",
+  "vat_rate",
+  "payment_days",
+  "invoice_prefix",
+  "next_invoice_number",
+  "kleinunternehmer",
+  "invoice_layout_config",
 ]);
 
 const CLIENT_COLUMNS = new Set([
-  "name", "address", "postal_code", "city", "country",
-  "email", "phone", "contact_person", "vat_id", "buyer_reference", "notes",
+  "name",
+  "address",
+  "postal_code",
+  "city",
+  "country",
+  "email",
+  "phone",
+  "contact_person",
+  "vat_id",
+  "buyer_reference",
+  "notes",
 ]);
 
 const PROJECT_COLUMNS = new Set([
-  "client_id", "code", "name", "daily_rate", "start_date", "end_date",
-  "budget_days", "service_description", "contract_number", "contract_date", "notes",
+  "client_id",
+  "code",
+  "name",
+  "daily_rate",
+  "start_date",
+  "end_date",
+  "budget_days",
+  "service_description",
+  "contract_number",
+  "contract_date",
+  "notes",
 ]);
 
-const TIME_ENTRY_COLUMNS = new Set([
-  "project_id", "date", "duration", "description", "billable",
-]);
+const TIME_ENTRY_COLUMNS = new Set(["project_id", "date", "duration", "description", "billable"]);
 
 // ─── Generic Safe Update Helper (P1-2 + P3-12) ──────────────────────────────
 
@@ -40,9 +65,7 @@ function safeUpdate(
   data: Record<string, unknown>,
   id: number,
 ): void {
-  const entries = Object.entries(data).filter(
-    ([k, v]) => v !== undefined && allowedColumns.has(k),
-  );
+  const entries = Object.entries(data).filter(([k, v]) => v !== undefined && allowedColumns.has(k));
   if (entries.length === 0) return;
   const fields = entries.map(([k]) => `${k} = ?`).join(", ");
   const values = entries.map(([, v]) => v as SQLValue);
@@ -78,7 +101,7 @@ export function getSettings() {
         id, company_name, address, postal_code, city, country,
         email, phone, mobile, bank_name, iban, bic, tax_number,
         ust_id, vat_rate, payment_days, invoice_prefix,
-        next_invoice_number, kleinunternehmer
+        next_invoice_number, kleinunternehmer, invoice_layout_config
        FROM settings WHERE id = 1`,
     )
     .get();
@@ -133,7 +156,9 @@ export function getClient(id: number) {
     .get(id);
 }
 
-export function createClient(data: Omit<Client, "id" | "created_at" | "archived">): number | undefined {
+export function createClient(
+  data: Omit<Client, "id" | "created_at" | "archived">,
+): number | undefined {
   const stmt = db.query(
     `INSERT INTO clients
      (name, address, postal_code, city, country, email, phone, contact_person, vat_id, buyer_reference, notes)
@@ -162,7 +187,10 @@ export function createClient(data: Omit<Client, "id" | "created_at" | "archived"
   return result?.id;
 }
 
-export function updateClient(id: number, data: Partial<Omit<Client, "id" | "created_at" | "archived">>) {
+export function updateClient(
+  id: number,
+  data: Partial<Omit<Client, "id" | "created_at" | "archived">>,
+) {
   safeUpdate("clients", CLIENT_COLUMNS, data as Record<string, unknown>, id);
   appendAuditLog("client", id, "update", data);
 }
@@ -220,7 +248,9 @@ export function getAllActiveProjectsWithClient() {
     .all();
 }
 
-export function createProject(data: Omit<Project, "id" | "created_at" | "archived">): number | undefined {
+export function createProject(
+  data: Omit<Project, "id" | "created_at" | "archived">,
+): number | undefined {
   const stmt = db.query(
     `INSERT INTO projects
      (client_id, code, name, daily_rate, start_date, end_date, budget_days, service_description, contract_number, contract_date, notes)
@@ -249,7 +279,10 @@ export function createProject(data: Omit<Project, "id" | "created_at" | "archive
   return result?.id;
 }
 
-export function updateProject(id: number, data: Partial<Omit<Project, "id" | "created_at" | "archived">>) {
+export function updateProject(
+  id: number,
+  data: Partial<Omit<Project, "id" | "created_at" | "archived">>,
+) {
   safeUpdate("projects", PROJECT_COLUMNS, data as Record<string, unknown>, id);
   appendAuditLog("project", id, "update", data);
 }
@@ -309,7 +342,9 @@ export function getAllUnbilledTimeEntries() {
     .all();
 }
 
-export function createTimeEntry(data: Omit<TimeEntry, "id" | "created_at" | "invoice_id">): number | undefined {
+export function createTimeEntry(
+  data: Omit<TimeEntry, "id" | "created_at" | "invoice_id">,
+): number | undefined {
   const stmt = db.query(
     `INSERT INTO time_entries (project_id, date, duration, description, billable)
      VALUES (?, ?, ?, ?, ?)
@@ -331,7 +366,10 @@ export function createTimeEntry(data: Omit<TimeEntry, "id" | "created_at" | "inv
   return result?.id;
 }
 
-export function updateTimeEntry(id: number, data: Partial<Omit<TimeEntry, "id" | "created_at" | "invoice_id">>) {
+export function updateTimeEntry(
+  id: number,
+  data: Partial<Omit<TimeEntry, "id" | "created_at" | "invoice_id">>,
+) {
   safeUpdate("time_entries", TIME_ENTRY_COLUMNS, data as Record<string, unknown>, id);
   appendAuditLog("time_entry", id, "update", data);
 }
@@ -342,4 +380,10 @@ export function deleteTimeEntry(id: number) {
 }
 
 // ─── Invoices — re-exported from invoice-queries ────────────────────────────
-export { createInvoice, getInvoice, getInvoiceItems, getAllInvoices, updateInvoiceStatus } from "./invoice-queries";
+export {
+  createInvoice,
+  getAllInvoices,
+  getInvoice,
+  getInvoiceItems,
+  updateInvoiceStatus,
+} from "./invoice-queries";

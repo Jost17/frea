@@ -33,6 +33,7 @@ export function initializeSchema() {
       invoice_prefix TEXT DEFAULT 'RE',
       next_invoice_number INTEGER DEFAULT 1,
       kleinunternehmer INTEGER DEFAULT 0,
+      invoice_layout_config TEXT DEFAULT '{"accent_color":"#2563eb","font_size":"md","paper_size":"a4","show_logo":false,"show_payment_terms":true,"show_bank_details":true,"show_tax_number":true}',
       CHECK (id = 1)
     )
   `);
@@ -182,7 +183,25 @@ export function initializeSchema() {
     }
   } catch (err) {
     console.error("[migration] Failed to add onboarding_complete column:", err);
-    throw new Error("Database migration failed: could not add onboarding_complete column", { cause: err });
+    throw new Error("Database migration failed: could not add onboarding_complete column", {
+      cause: err,
+    });
+  }
+
+  // Migration: add invoice_layout_config column if not present (safe for existing DBs)
+  try {
+    const settingsCols = db.query<{ name: string }, []>("PRAGMA table_info(settings)").all();
+    if (!settingsCols.some((c) => c.name === "invoice_layout_config")) {
+      db.run(
+        `ALTER TABLE settings ADD COLUMN invoice_layout_config TEXT DEFAULT '{"accent_color":"#2563eb","font_size":"md","paper_size":"a4","show_logo":false,"show_payment_terms":true,"show_bank_details":true,"show_tax_number":true}'`,
+      );
+      console.log("[migration] Added invoice_layout_config column to settings");
+    }
+  } catch (err) {
+    console.error("[migration] Failed to add invoice_layout_config column:", err);
+    throw new Error("Database migration failed: could not add invoice_layout_config column", {
+      cause: err,
+    });
   }
 
   // Initialize default settings if not present
