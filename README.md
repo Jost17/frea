@@ -42,10 +42,18 @@ bun run dev
 
 Die Anwendung läuft auf `http://localhost:3114`.
 
-## Zentrale Betriebsdoku
+## Dokumentation
 
-- Serverstart, Healthcheck und Troubleshooting: `docs/runbook-local-server.md`
-- Deployment-Flow (Lokal/Staging/Produktion): `docs/deployment-workflow.md`
+**Entwicklung & Beitragen:**
+- **Beitrag leisten:** `CONTRIBUTING.md` (Branch-Konventionen, Template-Extraction-Pattern, Test-Anforderungen)
+- **Systemdesign:** `docs/ARCHITECTURE.md` (Datenmodell, Datenflüsse, Architektur-Entscheidungen)
+
+**Betrieb & Deployment:**
+- **Serverstart & Troubleshooting:** `docs/runbook-local-server.md`
+- **Deployment-Flow:** `docs/deployment-workflow.md` (Lokal/Staging/Produktion)
+
+**Performance & Optimierung:**
+- **Datenbankanalyse:** `docs/DATABASE_OPTIMIZATION_ANALYSIS.md` (Abfrage-Analyse, Indexierungsstrategie)
 
 ## Konfiguration
 
@@ -88,17 +96,20 @@ audit_log       — GoBD Audit Trail (append-only)
 ## Projektstruktur
 
 ```
-src/
-  db/           — Schema, Queries, Setup
-  routes/       — Hono-Routes (dashboard, clients, projects, times, invoices, settings, api)
-  templates/    — HTMX-Templates (tagged template literals)
-  middleware/   — Error-Handling, Security-Header, Nav-Kontext
-  validation/   — Zod-Schemas
-public/
-  static/       — Self-hosted HTMX, Tailwind CSS
-docs/
-  adr/          — Architecture Decision Records
+frea/
+├── src/
+│   ├── routes/         — HTTP-Handler (invoices, projects, clients, times, settings, health)
+│   ├── templates/      — Presentation (reine HTML-Generierung)
+│   ├── db/             — Database Layer (Schema, Queries, Indexes)
+│   ├── validation/     — Input Validation (Zod Schemas + Validator Functions)
+│   └── lib/            — Utilities (AppError, Rounding, Dates)
+├── tests/              — Integration Tests (17 tests)
+├── docs/               — Architecture, Database Analysis, Contributing, Deployment
+├── CONTRIBUTING.md     — Development Guide + Code Patterns
+└── README.md           — This file
 ```
+
+**Vollständige Beschreibung:** Siehe `docs/ARCHITECTURE.md`
 
 ## Lizenz
 
