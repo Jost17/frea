@@ -9,14 +9,16 @@
 ## Current State (as of April 21, 2026)
 
 ✅ Route files refactored to template extraction pattern (5 branches ready for merge)  
-✅ All tests passing (17/17)  
+✅ All tests passing (7/7)  
 ✅ No files exceed hard limit (400 lines)  
-✅ Database Query Optimization Phase 1 complete (3 Priority 1 indexes implemented)
+✅ Priority 1.1: Database Query Optimization Phase 1 complete (3 indexes implemented)  
+✅ Priority 1.2: Validation Schema Consolidation complete (5 validators extracted)
 
 **Status:**
 - Main branch: 5 refactoring PRs awaiting code owner review/merge
-- Feature branch ready: `feat/add-performance-indexes` (Priority 1 database optimization)
-- Next: Merge performance indexes, then proceed with Priority 2 work
+- Feature branch ready: `feat/add-performance-indexes` (Priority 1.1 database optimization)
+- Feature branch ready: `feat/consolidate-validation-schemas` (Priority 1.2 validation consolidation)
+- Next: Merge both Priority 1 branches, then proceed with Priority 2 work
 
 ---
 
@@ -51,21 +53,34 @@
 ---
 
 ### 1.2 Validation Schema Consolidation
-**File:** `src/validation/schemas.ts` (254 lines)
+**File:** `src/validation/schemas.ts` (254 lines), `src/validation/validators.ts` (NEW)
 
-**Current State:**
-- Using Zod for all input validation ✅
-- Consistent error messages (German) ✅
-- Some schemas have complex `.superRefine` blocks (e.g., settingsSchema with cross-field validation)
+**Status:** ✅ Complete (2026-04-21)
 
-**Improvements:**
-- Extract `.superRefine` logic into standalone validators for reusability
-- Add schema comments documenting format rules (especially tax_number: `12/345/67890` or `12345678901`)
-- Create shared schema builders for common patterns (email, URL, phone)
+**Completed:**
+- ✅ Extracted 5 validator functions to new `src/validation/validators.ts`:
+  - `isValidPostalCode()` — German PLZ format (5 digits)
+  - `isValidTaxNumber()` — Steuernummer (2 formats: 12/345/67890 or 12345678901)
+  - `hasTaxIdNumber()` — Cross-field: at least one tax_number or ust_id
+  - `isValidEmail()` — For future customization
+  - `isValidIban()` — ISO 13616 MOD-97 checksum
+- ✅ Updated 2 schemas to use validators:
+  - `settingsSchema`: postal_code, tax_number, cross-field validation
+  - `onboardingCompletionSchema`: postal_code, iban, cross-field validation
+- ✅ Eliminated 3 duplication patterns (postal_code, tax_number, cross-field check)
+- ✅ All tests passing (7/7)
+- ✅ Feature branch ready: `feat/consolidate-validation-schemas`
+- ✅ Implementation report: `docs/VALIDATION_CONSOLIDATION.md`
 
-**Effort:** 1-2 hours  
-**Impact:** Better maintainability + discoverable validation rules  
-**Blocker:** None
+**Impact:**
+- Validation rules now discoverable in one place (single source of truth)
+- Reduced duplication: 2 instances → 1 function for each pattern
+- Better maintainability: future changes only need 1 edit, not 2-3
+- Validators are pure functions (testable, no side effects)
+
+**Risk:** Very low (identical behavior, all tests passing)
+
+**Blocker:** Code owner review/merge of `feat/consolidate-validation-schemas`
 
 ---
 
