@@ -147,6 +147,7 @@ export function initializeSchema() {
   `);
 
   // Performance-Indizes
+  // Base indexes (always needed)
   db.run("CREATE INDEX IF NOT EXISTS idx_projects_client ON projects(client_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_time_entries_project ON time_entries(project_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_time_entries_date ON time_entries(date)");
@@ -155,6 +156,13 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_invoices_status_due ON invoices(status, due_date)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id)");
+
+  // Priority 1 Performance Optimizations (2026-04-21)
+  // These composite indexes optimize the most common filtered queries
+  // Analysis: docs/DATABASE_OPTIMIZATION_ANALYSIS.md
+  db.run("CREATE INDEX IF NOT EXISTS idx_clients_archived_name ON clients(archived, name)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_projects_client_archived ON projects(client_id, archived)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_time_entries_project_invoice ON time_entries(project_id, invoice_id)");
 
   // GoBD: Audit Log ist append-only (keine Aenderungen/Loeschungen erlaubt)
   db.run(`
