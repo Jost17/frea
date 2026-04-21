@@ -1,19 +1,5 @@
 import { z } from "zod";
-
-// ─── IBAN Checksum (ISO 13616 MOD-97) ───────────────────────────────────────
-
-function isValidIban(iban: string): boolean {
-  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{1,30}$/.test(iban)) return false;
-  // Move first 4 chars to end, convert letters to digits (A=10, B=11, ..., Z=35)
-  const rearranged = iban.slice(4) + iban.slice(0, 4);
-  const numeric = rearranged.replace(/[A-Z]/g, (ch) => String(ch.charCodeAt(0) - 55));
-  // MOD-97 on large number (process in chunks to avoid BigInt dependency)
-  let remainder = 0;
-  for (const digit of numeric) {
-    remainder = (remainder * 10 + Number(digit)) % 97;
-  }
-  return remainder === 1;
-}
+import { isValidIban, isValidPostalCode, isValidTaxNumber, hasTaxIdNumber } from "./validators";
 
 // ─── Input Schemas (Zod) ──────────────────────────────────────────────────────
 
@@ -24,7 +10,7 @@ export const settingsSchema = z
     address: z.string().default(""),
     postal_code: z
       .string()
-      .refine((v) => !v || /^\d{5}$/.test(v), "PLZ muss 5 Ziffern haben")
+      .refine(isValidPostalCode, "PLZ muss 5 Ziffern haben")
       .default(""),
     city: z.string().default(""),
     country: z.string().default("Deutschland"),
@@ -42,10 +28,7 @@ export const settingsSchema = z
       .string()
       .optional()
       .default("")
-      .refine(
-        (v) => !v || /^\d{2}\/\d{3}\/\d{5}$/.test(v) || /^\d{10,11}$/.test(v),
-        "Ungültige Steuernummer (Format: 12/345/67890 oder 12345678901)",
-      ),
+      .refine(isValidTaxNumber, "Ungültige Steuernummer (Format: 12/345/67890 oder 12345678901)"),
     ust_id: z.string().optional(),
     vat_rate: z.number().default(0.19),
     payment_days: z.number().default(28),
@@ -53,14 +36,9 @@ export const settingsSchema = z
     next_invoice_number: z.number().default(1),
     kleinunternehmer: z.number().default(0),
   })
-  .superRefine((data, ctx) => {
-    if (!data.tax_number?.trim() && !data.ust_id?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Steuernummer oder Ust-IdNr. ist erforderlich",
-        path: ["tax_number"],
-      });
-    }
+  .refine(hasTaxIdNumber, {
+    message: "Steuernummer oder Ust-IdNr. ist erforderlich",
+    path: ["tax_number"],
   });
 
 export type Settings = z.infer<typeof settingsSchema> & { id: number; invoice_layout_config?: string };
@@ -241,14 +219,11 @@ export const onboardingCompletionSchema = z.object({
     .min(1)
     .refine((v) => v !== DEFAULT_COMPANY_NAME),
   address: z.string().min(1),
-  postal_code: z.string().refine((v) => /^\d{5}$/.test(v)),
+  postal_code: z.string().refine(isValidPostalCode),
   city: z.string().min(1),
   email: z.string().email(),
-  iban: z.string().min(1).refine((v) => isValidIban(v)),
+  iban: z.string().min(1).refine(isValidIban),
   bic: z.string().min(1),
   tax_number: z.string().optional().default(""),
   ust_id: z.string().optional().default(""),
-}).refine(
-  (data) => !!(data.tax_number?.trim() || data.ust_id?.trim()),
-  { message: "Steuernummer oder Ust-IdNr. erforderlich" },
-);
+}).refine(hasTaxIdNumber, { message: "Steuernummer oder Ust-IdNr. erforderlich" });
