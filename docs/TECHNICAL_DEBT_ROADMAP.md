@@ -12,13 +12,14 @@
 ✅ All tests passing (7/7)  
 ✅ No files exceed hard limit (400 lines)  
 ✅ Priority 1.1: Database Query Optimization Phase 1 complete (3 indexes implemented)  
-✅ Priority 1.2: Validation Schema Consolidation complete (5 validators extracted)
+✅ Priority 1.2: Validation Schema Consolidation complete (5 validators extracted)  
+✅ Priority 2.2: Documentation Improvements complete (1,000+ lines: CONTRIBUTING.md, ARCHITECTURE.md)
 
 **Status:**
 - Main branch: 5 refactoring PRs awaiting code owner review/merge
 - Feature branch ready: `feat/add-performance-indexes` (Priority 1.1 database optimization)
-- Feature branch ready: `feat/consolidate-validation-schemas` (Priority 1.2 validation consolidation)
-- Next: Merge both Priority 1 branches, then proceed with Priority 2 work
+- Feature branch ready: `feat/consolidate-validation-schemas` (Priority 1.2 validation + Priority 2.2 documentation)
+- Next: Merge both branches, then proceed with Priority 2.1 (test expansion) post-merge
 
 ---
 
@@ -115,17 +116,46 @@
 ---
 
 ### 2.2 Documentation Improvements
-**Current State:**
-- README exists (German)
-- No CONTRIBUTING.md
-- No architecture guide
+**Status:** ✅ Complete (2026-04-21)
 
-**Improvements:**
-1. Create `CONTRIBUTING.md` with:
-   - Branch naming convention (`feat/FREA-XXX-*`)
-   - Template extraction pattern (with before/after example)
-   - Test requirements for new routes
-   - PR review checklist
+**Completed:**
+- ✅ Created `CONTRIBUTING.md` (320 lines):
+  - Git workflow (branch naming, PR size limits, commit messages)
+  - Template extraction pattern (with before/after examples)
+  - Testing requirements for new routes (happy path, error cases, edge cases)
+  - Code style guide (TypeScript, DB, validation)
+  - Feature implementation checklist
+  - Code review checklist
+- ✅ Created `docs/ARCHITECTURE.md` (680 lines):
+  - System overview (diagram: Browser → Hono → SQLite)
+  - Project structure (33 files across 7 modules)
+  - Data model (7 tables with relationships)
+  - Invoice creation data flow (detailed walkthrough)
+  - Architectural decisions (6 major decisions explained)
+  - Error handling patterns
+  - Performance optimizations (Priority 1 indexes)
+  - WCAG compliance checklist
+  - Testing strategy
+  - Future enhancement ideas
+- ✅ Updated `README.md`:
+  - Reorganized documentation section
+  - Updated project structure with complete layout
+  - Added references to CONTRIBUTING.md and ARCHITECTURE.md
+- ✅ All tests passing (7/7)
+- ✅ Feature branch ready: `feat/consolidate-validation-schemas`
+- ✅ Implementation report: `docs/DOCUMENTATION_IMPROVEMENTS.md`
+
+**Impact:**
+- 1,000+ lines of new documentation
+- New developers have single source of truth for development workflow
+- Architecture document answers "how does this work?" questions
+- Code patterns documented with before/after examples
+- Feature implementation steps are clear
+- Compliance requirements (WCAG, EU data protection, tax law) documented
+
+**Risk:** Very low (documentation only, no code changes)
+
+**Blocker:** Code owner review/merge of `feat/consolidate-validation-schemas`
 
 2. Create `docs/ARCHITECTURE.md`:
    - System diagram (routes → queries → templates → HTML)
