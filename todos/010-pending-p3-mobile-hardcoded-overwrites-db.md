@@ -1,9 +1,11 @@
 ---
-status: pending
+status: complete
 priority: p3
 issue_id: "010"
 tags: [code-review, silent-failure, data-loss]
 dependencies: []
+resolved_by: "7dd8650 (git log verified)"
+resolved_date: "2026-04-15"
 ---
 
 # 010 — `mobile: ""` in settings.ts hardcodiert — überschreibt DB-Wert bei jedem Save

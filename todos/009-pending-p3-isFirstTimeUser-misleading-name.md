@@ -1,9 +1,11 @@
 ---
-status: pending
+status: complete
 priority: p3
 issue_id: "009"
 tags: [code-review, typescript, naming]
 dependencies: []
+resolved_by: "d5501a1 (git log verified)"
+resolved_date: "2026-04-07"
 ---
 
 # 009 — `isFirstTimeUser()` ist semantisch falsch — zählt Clients, nicht Session-Freshness
