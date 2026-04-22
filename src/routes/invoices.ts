@@ -327,15 +327,16 @@ invoiceRoutes.post("/:id/send", async (c) => {
 
     if (!client || !settings) throw new AppError("Daten fehlen", 500);
     if (!client.email) throw new AppError("Kunde hat keine E-Mail-Adresse", 400);
-    if (!invoice.pdf_path) throw new AppError("PDF für diese Rechnung existiert nicht", 400);
 
-    // Ensure PDF exists by regenerating if needed
-    if (!invoice.pdf_path) {
+    // Auto-regenerate PDF if missing
+    let pdfPath = invoice.pdf_path;
+    if (!pdfPath) {
       const items = getInvoiceItems(id);
       const result = await generateInvoicePdf({ invoice, items, client, settings });
       if (!result.success) {
         throw new AppError(`PDF konnte nicht erstellt werden: ${result.error}`, 500);
       }
+      pdfPath = result.filePath;
       saveInvoicePdfPath(id, result.filePath);
     }
 
@@ -344,7 +345,7 @@ invoiceRoutes.post("/:id/send", async (c) => {
     await emailService.sendInvoice({
       to: client.email,
       subject: `Rechnung ${invoice.invoice_number}`,
-      attachmentPath: invoice.pdf_path,
+      attachmentPath: pdfPath,
     });
 
     // Update invoice status to 'sent'
