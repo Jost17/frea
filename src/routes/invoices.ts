@@ -299,8 +299,8 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
     saveInvoicePdfPath(id, result.filePath);
 
     const fileName = result.fileName;
-    const fs = await import("node:fs");
-    const fileBuffer = fs.readFileSync(result.filePath);
+    const { readFile } = await import("node:fs/promises");
+    const fileBuffer = await readFile(result.filePath);
 
     c.header("Content-Type", "application/pdf");
     c.header("Content-Disposition", `attachment; filename="${fileName}"`);
