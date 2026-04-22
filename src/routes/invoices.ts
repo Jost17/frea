@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { Hono } from "hono";
 import { html } from "hono/html";
 import {
@@ -299,7 +300,6 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
     saveInvoicePdfPath(id, result.filePath);
 
     const fileName = result.fileName;
-    const { readFile } = await import("node:fs/promises");
     const fileBuffer = await readFile(result.filePath);
 
     c.header("Content-Type", "application/pdf");
