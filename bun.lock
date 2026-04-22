@@ -7,7 +7,7 @@
         "hono": "^4.12.16",
         "htmx.org": "^2.0.10",
         "lucide": "^1.14.0",
-        "puppeteer": "^24.42.0",
+        "puppeteer": "24.42.0",
         "zod": "^4.4.2",
       },
       "devDependencies": {

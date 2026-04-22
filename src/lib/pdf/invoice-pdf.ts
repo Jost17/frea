@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { Browser } from "puppeteer";
 import puppeteer from "puppeteer";
 import { buildInvoiceHtml, type InvoicePdfData } from "./invoice-html";
 
@@ -12,6 +13,17 @@ function ensurePdfDir(): void {
   } catch (err) {
     console.error("[invoice-pdf] Failed to create PDF directory:", err);
   }
+}
+
+let browserSingleton: Browser | null = null;
+
+async function getBrowser(): Promise<Browser> {
+  if (browserSingleton?.connected) return browserSingleton;
+  browserSingleton = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+  });
+  return browserSingleton;
 }
 
 export interface PdfGenerationResult {
@@ -27,7 +39,6 @@ export interface PdfGenerationError {
 
 export type PdfResult = PdfGenerationResult | PdfGenerationError;
 
-// TODO: Browser-Singleton fuer bessere Performance bei vielen PDF-Requests
 export async function generateInvoicePdf(data: InvoicePdfData): Promise<PdfResult> {
   ensurePdfDir();
 
@@ -36,12 +47,9 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<PdfResul
   const fileName = `${safeInvoiceNumber}.pdf`;
   const filePath = join(PDF_OUTPUT_DIR, fileName);
 
-  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | undefined;
+  let browser: Browser | undefined;
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-    });
+    browser = await getBrowser();
 
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
