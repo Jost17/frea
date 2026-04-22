@@ -6,6 +6,7 @@ import {
   getAllInvoices,
   getInvoice,
   getInvoiceItems,
+  saveInvoicePdfPath,
   updateInvoiceStatus,
 } from "../db/invoice-queries";
 import {
@@ -289,14 +290,13 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
 
     if (!client || !settings) throw new AppError("Daten fehlen", 500);
 
-    const result = await generateInvoicePdf(
-      { invoice, items, client, settings },
-      { embedZugferd: true },
-    );
+    const result = await generateInvoicePdf({ invoice, items, client, settings });
 
     if (!result.success) {
       throw new AppError(`PDF konnte nicht erstellt werden: ${result.error}`, 500);
     }
+
+    saveInvoicePdfPath(id, result.filePath);
 
     const fileName = result.fileName;
     const fs = await import("node:fs");
