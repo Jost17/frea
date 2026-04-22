@@ -1,8 +1,8 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import puppeteer from "puppeteer";
 import { buildInvoiceHtml, type InvoicePdfData } from "./invoice-html";
-import { embedZugferdXml } from "./zugferd-embed";
 
 const PDF_OUTPUT_DIR = join(import.meta.dir, "../../../../data/pdfs");
 
@@ -27,10 +27,8 @@ export interface PdfGenerationError {
 
 export type PdfResult = PdfGenerationResult | PdfGenerationError;
 
-export async function generateInvoicePdf(
-  data: InvoicePdfData,
-  options?: { embedZugferd?: boolean },
-): Promise<PdfResult> {
+// TODO: Browser-Singleton fuer bessere Performance bei vielen PDF-Requests
+export async function generateInvoicePdf(data: InvoicePdfData): Promise<PdfResult> {
   ensurePdfDir();
 
   const html = buildInvoiceHtml(data);
@@ -54,25 +52,7 @@ export async function generateInvoicePdf(
       margin: { top: "20mm", right: "20mm", bottom: "25mm", left: "20mm" },
     });
 
-    let finalBuffer: Uint8Array;
-    if (options?.embedZugferd) {
-      const { generateZugferdXml } = await import("../zugferd-generator");
-      const xml = generateZugferdXml(data);
-      const embedResult = await embedZugferdXml(pdfBytes, xml);
-      if (!embedResult.success) {
-        console.warn(
-          "[invoice-pdf] ZUGFeRD embedding failed, saving plain PDF:",
-          embedResult.error,
-        );
-        finalBuffer = pdfBytes;
-      } else {
-        finalBuffer = embedResult.buffer;
-      }
-    } else {
-      finalBuffer = pdfBytes;
-    }
-
-    writeFileSync(filePath, finalBuffer);
+    await writeFile(filePath, pdfBytes);
 
     return { success: true, filePath, fileName };
   } catch (err) {

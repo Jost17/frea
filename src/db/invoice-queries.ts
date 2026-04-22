@@ -294,3 +294,8 @@ export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "ca
 
   updateWithAudit();
 }
+
+export function saveInvoicePdfPath(invoiceId: number, pdfPath: string): void {
+  db.query("UPDATE invoices SET pdf_path = ? WHERE id = ?").run(pdfPath, invoiceId);
+  appendAuditLog("invoice", invoiceId, "update", { pdf_path: pdfPath });
+}
