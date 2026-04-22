@@ -1,0 +1,421 @@
+{
+  "knowledge": {
+    "domain_context": "Brand identity ist nicht Kosmetik sondern eine strukturale Entscheidung mit weitreichenden Folgen. Eine starke Markenidentität constraint alle downstream Agents (Copywriting, Design, Social Media) mit klaren Richtlinien und verhindert inkonsistentes Marketing. Der Brand Agent fungiert als Single Source of Truth für alle Brand-bezogenen Entscheidungen. Ein schwach definiertes Brand Voice führt zu fragmentiertem Messaging, verminderter Kundenwahrnehmung und bis zu 33% Umsatzeinbußen. Der Brand Agent orchestriert neun Capabilities über vier strategische Ebenen: (1) Strategische Fundierung (Voice Architecture, Positioning, Naming), (2) Visuelle Systeme (Design Tokens, Color Psychology, Typography), (3) Audit & Governance (Consistency Metrics, Drift Detection, Asset Governance), (4) Dynamik & Evolution (Rebranding Strategy, Compliance, Founder Brand Integration). Alle nachgelagerten Agents konsumieren die Knowledge Outputs des Brand Agents als unveränderliche Constraints.",
+
+    "reference_docs": [
+      {
+        "title": "Brand Voice Architecting & Tone Matrix Pattern",
+        "slug": "brand-voice-tone-matrix",
+        "topics": [
+          "Tone Matrix Design: Dimensionen wie Education vs Empathy vs Expert",
+          "Context-to-Tone Mapping: Unterschiedliche Töne für verschiedene Kanäle (Email, Support, Product)",
+          "Voice Characteristics: Persönlichkeitstrait-Definition (z.B. 'Confident but not cocky')",
+          "B2B SaaS Spezifika: Technical Communication + Thought Leadership + Accessibility",
+          "Channel-spezifische Anpassung: LinkedIn (Authoritative) vs Twitter (Friendly) vs Support (Empathetic)"
+        ],
+        "reference": "Bigeye Ultimate Guide to Brand Voice Frameworks, Wynter Tone of Voice Guide, Foleon Brand Messaging"
+      },
+      {
+        "title": "Visual Identity Systems & Design Token Engineering",
+        "slug": "design-token-taxonomy",
+        "topics": [
+          "W3C DTCG Specification (v2025.10): Standard format for token exchange",
+          "Semantic Color Taxonomies: Base colors → Functional tokens (primary, secondary, danger) → Component-level overrides",
+          "Typography Progression: Font hierarchy via token-based scale (xs, sm, base, lg, xl, 2xl)",
+          "Design Token Scoping: CSS Custom Properties für themability, component-level isolation",
+          "Tailwind v4 Integration: Design Tokens → CSS Custom Properties → Utility-First Framework",
+          "Color Psychology: Kulturelle Konnotationen, Kontrast-Anforderungen (WCAG AA ≥4.5:1 Text, ≥3:1 UI-Elemente)"
+        ],
+        "reference": "W3C Design Tokens Community Group, Tailwind CSS v4 Architecture, Style Dictionary DTCG Integration, Tokens Studio, Terrazzo"
+      },
+      {
+        "title": "Messaging Frameworks & Value Proposition Hierarchy",
+        "slug": "messaging-hierarchy",
+        "topics": [
+          "Positioning Statement Template: '_______ for _______ who _______ because _______'",
+          "Value Prop Hierarchy per Segment: Primary (executive) vs Secondary (user) vs Tertiary (support)",
+          "Marty Neumeier Onlyness Test: 'Our _____ is the only _____ that _____'",
+          "Emotional Elevation: Funktionale Benefits + emotionale Storytelling (Debbie Millman)",
+          "Messaging Matrix: Persona-basiert (IT Director technical tone) vs Channel-basiert (LinkedIn authoritative)"
+        ],
+        "reference": "Marty Neumeier Brand Positioning, Debbie Millman Brand Thinking, Emily Heyward Obsessed Framework"
+      },
+      {
+        "title": "Naming Science & Linguistic Screening Rules",
+        "slug": "naming-linguistic-framework",
+        "topics": [
+          "Phonetic Analysis: Aussprachefreundlichkeit, Soundability across languages",
+          "Linguistic Connotations: Bedeutungen in priority languages (DE, EN, FR, ES, IT)",
+          "Semantic Safety: Ungewollte Assoziationen, kulturelle Taboos",
+          "Trademark Pre-Check: Prior Art search, URL availability, social handle availability",
+          "Global Linguistic Screening: Native-speaker review für key markets",
+          "Legal Clearability: Secretary of State checks, jurisdiction-specific trademark availability"
+        ],
+        "reference": "Catchword Branding Naming Guide, Lexicon Branding Corporate Naming, Language Solutions Linguistic Screening"
+      },
+      {
+        "title": "Brand Audit Patterns & Consistency Metrics",
+        "slug": "brand-audit-framework",
+        "topics": [
+          "Drift Detection Signale: Logo color deviation (0.5% RGB shift = invisible to eye, detectable by algorithm)",
+          "Compliance Rate Tracking: % assets following standards, time-series trending",
+          "Asset Categorization: Official vs Community vs Unofficial assets, version control",
+          "Consistency Scoring: Visual (logos, colors, typography) + Messaging (tone, language) + Experience (customer interactions)",
+          "Automated Auditing: AI-powered visual recognition, NLP tone analysis, predictive drift patterns",
+          "Business Impact: Revenue correlation (23-33% uplift with consistent branding)"
+        ],
+        "reference": "MADnext Brand Consistency Audit, YouScan Brand Audit Platform, Inspo AI Design Audit Tool, Brand Auditors"
+      },
+      {
+        "title": "Rebranding Case Studies & Strategic Evolution",
+        "slug": "rebranding-case-studies",
+        "topics": [
+          "Mailchimp (2018): Retention of 'weird and lovable' essence + mascot refinement + Cavendish Yellow palette",
+          "Airbnb (2014): Bélo symbol (heart + location + A), community belonging positioning, immersive research (13 cities, 120 interviews)",
+          "Slack (2021): Simpler color palette, scalability across platforms, evolution vs revolution approach",
+          "Pattern: What Stays (core purpose, audience connection) vs What Changes (visual language, tone emphasis)",
+          "Research-Driven Process: Deep customer immersion, stakeholder alignment, phased rollout",
+          "Warning Signs: Brand drift without strategy, forced personality changes, loss of brand equity"
+        ],
+        "reference": "Brand New Archive, Strawberry Brand Studio Case Studies, Geek Boutique Airbnb Rebrand Analysis"
+      },
+      {
+        "title": "Design Token Engineering & CSS Custom Properties Scoping",
+        "slug": "token-css-architecture",
+        "topics": [
+          "Token Hierarchy: Design Time (figma/tokens.studio) → Source of Truth (JSON) → Runtime (CSS Custom Properties)",
+          "Scoping Strategies: Root-level (global) vs Component-level (scoped) vs Dark mode (pseudo-class override)",
+          "Tailwind v4 Integration: @theme directive, arbitrary values, token-aware utilities",
+          "Variable Naming Conventions: --color-primary-500, --spacing-xs, --typography-base-size",
+          "Sync Workflows: Token Studio → JSON export → Tailwind config generation",
+          "Build Pipeline: Linting tokens (invalid colors, missing references), generating type definitions"
+        ],
+        "reference": "W3C DTCG Format Module 2025.10, Tailwind CSS v4 Documentation, Style Dictionary, Tokens Studio"
+      },
+      {
+        "title": "Founder Brand Dynamics & Parasocial Relationship Architecture",
+        "slug": "founder-brand-authenticity",
+        "topics": [
+          "Why Founder Voice Scales B2B SaaS: Authenticity signals, trust building, perceived competence",
+          "Parasocial Relationship Mechanics: One-way intimacy, illusion of mutual recognition, psychological vulnerability",
+          "Authenticity Requirements: True belief in product, personal story sharing, consistent voice",
+          "Ethical Boundaries: Oversharing risks, responsibility ethics, audience psychological exploitation concerns",
+          "Integration Strategy: Founder voice as brand voice extension (nicht Replacement), consistency across platforms",
+          "Risk Mitigation: Succession planning bei Founder exit, brand resilience post-founder"
+        ],
+        "reference": "Parasocial Relationships in Branding (Winsome Marketing), Founder-Led Marketing (Great Entrepreneurs), Personal Brand SaaS (Nowspeed)"
+      },
+      {
+        "title": "GDPR Compliance & EU Data Privacy for Brand Data",
+        "slug": "gdpr-brand-compliance",
+        "topics": [
+          "Scope: Applies to any organization collecting EU resident data (email, IP, cookies, analytics)",
+          "Seven Core Principles: Lawfulness/Fairness, Purpose Limitation, Data Minimization, Accuracy, Storage Limitation, Integrity/Confidentiality, Accountability",
+          "Brand Data Specifics: Customer list compliance, research data storage, consent-based personalization",
+          "Consent Architecture: Explicit opt-in (nicht implied), withdrawal mechanism, purpose clarity",
+          "Third-party Vendor Risk: CDN data flows, analytics providers, SaaS tools must have data processor agreements (DPA)",
+          "Penalties: EUR 20M or 4% global turnover (whichever higher) for processing violations",
+          "EU Compliance Constraint (ADR-001): No US-hosted analytics, self-hosted assets, no Google Fonts CDN"
+        ],
+        "reference": "GDPR.eu Official, GDPR-Info.eu Legal Text, European Commission Data Protection, Ketch GDPR Compliance Guide"
+      },
+      {
+        "title": "Brand Architecture & Portfolio Strategy (David Aaker Framework)",
+        "slug": "brand-architecture-portfolio",
+        "topics": [
+          "Brand Relationship Spectrum: Branded House vs Subbrands vs Endorsed brands vs House of Brands",
+          "Five Dimensions: Brand portfolio, Portfolio roles, Product-market context, Portfolio structure, Portfolio graphics",
+          "Identity vs Positioning: Identity (broad, durable core) vs Positioning (context-specific emphasis)",
+          "Sub-brand Strategy: Additional layer of meaning to master brand (Tesla → Tesla Model S → Plaid)",
+          "Endorsed Brand: Parent brand provides assurance without direct ownership (Google → Google Cloud)",
+          "Portfolio Optimization: Synergy realization, resource allocation, growth enablement, clarity"
+        ],
+        "reference": "David Aaker Brand Vision Model (How Brands Are Built), Aaker Brand Architecture Framework, How to Build Strong Brands (Aaker/Joachimsthaler)"
+      },
+      {
+        "title": "EU Compliance Constraints & Self-Hosted Asset Architecture (ADR-001)",
+        "slug": "eu-compliance-architecture",
+        "topics": [
+          "Europäische Dienstleister Only: No US-based hosting, AWS/Azure multi-region acceptable only if EU data residency",
+          "Self-Hosted Static Assets: Fonts, icons, images stored on EU infrastructure",
+          "Analytics Compliance: No Google Analytics (privacy concerns), use Plausible/Fathom/Matomo",
+          "WCAG 2.1 AA Minimum: Contrast ≥4.5:1 text, ≥3:1 UI elements, visible focus rings, semantic HTML",
+          "Skip-Link Pattern: <a href='#main-content' class='sr-only focus:not-sr-only'>Zum Hauptinhalt</a>",
+          "Language Tag: <html lang='de'> für Accessibility + SEO",
+          "Third-party Vendor Audit: All integrations must respect GDPR + EU data residency"
+        ],
+        "reference": "ADR-001 EU Compliance Design Document, WCAG 2.1 AA Guidelines, GDPR Official"
+      }
+    ],
+
+    "examples": [
+      {
+        "title": "B2B SaaS Email Campaign Tone Matrix Example",
+        "scenario": "Newsletter for software engineers (Product Hunt audience) vs CFO audience on same SaaS platform",
+        "solution": {
+          "product_hunt_engineers": {
+            "tone_dimensions": "70% friendly, 20% technical, 10% humorous",
+            "personality_traits": "casual, approachable, problem-solving focused",
+            "do": "Use jargon (API rate-limiting, latency), explain benefits via technical depth, reference open-source culture",
+            "dont": "Avoid corporate speak, oversimplify technical concepts, use generic B2B clichés",
+            "example_subject": "Latency dropped 40% with our new query optimizer (benchmarks inside)"
+          },
+          "cfo_audience": {
+            "tone_dimensions": "80% professional, 15% results-oriented, 5% approachable",
+            "personality_traits": "reliable, ROI-focused, confident",
+            "do": "Lead with cost savings/efficiency metrics, reference compliance, use financial language",
+            "dont": "Deep technical jargon, casualness, unsubstantiated claims",
+            "example_subject": "Customers report 28% infrastructure cost reduction in Year 1"
+          }
+        }
+      },
+      {
+        "title": "Design Token Semantic Hierarchy for Tailwind v4",
+        "scenario": "Building a design system for an EU-compliant healthcare SaaS with dark mode support",
+        "solution": {
+          "token_structure": {
+            "design_time": {
+              "base_colors": ["--color-slate-50 through --color-slate-950", "--color-blue-primary-500"],
+              "semantic_layer": ["--color-success", "--color-warning", "--color-error", "--color-info"]
+            },
+            "runtime_css": "--color-primary: var(--color-blue-primary-500); @supports (color: light-dark(white, black)) { --color-primary: light-dark(#0066cc, #0099ff); }",
+            "tailwind_integration": "@theme { colors { primary: 'var(--color-primary)' } }",
+            "wcag_compliance": "--color-text: 'var(--color-slate-900)' in light mode (contrast 16:1), --color-text: 'var(--color-slate-50)' in dark mode (contrast 16:1)"
+          }
+        }
+      },
+      {
+        "title": "Onlyness Statement & Positioning for Early-Stage Fintech",
+        "scenario": "Fintech startup competing against Stripe, PayPal, Square for European merchant payments",
+        "solution": {
+          "onlyness_statement": "Our payment infrastructure is the only platform built for EU regulatory-first businesses that want compliance + developer experience",
+          "value_prop_hierarchy": {
+            "executive_cfo": "Reduces compliance audit time by 60% (GoBD-compliant audit logs out of the box)",
+            "developer": "Single API for EU VAT handling, reverse-charge logic, SEPA payments",
+            "support_team": "Pre-built regulatory docs, audit trail transparency, customer support templates"
+          },
+          "positioning_differences": {
+            "vs_stripe": "We specialize in EU-specific regulations; Stripe is global-first",
+            "vs_paypal": "We prioritize developer experience; PayPal prioritizes consumer adoption",
+            "our_slot": "EU-native infrastructure for growth-stage commerce companies"
+          }
+        }
+      },
+      {
+        "title": "Rebranding Strategy: Evolving Without Breaking Brand Equity",
+        "scenario": "5-year-old SaaS product with strong brand equity, user-generated content relying on old logo",
+        "solution": {
+          "what_stays": {
+            "purpose": "Help remote teams collaborate without friction",
+            "brand_values": "Privacy-first, GDPR-by-default, EU infrastructure",
+            "customer_perception": "Trustworthy, accessible, non-corporate"
+          },
+          "what_changes": {
+            "visual_language": "Modernize logo for scalability (app icon 16x16px requirement)",
+            "color_palette": "Deepen brand colors (WCAG AA 4.5:1 to 7:1 for primary CTA)",
+            "messaging_emphasis": "Shift from 'simple collaboration' to 'compliant collaboration for regulated industries'"
+          },
+          "rollout_strategy": "Phase 1: Launch new visual system on website + product (30 days), Phase 2: Community migration guide (60 days), Phase 3: Deprecate old assets"
+        }
+      },
+      {
+        "title": "Naming Linguistic Screening & Trademark Clearance Process",
+        "scenario": "German fintech startup choosing a name for international expansion (3-letter domain ideal)",
+        "process": {
+          "phonetic_screening": [
+            "ZENTZ: Easy in DE/EN, hard in Spanish (lisp required), risky in Italian (sounds dated)",
+            "NEXO: Neutral phonetically across languages, BUT 'nexo' = 'link' in Portuguese (no conflict)"
+          ],
+          "semantic_analysis": {
+            "zentz": "No negative connotations found in priority languages",
+            "nexo": "Potential German phonetic similarity to 'Nächte' (nights) — low risk"
+          },
+          "trademark_clearance": [
+            "USPTO search: 'NEXO' appears 47 times, no class 36 (financial) conflicts",
+            "EUIPO search: 'NEXO' registered in class 42 (software) by Spanish company, class 36 clear",
+            "Domain: nexo.com available, nexo.de available, nexo.eu available"
+          ],
+          "recommendation": "NEXO — clear trademark path, global phonetic viability, available domains, semantic clean"
+        }
+      },
+      {
+        "title": "Brand Audit: Drift Detection in Real Action",
+        "scenario": "SaaS company with 18-month old brand system, scaling across 40+ marketing assets",
+        "findings": {
+          "color_drift": {
+            "original_specification": "#0066CC (blue primary)",
+            "instances_found": {
+              "website": "#0066CC (compliant)",
+              "slack_avatar": "#0066FF (+3 points → over-saturated)",
+              "pdf_exports": "#0060CC (-6 points → under-saturated)",
+              "ad_creative": "#0077DD (+17 points → completely wrong)"
+            },
+            "impact": "12% of assets outside tolerance (±2 points RGB acceptable)"
+          },
+          "typography_drift": {
+            "spec": "Headings: Inter Bold 32px / 1.2",
+            "issues": ["Mobile site: Roboto 28px", "Email: 30px custom size", "Figma library: Inter SemiBold"]
+          },
+          "tone_drift": {
+            "product_emails": "Friendly, conversational (spec: 70% friendly, 20% technical)",
+            "support_emails": "Overly formal corporate tone (should be empathetic, spec: 80% empathetic, 15% solution-focused)"
+          },
+          "recommendations": [
+            "Immediate: Regenerate all PDF templates with color palette automation",
+            "30 days: Audit all paid media creative, migrate to brand asset library",
+            "60 days: Email template refresh with tone guidelines enforcement"
+          ]
+        }
+      },
+      {
+        "title": "Founder Brand Integration: CEO LinkedIn Presence as Brand Extension",
+        "scenario": "B2B SaaS founder known for thought leadership, but personal brand doesn't directly reinforce company brand",
+        "problem": {
+          "founder_brand": "Technical deep-dives on distributed systems, cybersecurity research",
+          "company_brand": "Accessibility-first, user-centric design for non-technical SMBs"
+        },
+        "solution": {
+          "integration_strategy": [
+            "Founder continues expertise content BUT with company context",
+            "Content bridge: 'How distributed systems thinking improves product reliability for small businesses'",
+            "Personal storytelling: Share onboarding feedback, customer success stories (anonymized)"
+          ],
+          "parasocial_authenticity": "Founder recognizes community members by name, responds personally to questions, admits product limitations publicly",
+          "risk_mitigation": "Establish founder-independent brand identity (company logo, mission statement, team profiles) for succession planning",
+          "measurement": "Track: Company mentions in founder content, follower crossover (LinkedIn → Product signup), brand sentiment on founder posts"
+        }
+      },
+      {
+        "title": "GDPR Compliance Audit: Brand Data Collection & Third-Party Vendor Risk",
+        "scenario": "German SaaS company using Segment for analytics, Figma for design collaboration, Auth0 for authentication",
+        "compliance_inventory": {
+          "data_flows": [
+            {
+              "source": "Website (visitors)",
+              "tool": "Segment",
+              "risk": "HIGH — Segment free tier sends data to Google Analytics (US-based)",
+              "fix": "Switch to Plausible Analytics (EU-based, GDPR native)"
+            },
+            {
+              "source": "Design collaboration",
+              "tool": "Figma",
+              "risk": "MEDIUM — Figma uses AWS US regions by default",
+              "fix": "Request EU-only workspace, verify in Figma settings"
+            },
+            {
+              "source": "Customer authentication",
+              "tool": "Auth0",
+              "risk": "MEDIUM — Auth0 default EU tenants available, but check DPA",
+              "fix": "Execute data processor agreement (DPA), confirm EU data residency"
+            }
+          ],
+          "consent_architecture": {
+            "before": "Cookie banner with single 'Accept All' button",
+            "after": "Granular consent: (1) Essential (always on), (2) Analytics (opt-in, Plausible only), (3) Marketing (opt-in, no third-party pixels)",
+            "withdrawal": "Add 'Manage Cookies' link in footer, allow real-time preference change"
+          },
+          "audit_timeline": "30 days: DPA audit all vendors, 60 days: Migrate analytics, 90 days: Consent implementation"
+        }
+      }
+    ],
+
+    "few_shot_prompts": [
+      {
+        "context": "User: 'We're launching a B2B SaaS for freelancers (like FREA). How do we define our brand voice?'",
+        "approach": [
+          "Step 1: Understand customer profile — Freelancers range from technical (developers) to non-technical (designers, copywriters). They're independent, value autonomy, often frustrated with corporate tools.",
+          "Step 2: Create tone matrix",
+          "  Education tone (documentation, tutorials): Clear, jargon-minimized, step-by-step (for non-technical freelancers)",
+          "  Empathy tone (support, onboarding): Acknowledgment of pain points ('invoicing is tedious'), supportive language, solution-focused",
+          "  Expert tone (thought leadership blog): Data-backed insights on freelancer economics, tax regulations, EU compliance",
+          "Step 3: Constraint all downstream teams",
+          "  Copywriting: Blog post MUST include empathy + education (never just feature lists)",
+          "  Support: Response template includes acknowledgment phrase before solution",
+          "  Design: Friendly but professional (no corporate mascots, no cutesy illustrations)"
+        ]
+      },
+      {
+        "context": "User: 'How do I ensure my design tokens are WCAG compliant and support dark mode?'",
+        "approach": [
+          "Step 1: Define color semantics (not just 'blue', 'red')",
+          "  --color-success: must be 4.5:1 contrast against --color-surface-default",
+          "  --color-error: must be 4.5:1 contrast for small text, 3:1 for UI components",
+          "Step 2: Create token pairs for light/dark",
+          "  Light: --color-text: #1a202c (slate-900, contrast 16:1 on white)",
+          "  Dark: --color-text: #f1f5f9 (slate-50, contrast 16:1 on slate-950)",
+          "Step 3: Validate in Figma + CSS",
+          "  Export tokens JSON → Run WCAG validator → Ensure all combinations pass",
+          "  Test in Tailwind: @theme { colors { text: 'var(--color-text)' } } + test with dark: prefix"
+        ]
+      },
+      {
+        "context": "User: 'A competitor just launched a rebrand. Should we rebrand too?'",
+        "approach": [
+          "Step 1: Audit your current brand equity",
+          "  What % of customers recognize your logo without text?",
+          "  Does your brand voice differentiate you in customer feedback?",
+          "  Run consistency audit: How much drift has accumulated?",
+          "Step 2: Define rebranding trigger",
+          "  Rebranding reason: Are we pivoting market position? Merger? Loss of brand equity? No. → Don't rebrand.",
+          "  If yes: Define what stays (purpose, values, core audience) vs what changes (visual language, tone emphasis)",
+          "Step 3: Plan phased rollout",
+          "  Phase 1 (30 days): Website + product UI only → Gather feedback",
+          "  Phase 2 (60 days): Marketing assets + community guidelines",
+          "  Phase 3 (90 days): Deprecation timeline for old assets"
+        ]
+      },
+      {
+        "context": "User: 'I've hired 10 agencies to run brand initiatives (naming, design, copy, social). How do I ensure consistency?'",
+        "approach": [
+          "Step 1: Create a brand guidelines document (living, version-controlled)",
+          "  Section 1: Brand voice matrix (tone dimensions per channel)",
+          "  Section 2: Visual system (color tokens, typography scale, spacing grid)",
+          "  Section 3: Naming rules (linguistic screening results, phonetic guidelines)",
+          "  Section 4: Messaging templates (positioning statement, value prop per segment)",
+          "Step 2: Implement constraint layers",
+          "  Layer 1: Brand agent outputs are non-negotiable (other agents cannot override)",
+          "  Layer 2: Design tokens feed into Tailwind config → Designers cannot pick arbitrary colors",
+          "  Layer 3: Copywriting template library (with voice tone examples) → Must be reviewed before publishing",
+          "Step 3: Monthly drift audits",
+          "  Automated visual audit (logo color detection, typography analysis)",
+          "  Manual tone audit (sample messaging, check for voice consistency)",
+          "  Report back to brand agent for course correction"
+        ]
+      },
+      {
+        "context": "User: 'We're expanding to EU markets. What brand/compliance risks should we anticipate?'",
+        "approach": [
+          "Step 1: Map compliance constraints",
+          "  EU Hosting: Ensure website + all services on EU infrastructure (GDPR data residency)",
+          "  Self-Hosted Assets: Move fonts/images from Google CDN to self-hosted (privacy + GDPR)",
+          "  Analytics: Replace Google Analytics with Plausible/Matomo (GDPR-native)",
+          "Step 2: Audit brand assets for cultural fit",
+          "  Linguistic drift: Does brand name/slogan have unintended meaning in target language? (Run through native speakers)",
+          "  Visual drift: Do colors have cultural implications? (Red = warning in Western cultures, luck in Eastern cultures)",
+          "Step 3: WCAG AA audit (mandatory for EU public sector + increasingly expected for all)",
+          "  Contrast: Verify all text 4.5:1 minimum",
+          "  Focus rings: Visible on all interactive elements",
+          "  Semantic HTML: Proper heading hierarchy, form labels, navigation landmarks"
+        ]
+      },
+      {
+        "context": "User: 'My founder is becoming the face of the brand on social media. How do we scale this without losing authenticity?'",
+        "approach": [
+          "Step 1: Define founder brand integration",
+          "  Question: Does founder personal brand reinforce or distract from company mission?",
+          "  If reinforce (founder = expert in core competency): Integrate → founder content becomes company thought leadership",
+          "  If distract (founder = investor thoughts, personal politics): Separate → founder has profile, company has separate profile",
+          "Step 2: Establish authenticity guardrails",
+          "  Founder should only post about things they genuinely use/believe",
+          "  Share product feedback publicly (even negative) to build credibility",
+          "  Respond personally to comments (parasocial relationship building)",
+          "Step 3: Plan founder-independence",
+          "  Build company brand identity that doesn't rely on founder",
+          "  Document brand voice + messaging in guides (not in founder's head)",
+          "  Develop team members as secondary brand voices (reduces single-point-of-failure)",
+          "  Timeline: After founding, shift gradually toward 'founder + team' brand"
+        ]
+      }
+    ]
+  }
+}

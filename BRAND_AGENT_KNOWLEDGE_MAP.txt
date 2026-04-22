@@ -1,0 +1,317 @@
+BRAND AGENT KNOWLEDGE BASE — CAPABILITY MAPPING
+================================================
+
+9 CAPABILITIES MATRIX (Scope v1.5)
+===================================
+
+                    STRATEGIC      VISUAL         OPERATIONAL    EVOLUTIONARY
+                    LAYER          LAYER          LAYER          LAYER
+
+KNOWLEDGE BLOCK 1:  Voice          Design Tokens  Brand Audit    Rebranding
+                    Architecture   Engineering    Patterns       Case Studies
+                    + Tone Matrix                 + Drift        + What Stays/
+                                                  Detection      Changes
+
+KNOWLEDGE BLOCK 2:  Messaging      Color          Consistency    EU Compliance
+                    Frameworks     Psychology     Metrics        + GDPR
+                    + Onlyness     + Typography   + Scoring      + Self-Hosted
+                                   Progression                    Assets
+
+KNOWLEDGE BLOCK 3:  Positioning    CSS Custom     Asset          Founder Brand
+                    Statement      Properties     Categorization + Parasocial
+                                   Scoping        + Version      Relationship
+                                                  Control
+
+KNOWLEDGE BLOCK 4:  Value Prop     Tailwind v4    Automated      Compliance
+                    Hierarchy      Integration    Auditing       + Vendor Risk
+                                   + Dark Mode                   Assessment
+
+
+KNOWLEDGE RETRIEVAL FLOW
+========================
+
+User Input: "Define brand voice for B2B SaaS"
+        ↓
+[ROUTER] Identify decision type: "Brand Voice Definition"
+        ↓
+[DOMAIN CONTEXT] Load framing: "Brand identity is structural decision..."
+        ↓
+[FEW-SHOT PROMPT] Load pattern: "3-step: customer profile → tone matrix → constraints"
+        ↓
+[REFERENCE DOC] Load: "Brand Voice Architecting & Tone Matrix Pattern"
+        ↓
+[EXAMPLE] Load: "B2B SaaS Email Campaign Tone Matrix"
+        ↓
+[OUTPUT] Synthesized response: Tone matrix + do/dont rules + constraint specification
+
+
+REFERENCE DOCUMENT INDEX
+========================
+
+1. BRAND VOICE ARCHITECTING
+   Slug: brand-voice-tone-matrix
+   Topics: Tone Matrix Design, Context-to-Tone Mapping, Voice Characteristics,
+           B2B SaaS Specifics, Channel-Specific Adaptation
+   Sources: Bigeye, Wynter, Foleon
+
+2. VISUAL IDENTITY SYSTEMS
+   Slug: design-token-taxonomy
+   Topics: W3C DTCG v2025.10, Semantic Color Taxonomies, Typography Progression,
+           CSS Custom Properties Scoping, Tailwind v4 Integration, Color Psychology
+   Sources: W3C DTCG, Style Dictionary, Tokens Studio, Terrazzo
+
+3. MESSAGING FRAMEWORKS
+   Slug: messaging-hierarchy
+   Topics: Positioning Statement Template, Value Prop Hierarchy, Onlyness Test,
+           Emotional Elevation, Messaging Matrix
+   Sources: Marty Neumeier, Debbie Millman, Emily Heyward
+
+4. NAMING SCIENCE
+   Slug: naming-linguistic-framework
+   Topics: Phonetic Analysis, Linguistic Connotations, Semantic Safety,
+           Trademark Pre-Check, Global Screening, Legal Clearability
+   Sources: Catchword, Lexicon Branding, Language Solutions
+
+5. BRAND AUDIT PATTERNS
+   Slug: brand-audit-framework
+   Topics: Drift Detection Signals, Compliance Rate Tracking, Asset Categorization,
+           Consistency Scoring, Automated Auditing, Business Impact
+   Sources: MADnext, YouScan, Inspo AI, Brand Auditors
+
+6. REBRANDING CASE STUDIES
+   Slug: rebranding-case-studies
+   Topics: Mailchimp (2018), Airbnb (2014), Slack (2021), What Stays/Changes,
+           Research-Driven Process, Warning Signs
+   Sources: Brand New Archive, Strawberry Studio, Geek Boutique
+
+7. DESIGN TOKEN ENGINEERING
+   Slug: token-css-architecture
+   Topics: Token Hierarchy (Design → Source → Runtime), Scoping Strategies,
+           Tailwind v4 Integration, Variable Naming, Sync Workflows, Build Pipeline
+   Sources: W3C DTCG v2025.10, Tailwind CSS v4, Style Dictionary, Tokens Studio
+
+8. FOUNDER BRAND DYNAMICS
+   Slug: founder-brand-authenticity
+   Topics: Founder Voice Scaling B2B SaaS, Parasocial Relationship Mechanics,
+           Authenticity Requirements, Ethical Boundaries, Integration Strategy,
+           Risk Mitigation
+   Sources: Winsome Marketing, Great Entrepreneurs, Nowspeed
+
+9. GDPR COMPLIANCE & EU PRIVACY
+   Slug: gdpr-brand-compliance
+   Topics: Scope & Applicability, Seven Core Principles, Brand Data Specifics,
+           Consent Architecture, Third-Party Vendor Risk, Penalties
+   Sources: GDPR.eu, GDPR-Info.eu, European Commission, Ketch
+
+10. BRAND ARCHITECTURE PORTFOLIO
+    Slug: brand-architecture-portfolio
+    Topics: Brand Relationship Spectrum, Five Dimensions, Identity vs Positioning,
+            Sub-Brand Strategy, Endorsed Brand Strategy, Portfolio Optimization
+    Sources: David Aaker, How Brands Are Built, Aaker/Joachimsthaler
+
+11. EU COMPLIANCE CONSTRAINTS
+    Slug: eu-compliance-architecture
+    Topics: European Dienstleister Only, Self-Hosted Assets, Analytics Compliance,
+            WCAG 2.1 AA, Skip-Link Pattern, Language Tags, Vendor Audits
+    Sources: ADR-001, WCAG 2.1 AA, GDPR Official
+
+
+EXAMPLES INDEX (Real-World Scenarios)
+=====================================
+
+[1] B2B SaaS Email Campaign Tone Matrix
+    Scenario: Product Hunt engineers vs CFO audience, same platform
+    Output: 2 tone matrices with do/dont rules + subject line examples
+
+[2] Design Token Semantic Hierarchy
+    Scenario: EU-compliant healthcare SaaS with dark mode
+    Output: Token structure JSON + CSS variables + Tailwind config + WCAG compliance matrix
+
+[3] Onlyness Statement & Positioning
+    Scenario: Fintech vs Stripe/PayPal/Square for EU merchants
+    Output: Onlyness statement + Value prop hierarchy (3 segments) + Competitive positioning
+
+[4] Rebranding Strategy: Evolve Without Breaking Equity
+    Scenario: 5-year-old SaaS with strong equity, UGC relying on old logo
+    Output: What Stays / What Changes matrix + Phased rollout timeline (3 phases)
+
+[5] Naming Linguistic Screening & Trademark Clearance
+    Scenario: German fintech choosing 3-letter domain for international expansion
+    Output: Phonetic analysis (3 candidates) + Semantic analysis + Trademark clearance + Recommendation
+
+[6] Brand Audit: Drift Detection in Real Action
+    Scenario: SaaS scaling across 40+ marketing assets, 18 months of drift
+    Output: Color drift findings + Typography drift + Tone drift + Remediation recommendations
+
+[7] Founder Brand Integration
+    Scenario: CEO known for technical deep-dives, company brand is accessibility-first UX
+    Output: Integration strategy + Parasocial authenticity guardrails + Risk mitigation + Measurement
+
+[8] GDPR Compliance Audit: Brand Data Collection & Vendor Risk
+    Scenario: German SaaS using Segment, Figma, Auth0
+    Output: Data flows risk assessment + Consent architecture redesign + Audit timeline
+
+
+FEW-SHOT PROMPTS INDEX (Reasoning Patterns)
+=============================================
+
+[1] Brand Voice Definition
+    Trigger: "Define our brand voice"
+    Pattern: 3-step (customer profile → tone matrix → constraint teams)
+    Output: Voice matrix + constraint spec for Copy/Design/Social agents
+
+[2] WCAG Compliant Design Tokens
+    Trigger: "Create design tokens with dark mode + WCAG AA"
+    Pattern: 3-step (semantic definition → light/dark pairs → validation)
+    Output: Token definitions + CSS code + WCAG validation checklist
+
+[3] Rebrand Decision Framework
+    Trigger: "Should we rebrand now? Competitor just rebranded."
+    Pattern: 3-step (audit equity → define trigger → plan rollout)
+    Output: Go/no-go decision + What Stays/Changes + Phased timeline
+
+[4] Multi-Agency Consistency Governance
+    Trigger: "10 agencies, 1 brand. How do we ensure consistency?"
+    Pattern: 3-step (guidelines doc → constraint layers → drift audits)
+    Output: Governance model + Enforcement mechanisms + Monthly audit cadence
+
+[5] EU Expansion Compliance & Cultural Fit
+    Trigger: "Expanding to EU markets. What brand/compliance risks?"
+    Pattern: 3-step (map compliance → audit cultural fit → accessibility)
+    Output: Risk assessment + Implementation roadmap + Vendor audit checklist
+
+[6] Founder Brand Scaling & Authenticity
+    Trigger: "Founder becoming brand face. How do we scale without losing authenticity?"
+    Pattern: 3-step (define integration → authenticity guardrails → succession planning)
+    Output: Integration model + Authenticity checklist + Founder-independence plan
+
+
+CONSTRAINT PROPAGATION ARCHITECTURE
+====================================
+
+Brand Agent Output → Downstream Constraints
+============================================
+
+TONE MATRIX
+├─→ Copy Agent: "Use 70% friendly, 20% technical in product emails"
+├─→ Social Agent: "LinkedIn: expert tone, Twitter: friendly tone"
+├─→ Support Agent: "Customer emails: 80% empathetic, 15% solution-focused"
+└─→ Design Agent: "Conversational UI copy, avoid corporate jargon"
+
+DESIGN TOKENS
+├─→ Design Agent: "Button primary: #0066CC (±2 RGB tolerance)"
+├─→ Frontend Agent: "Use --color-primary CSS variable, not hardcoded hex"
+├─→ Build Agent: "Validate tokens in Figma + CSS before deploy"
+└─→ QA Agent: "WCAG compliance: 4.5:1 contrast on all text"
+
+POSITIONING STATEMENT
+├─→ Copy Agent: "All marketing copy must reinforce 'only for EU merchants' positioning"
+├─→ Sales Agent: "Competitive slide decks must reference Onlyness statement"
+├─→ Product Agent: "Feature prioritization aligned with positioning"
+└─→ Social Agent: "Thought leadership content must reinforce core positioning"
+
+COMPLIANCE REQUIREMENTS (EU/GDPR)
+├─→ Infrastructure Agent: "All data EU-hosted, no US CDNs"
+├─→ Analytics Agent: "Use Plausible, not Google Analytics"
+├─→ Design Agent: "Self-host fonts, no Google Fonts CDN"
+├─→ Legal Agent: "All third-party integrations require DPA"
+└─→ Security Agent: "Audit all vendor GDPR compliance quarterly"
+
+
+DECISION TREE ROUTING
+=====================
+
+User Input
+    ↓
+[TYPE DETECTION]
+    ├─→ "Define voice" → Few-Shot [1] + Reference [1] + Example [1]
+    ├─→ "Create design system" → Few-Shot [2] + Reference [2,7] + Example [2]
+    ├─→ "Should we rebrand?" → Few-Shot [3] + Reference [6] + Example [4]
+    ├─→ "Ensure consistency" → Few-Shot [4] + Reference [5] + Example [6]
+    ├─→ "EU expansion" → Few-Shot [5] + Reference [9,11] + Example [8]
+    ├─→ "Founder personal brand" → Few-Shot [6] + Reference [8] + Example [7]
+    ├─→ "Name a product" → Reference [4] + Example [5]
+    ├─→ "Brand audit drift" → Reference [5] + Example [6]
+    └─→ "Positioning statement" → Reference [3,10] + Example [3]
+    ↓
+[SYNTHESIS]
+    Output: Recommendation + Constraint Spec + Timeline + Measurement
+
+
+KNOWLEDGE MAINTENANCE CALENDAR
+================================
+
+Monthly Reviews:
+- DTCG specification updates (W3C DTCG)
+- Tailwind CSS releases (Tailwind Labs)
+- GDPR enforcement actions (GDPR.eu)
+
+Quarterly Reviews:
+- Brand rebranding announcements (Brand New Archive)
+- Founder-brand trends in B2B SaaS
+- New case studies from major rebrands
+
+Annual Reviews:
+- Marty Neumeier, David Aaker, Emily Heyward publications
+- WCAG guideline updates (W3C)
+- New design thinking methodologies
+
+
+KEY METRICS FOR SUCCESS
+========================
+
+Brand Agent Adoption:
+- % of brand decisions routed through Brand Agent
+- Time to decision (days)
+- Downstream agent compliance with constraints (%)
+
+Brand Health Outcomes:
+- Brand voice consistency score (target: 95%)
+- Visual consistency drift (target: <5% quarterly)
+- Revenue correlation with brand consistency (target: +23-33%)
+
+Knowledge Base Quality:
+- Reference citation frequency
+- Example relevance ratings (user feedback)
+- Few-shot pattern match accuracy (%)
+
+
+SOURCES & AUTHORITIES
+======================
+
+1. Marty Neumeier
+   - The Brand Gap: How to Bridge the Distance Between Business Strategy and Design
+   - The New Brand Model (martyneumeier.com)
+   - The Onlyness Test (martyneumeier.com)
+
+2. W3C Design Tokens Community Group
+   - Design Tokens Specification v2025.10 (designtokens.org)
+   - Format Module 2025.10 (w3.org/community/design-tokens/)
+
+3. David Aaker
+   - Brand Vision Model (Aaker & Joachimsthaler)
+   - Brand Architecture Framework (howbrandsarebuilt.com)
+
+4. Debbie Millman
+   - Brand Thinking and Other Noble Pursuits (2009)
+   - Design Matters Podcast (debbiemillman.com)
+
+5. Emily Heyward
+   - Obsessed: Building a Brand People Love from Day One (2020)
+   - Red Antler case studies (redantler.com)
+
+6. Regulatory
+   - GDPR Official (gdpr.eu, gdpr-info.eu)
+   - WCAG 2.1 AA (w3.org/WAI/WCAG21/quickref/)
+   - EU Compliance ADR-001 (frea_freelancer/docs/adr/001-eu-compliance.md)
+
+7. Design Systems & Tokens
+   - Tailwind CSS v4 (tailwindcss.com)
+   - Style Dictionary (amzn.github.io/style-dictionary/)
+   - Tokens Studio (tokens.studio)
+   - Terrazzo (terrazzo.app)
+
+8. Case Studies & Trends
+   - Brand New Archive (underconsideration.com/brandnew/)
+   - How Brands Are Built (howbrandsarebuilt.com)
+   - Agency insights (Strawberry Studio, Bigeye, Honest Agency)

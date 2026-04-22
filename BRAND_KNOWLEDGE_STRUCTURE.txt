@@ -1,0 +1,433 @@
+BRAND AGENT KNOWLEDGE BASE — JSON STRUCTURE BREAKDOWN
+=====================================================
+
+ROOT STRUCTURE:
+{
+  "knowledge": {
+    "domain_context": string (2-3 paragraphs explaining brand identity strategic importance)
+    "reference_docs": Array<{
+      "title": string (name of reference material)
+      "slug": string (URL-safe identifier)
+      "topics": Array<string> (list of covered topics)
+      "reference": string (source citations)
+    }>
+    "examples": Array<{
+      "title": string (descriptive example name)
+      "scenario": string (user context/problem)
+      "solution": object (structured solution with named keys per scenario type)
+    }>
+    "few_shot_prompts": Array<{
+      "context": string (user question triggering this pattern)
+      "approach": Array<string> (numbered steps with detailed reasoning)
+    }>
+  }
+}
+
+
+SECTION 1: DOMAIN CONTEXT
+=========================
+
+Content: 2-3 paragraph narrative explaining:
+- Why brand identity matters (structural vs cosmetic)
+- Role of Brand Agent (single source of truth)
+- Business impact (33% revenue uplift from consistency)
+- System integration (downstream agents consume constraints)
+- 9 capabilities across 4 strategic layers
+
+Purpose: Sets narrative context for all agent decisions
+Usage: Loaded once per conversation, used in system prompt
+
+
+SECTION 2: REFERENCE DOCUMENTS (11 docs)
+=========================================
+
+Structure per doc:
+{
+  "title": "Brand Voice Architecting & Tone Matrix Pattern",
+  "slug": "brand-voice-tone-matrix",
+  "topics": [
+    "Tone Matrix Design: Dimensions like Education vs Empathy vs Expert",
+    "Context-to-Tone Mapping: Different tones for channels",
+    "Voice Characteristics: Personality trait definition",
+    "B2B SaaS Specifics: Technical + thought leadership + accessibility",
+    "Channel-specific Adaptation: LinkedIn (Authoritative) vs Twitter (Friendly)"
+  ],
+  "reference": "Bigeye Ultimate Guide, Wynter Tone of Voice Guide, Foleon Brand Messaging"
+}
+
+Reference Docs Covered:
+1. brand-voice-tone-matrix
+   ├─ Tone Matrix Design
+   ├─ Context-to-Tone Mapping
+   ├─ Voice Characteristics
+   ├─ B2B SaaS Specifics
+   └─ Channel-Specific Adaptation
+
+2. design-token-taxonomy
+   ├─ W3C DTCG Specification v2025.10
+   ├─ Semantic Color Taxonomies
+   ├─ Typography Progression
+   ├─ CSS Custom Properties Scoping
+   ├─ Tailwind v4 Integration
+   └─ Color Psychology
+
+3. messaging-hierarchy
+   ├─ Positioning Statement Template
+   ├─ Value Prop Hierarchy per Segment
+   ├─ Marty Neumeier Onlyness Test
+   ├─ Emotional Elevation
+   └─ Messaging Matrix
+
+4. naming-linguistic-framework
+   ├─ Phonetic Analysis
+   ├─ Linguistic Connotations
+   ├─ Semantic Safety
+   ├─ Trademark Pre-Check Workflow
+   ├─ Global Linguistic Screening
+   └─ Legal Clearability
+
+5. brand-audit-framework
+   ├─ Drift Detection Signals
+   ├─ Compliance Rate Tracking
+   ├─ Asset Categorization
+   ├─ Consistency Scoring
+   ├─ Automated Auditing
+   └─ Business Impact Metrics
+
+6. rebranding-case-studies
+   ├─ Mailchimp (2018) Case Study
+   ├─ Airbnb (2014) Case Study
+   ├─ Slack (2021) Case Study
+   ├─ What Stays vs What Changes Pattern
+   ├─ Research-Driven Process
+   └─ Warning Signs
+
+7. token-css-architecture
+   ├─ Token Hierarchy (Design → Source → Runtime)
+   ├─ Scoping Strategies (global, component-level, dark mode)
+   ├─ Tailwind v4 Integration
+   ├─ Variable Naming Conventions
+   ├─ Sync Workflows
+   └─ Build Pipeline
+
+8. founder-brand-authenticity
+   ├─ Founder Voice Scaling B2B SaaS
+   ├─ Parasocial Relationship Mechanics
+   ├─ Authenticity Requirements
+   ├─ Ethical Boundaries
+   ├─ Integration Strategy
+   └─ Risk Mitigation
+
+9. gdpr-brand-compliance
+   ├─ Scope & Applicability
+   ├─ Seven Core Principles
+   ├─ Brand Data Specifics
+   ├─ Consent Architecture
+   ├─ Third-Party Vendor Risk
+   └─ Penalties
+
+10. brand-architecture-portfolio
+    ├─ Brand Relationship Spectrum
+    ├─ Five Dimensions of Architecture
+    ├─ Identity vs Positioning
+    ├─ Sub-Brand Strategy
+    ├─ Endorsed Brand Strategy
+    └─ Portfolio Optimization
+
+11. eu-compliance-architecture
+    ├─ Europäische Dienstleister Only
+    ├─ Self-Hosted Static Assets
+    ├─ Analytics Compliance
+    ├─ WCAG 2.1 AA Minimum
+    ├─ Skip-Link Pattern
+    ├─ Language Tags
+    └─ Third-Party Vendor Audit
+
+Usage Pattern:
+- Agent retrieves doc by slug matching user's query topic
+- Provides topics list as quick reference
+- Cites reference sources in output
+- Uses reference as constraint for recommendations
+
+
+SECTION 3: EXAMPLES (8 detailed scenarios)
+==========================================
+
+Structure per example:
+{
+  "title": "Descriptive example name",
+  "scenario": "User's context / problem statement",
+  "solution": {
+    "key1": "value or nested object",
+    "key2": { "subkey": "value" }
+    // Structure varies by example type
+  }
+}
+
+Example 1: B2B SaaS Email Campaign Tone Matrix
+{
+  "title": "B2B SaaS Email Campaign Tone Matrix Example",
+  "scenario": "Newsletter for software engineers vs CFO audience, same platform",
+  "solution": {
+    "product_hunt_engineers": {
+      "tone_dimensions": "70% friendly, 20% technical, 10% humorous",
+      "personality_traits": "casual, approachable, problem-solving focused",
+      "do": "Use jargon, explain via technical depth, reference open-source",
+      "dont": "Avoid corporate speak, oversimplify, generic B2B clichés",
+      "example_subject": "Latency dropped 40% with our new query optimizer"
+    },
+    "cfo_audience": {
+      "tone_dimensions": "80% professional, 15% results-oriented, 5% approachable",
+      "personality_traits": "reliable, ROI-focused, confident",
+      "do": "Lead with metrics, reference compliance, use financial language",
+      "dont": "Deep jargon, casualness, unsubstantiated claims",
+      "example_subject": "Customers report 28% infrastructure cost reduction"
+    }
+  }
+}
+
+Example 2: Design Token Semantic Hierarchy
+{
+  "title": "Design Token Semantic Hierarchy for Tailwind v4",
+  "scenario": "EU-compliant healthcare SaaS with dark mode support",
+  "solution": {
+    "token_structure": {
+      "design_time": { ... },
+      "runtime_css": "...",
+      "tailwind_integration": "@theme { colors { ... } }",
+      "wcag_compliance": { ... }
+    }
+  }
+}
+
+Example 3: Onlyness Statement & Positioning
+{
+  "scenario": "Fintech vs Stripe/PayPal/Square for EU merchants",
+  "solution": {
+    "onlyness_statement": "...",
+    "value_prop_hierarchy": { ... },
+    "positioning_differences": { ... }
+  }
+}
+
+Example 4: Rebranding Strategy
+{
+  "scenario": "5-year-old SaaS with brand equity, UGC relying on old logo",
+  "solution": {
+    "what_stays": { ... },
+    "what_changes": { ... },
+    "rollout_strategy": "Phase 1: 30 days, Phase 2: 60 days, Phase 3: ..."
+  }
+}
+
+Example 5: Naming Linguistic Screening
+{
+  "scenario": "German fintech choosing 3-letter domain for international expansion",
+  "process": {
+    "phonetic_screening": [ ... ],
+    "semantic_analysis": { ... },
+    "trademark_clearance": [ ... ],
+    "recommendation": "..."
+  }
+}
+
+Example 6: Brand Audit Drift Detection
+{
+  "scenario": "SaaS scaling across 40+ marketing assets, 18 months of drift",
+  "findings": {
+    "color_drift": { ... },
+    "typography_drift": { ... },
+    "tone_drift": { ... },
+    "recommendations": [ ... ]
+  }
+}
+
+Example 7: Founder Brand Integration
+{
+  "scenario": "CEO known for technical deep-dives, company = accessibility-first",
+  "problem": { ... },
+  "solution": {
+    "integration_strategy": [ ... ],
+    "parasocial_authenticity": "...",
+    "risk_mitigation": "...",
+    "measurement": "..."
+  }
+}
+
+Example 8: GDPR Compliance Audit
+{
+  "scenario": "German SaaS using Segment, Figma, Auth0",
+  "compliance_inventory": {
+    "data_flows": [ { source, tool, risk, fix }, ... ],
+    "consent_architecture": { before, after, withdrawal },
+    "audit_timeline": "30 days, 60 days, 90 days"
+  }
+}
+
+Usage Pattern:
+- Agent retrieves example matching user's scenario type
+- Extracts decision-making framework (not literal solution)
+- Adapts framework to user's specific context
+- Cites example as validation that pattern works
+
+
+SECTION 4: FEW-SHOT PROMPTS (6 reasoning patterns)
+==================================================
+
+Structure per prompt:
+{
+  "context": "User: '[Actual user question trigger]'",
+  "approach": [
+    "Step 1: [Detailed reasoning with rationale]",
+    "Step 2: [Next step with specific action]",
+    "Step 3: [Final step with expected output]",
+    // Additional context and decision points
+  ]
+}
+
+Prompt 1: Brand Voice Definition
+{
+  "context": "User: 'We're launching B2B SaaS for freelancers. How do we define our brand voice?'",
+  "approach": [
+    "Step 1: Understand customer profile — Range from technical to non-technical",
+    "Step 2: Create tone matrix — Education, Empathy, Expert tones per context",
+    "Step 3: Constraint all downstream teams — Copy, Support, Design, Social all follow tone"
+  ]
+}
+
+Prompt 2: WCAG Compliant Design Tokens
+{
+  "context": "User: 'How do I ensure my design tokens are WCAG compliant and support dark mode?'",
+  "approach": [
+    "Step 1: Define color semantics (not just colors, but functional meanings)",
+    "Step 2: Create token pairs for light/dark modes",
+    "Step 3: Validate in Figma + CSS using WCAG validator"
+  ]
+}
+
+Prompt 3: Rebrand Decision
+{
+  "context": "User: 'A competitor just launched a rebrand. Should we rebrand too?'",
+  "approach": [
+    "Step 1: Audit your current brand equity (recognition, differentiation, drift)",
+    "Step 2: Define rebranding trigger (is there a strategic reason?)",
+    "Step 3: Plan phased rollout (Phase 1: 30d website, Phase 2: 60d assets, Phase 3: 90d deprecation)"
+  ]
+}
+
+Prompt 4: Multi-Agency Consistency
+{
+  "context": "User: 'We've hired 10 agencies. How do we ensure consistency?'",
+  "approach": [
+    "Step 1: Create living brand guidelines (voice matrix, design tokens, naming rules, messaging)",
+    "Step 2: Implement constraint layers (Brand Agent outputs non-negotiable)",
+    "Step 3: Monthly drift audits (visual + tone + consistency scoring)"
+  ]
+}
+
+Prompt 5: EU Expansion Compliance
+{
+  "context": "User: 'We're expanding to EU. What brand/compliance risks?'",
+  "approach": [
+    "Step 1: Map compliance constraints (EU hosting, self-hosted assets, GDPR analytics)",
+    "Step 2: Audit brand assets for cultural fit (linguistic + visual + regulatory)",
+    "Step 3: WCAG AA audit (contrast, focus rings, semantic HTML)"
+  ]
+}
+
+Prompt 6: Founder Brand Scaling
+{
+  "context": "User: 'Founder is becoming brand face on social. How do we scale without losing authenticity?'",
+  "approach": [
+    "Step 1: Define founder brand integration (does it reinforce or distract from mission?)",
+    "Step 2: Establish authenticity guardrails (founder uses product, shares real feedback)",
+    "Step 3: Plan founder-independence (build company brand not dependent on founder)"
+  ]
+}
+
+Usage Pattern:
+- Agent identifies user's decision type (voice definition, token engineering, etc.)
+- Loads matching few-shot prompt
+- Follows numbered reasoning steps
+- Outputs structured decision + actionable next steps
+
+
+RETRIEVAL ALGORITHMS
+====================
+
+Algorithm 1: Route on Query Topic
+Input: User question
+Process:
+  1. Extract keywords (voice, tone, design, token, naming, audit, rebrand, etc.)
+  2. Match to reference_docs slugs
+  3. Return matching reference doc + slug
+
+Algorithm 2: Retrieve Matching Example
+Input: User scenario description
+Process:
+  1. Calculate semantic similarity between user's context and example scenarios
+  2. Return example with highest similarity score
+  3. Extract decision framework from solution structure
+
+Algorithm 3: Select Few-Shot Pattern
+Input: User's decision type (inferred from question)
+Process:
+  1. Map decision type to prompt context keywords
+  2. Return matching prompt
+  3. Follow approach steps as conversational flow
+
+Algorithm 4: Generate Constraint Specification
+Input: Brand Agent recommendation
+Process:
+  1. Identify affected downstream agents
+  2. Generate constraint in format: "Copy Agent MUST use [constraint]"
+  3. Include validation criteria and timelines
+
+
+EXAMPLE RETRIEVAL SEQUENCE
+==========================
+
+User: "Help us define brand voice for B2B SaaS for freelancers"
+  ↓
+[Parse] Decision type: "Brand Voice Definition"
+  ↓
+[Route] Load few_shot_prompts[0] (Brand Voice Definition pattern)
+  ↓
+[Route] Load reference_docs[0] (Brand Voice Tone Matrix)
+  ↓
+[Route] Load examples[0] (B2B SaaS Email Tone Matrix)
+  ↓
+[Synthesize]
+  - Follow few-shot pattern: 3 steps (customer → tone matrix → constraints)
+  - Cite reference doc: "Brand Voice Architecting & Tone Matrix"
+  - Show example: "Here's how Product Hunt engineers vs CFOs would differ"
+  - Output: Tone matrix + do/dont rules + constraint specification for downstream
+  ↓
+Output format:
+RECOMMENDATION: [Tone matrix]
+CONSTRAINT FOR: Copy Agent, Design Agent, Support Agent, Social Agent
+REFERENCE: [docs cited]
+TIMELINE: Week 1: documentation, Week 2-3: team training, Month 2: launch
+MEASUREMENT: Brand voice consistency audit (target: 95%)
+
+
+FILE STATISTICS
+===============
+
+knowledge-base.json (complete knowledge base):
+- Total size: ~45KB
+- Domain context: 1 paragraph (300 words)
+- Reference docs: 11 documents
+- Examples: 8 scenarios
+- Few-shot prompts: 6 patterns
+- Total source citations: 25+ authority sources
+
+Content depth:
+- Average reference doc topics: 5-6 per doc
+- Average example solution depth: 3-5 nested levels
+- Average few-shot steps: 3-4 per pattern
+
+Encoding:
+- UTF-8
+- Escaped quotes in example strings
+- Nested JSON objects for hierarchical solutions
