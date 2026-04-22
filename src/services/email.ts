@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import type { Settings } from "../validation/schemas";
 
 export interface EmailParams {
@@ -47,7 +47,8 @@ export class EmailService {
   private async loadNodemailer(): Promise<any> {
     try {
       return await import("nodemailer");
-    } catch {
+    } catch (err) {
+      console.debug("[email] nodemailer not available:", err instanceof Error ? err.message : String(err));
       return null;
     }
   }
@@ -63,7 +64,7 @@ export class EmailService {
       },
     });
 
-    const attachmentData = readFileSync(params.attachmentPath);
+    const attachmentData = await readFile(params.attachmentPath);
 
     try {
       await transporter.sendMail({
