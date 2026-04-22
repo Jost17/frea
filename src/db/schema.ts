@@ -180,9 +180,20 @@ export function initializeSchema() {
       db.run("ALTER TABLE settings ADD COLUMN onboarding_complete INTEGER DEFAULT 0");
       console.log("[migration] Added onboarding_complete column to settings");
     }
+
+    // Migration: add SMTP fields for email sending (FREA-146)
+    const smtpHostExists = settingsCols.some((c) => c.name === "smtp_host");
+    if (!smtpHostExists) {
+      db.run("ALTER TABLE settings ADD COLUMN smtp_host TEXT DEFAULT ''");
+      db.run("ALTER TABLE settings ADD COLUMN smtp_port INTEGER DEFAULT 587");
+      db.run("ALTER TABLE settings ADD COLUMN smtp_user TEXT DEFAULT ''");
+      db.run("ALTER TABLE settings ADD COLUMN smtp_password TEXT DEFAULT ''");
+      db.run("ALTER TABLE settings ADD COLUMN smtp_from TEXT DEFAULT ''");
+      console.log("[migration] Added SMTP configuration columns to settings");
+    }
   } catch (err) {
-    console.error("[migration] Failed to add onboarding_complete column:", err);
-    throw new Error("Database migration failed: could not add onboarding_complete column", { cause: err });
+    console.error("[migration] Failed to add columns to settings:", err);
+    throw new Error("Database migration failed: could not add settings columns", { cause: err });
   }
 
   // Initialize default settings if not present

@@ -42,6 +42,11 @@ export function renderInvoiceDetailPage(args: {
           ${
             invoice.status === "draft"
               ? html`
+                  <form method="post" action="/rechnungen/${invoice.id}/send" class="inline">
+                    <button type="submit" class="rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700">
+                      Per E-Mail senden
+                    </button>
+                  </form>
                   <form method="post" action="/rechnungen/${invoice.id}/status" class="inline">
                     <input type="hidden" name="status" value="sent" />
                     <button type="submit" class="rounded-md px-4 py-2 text-sm font-medium text-white" style="background-color: ${accent}">
