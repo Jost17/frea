@@ -1,0 +1,54 @@
+{{ define "main" }}
+<section class="hero">
+  <div class="hero-container">
+    <h1>GoBD-konforme Rechnungen für Freelancer</h1>
+    <p class="hero-lead">
+      FREA erstellt rechtssichere Rechnungen mit ZUGFeRD-Support,
+      verbindet Zeiterfassung direkt mit der Abrechnung und
+      archiviert alles revisionssicher nach GoBD.
+    </p>
+    <a href="http://localhost:3114" class="btn-cta btn-cta--large">Kostenlos starten</a>
+  </div>
+</section>
+
+<section id="features" class="features" aria-labelledby="features-heading">
+  <div class="features-container">
+    <h2 id="features-heading">Was FREA kann</h2>
+    <ul class="features-list" role="list">
+      <li>
+        <h3>Rechnungsstellung</h3>
+        <p>§14 UStG-konforme Rechnungen mit MwSt pro Position — korrekt nach GoBD.</p>
+      </li>
+      <li>
+        <h3>ZUGFeRD 2.1</h3>
+        <p>Hybride PDF/XML-Rechnungen für automatisierte Verarbeitung beim Kunden.</p>
+      </li>
+      <li>
+        <h3>Zeiterfassung</h3>
+        <p>Stunden tracken und direkt als Rechnungspositionen übernehmen.</p>
+      </li>
+      <li>
+        <h3>GoBD-Archivierung</h3>
+        <p>Audit-Log, Unveränderbarkeit, 10-Jahres-Archivierung — alles eingebaut.</p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="blog-preview" aria-labelledby="blog-preview-heading">
+  <div class="blog-preview-container">
+    <h2 id="blog-preview-heading">Aktuell im Blog</h2>
+    <ul class="blog-preview-list" role="list">
+      {{ range first 3 (where .Site.RegularPages "Section" "blog") }}
+      <li>
+        <article>
+          <h3><a href="{{ .RelPermalink }}">{{ .Title }}</a></h3>
+          {{ with .Description }}<p>{{ . }}</p>{{ end }}
+        </article>
+      </li>
+      {{ end }}
+    </ul>
+    <a href="/blog/" class="btn-secondary">Alle Artikel →</a>
+  </div>
+</section>
+{{ end }}

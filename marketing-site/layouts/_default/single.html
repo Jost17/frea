@@ -1,0 +1,29 @@
+{{ define "main" }}
+<article class="article-container">
+  <header class="article-header">
+    <div class="article-meta">
+      {{ with .Date }}
+      <time datetime="{{ .Format "2006-01-02" }}">{{ .Format "02.01.2006" }}</time>
+      {{ end }}
+      {{ with .Params.category }}
+      <span class="article-category">{{ . }}</span>
+      {{ end }}
+    </div>
+    <h1>{{ .Title }}</h1>
+    {{ with .Description }}
+    <p class="article-lead">{{ . }}</p>
+    {{ end }}
+  </header>
+
+  <div class="article-body">
+    {{ .Content }}
+  </div>
+
+  <footer class="article-footer">
+    <p class="article-cta">
+      <strong>Bereit, Ihre Rechnungsverwaltung zu vereinfachen?</strong><br>
+      <a href="http://localhost:3114" class="btn-cta">Kostenlos mit FREA starten</a>
+    </p>
+  </footer>
+</article>
+{{ end }}

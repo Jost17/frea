@@ -1,0 +1,27 @@
+{{ define "main" }}
+<div class="blog-list-container">
+  <header class="blog-list-header">
+    <h1>Blog</h1>
+    <p>Expertenwissen für deutsche Freelancer — GoBD, ZUGFeRD, Rechnungsstellung und mehr.</p>
+  </header>
+
+  <ul class="blog-list" role="list">
+    {{ range .Pages }}
+    <li class="blog-list-item">
+      <article>
+        <header>
+          {{ with .Date }}
+          <time datetime="{{ .Format "2006-01-02" }}">{{ .Format "02.01.2006" }}</time>
+          {{ end }}
+          <h2><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
+          {{ with .Description }}
+          <p>{{ . }}</p>
+          {{ end }}
+        </header>
+        <a href="{{ .RelPermalink }}" class="read-more" aria-label="Artikel lesen: {{ .Title }}">Weiterlesen →</a>
+      </article>
+    </li>
+    {{ end }}
+  </ul>
+</div>
+{{ end }}

@@ -1,0 +1,11 @@
+name = "frea-marketing"
+pages_build_output_dir = "public"
+
+# EU Compliance: Cloudflare mit DSGVO-Addendum (ADR-001)
+# Deployment Regionen: EU only
+# https://developers.cloudflare.com/pages/configuration/build-configuration/
+
+[env.production]
+# Setze in Cloudflare Dashboard: Pages → Settings → Environment Variables
+# HUGO_VERSION = "0.127.0"
+# HUGO_ENV = "production"

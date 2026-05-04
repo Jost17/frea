@@ -1,0 +1,35 @@
+baseURL = "https://frea.app/"
+languageCode = "de-DE"
+title = "FREA — Rechnungen & Zeiterfassung für Freelancer"
+enableRobotsTXT = true
+enableGitInfo = false
+
+[params]
+  description = "FREA hilft deutschen Freelancern bei GoBD-konformer Rechnungsstellung, Zeiterfassung und ZUGFeRD-Rechnungen."
+  author = "FREA"
+  siteName = "FREA"
+  siteUrl = "https://frea.app"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+[outputs]
+  home = ["HTML", "RSS"]
+  section = ["HTML", "RSS"]
+  page = ["HTML"]
+
+[sitemap]
+  changefreq = "weekly"
+  priority = 0.5
+
+[[menus.main]]
+  name = "Blog"
+  url = "/blog/"
+  weight = 10
+
+[[menus.main]]
+  name = "Features"
+  url = "/#features"
+  weight = 20

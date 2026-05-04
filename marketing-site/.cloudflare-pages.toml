@@ -1,0 +1,15 @@
+# Cloudflare Pages Build Configuration
+# Einstellungen in Cloudflare Dashboard: Pages → Ihr Projekt → Settings → Builds & Deployments
+#
+# Build command:   hugo --minify
+# Build output:    public
+# Root directory:  marketing-site
+#
+# Environment Variables (Production):
+#   HUGO_VERSION = 0.127.0
+#   HUGO_ENV     = production
+#
+# EU Compliance:
+#   - Cloudflare DSGVO-Addendum muss unter Account → Legal → Data Processing Addendum aktiviert sein
+#   - Smart Placement deaktivieren oder EU-Region erzwingen (Cloudflare Enterprise Feature)
+#   - Für strikte EU-Datenresidenz: Alternativ Hetzner Object Storage + GitHub Actions Deploy nutzen

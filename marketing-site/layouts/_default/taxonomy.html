@@ -1,0 +1,14 @@
+{{ define "main" }}
+<div class="blog-list-container">
+  <header class="blog-list-header">
+    <h1>{{ .Title }}</h1>
+  </header>
+  <ul class="blog-list" role="list">
+    {{ range .Pages }}
+    <li class="blog-list-item">
+      <h2><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
+    </li>
+    {{ end }}
+  </ul>
+</div>
+{{ end }}
