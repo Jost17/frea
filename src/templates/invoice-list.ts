@@ -1,7 +1,17 @@
 import { html } from "hono/html";
 import type { InvoiceListItem } from "../validation/schemas";
 import { EmptyState } from "./components/empty-state";
+import { Table, TableRow, Td } from "./components/table";
 import { formatCurrency, formatDate, statusBadge } from "./invoice-shared";
+
+const INVOICE_COLUMNS = [
+  { label: "Rechnungsnummer" },
+  { label: "Kunde" },
+  { label: "Betrag", align: "right" as const },
+  { label: "Status", align: "center" as const },
+  { label: "Rechnungsdatum", align: "right" as const },
+  { label: "Fällig", align: "right" as const },
+];
 
 export function renderInvoiceList(invoices: InvoiceListItem[], now: string) {
   if (invoices.length === 0) {
@@ -13,37 +23,31 @@ export function renderInvoiceList(invoices: InvoiceListItem[], now: string) {
     });
   }
 
-  return html`
-    <div class="rounded-lg border border-gray-200 bg-white overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200 text-sm">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="px-4 py-3 text-left font-semibold text-gray-700">Rechnungsnummer</th>
-            <th class="px-4 py-3 text-left font-semibold text-gray-700">Kunde</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-700">Betrag</th>
-            <th class="px-4 py-3 text-center font-semibold text-gray-700">Status</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-700">Rechnungsdatum</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-700">Fällig</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100">
-          ${invoices.map((inv) => {
-            const isOverdue = inv.status === "sent" && inv.due_date < now;
-            return html`
-              <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3">
-                  <a href="/rechnungen/${inv.id}" class="font-medium text-blue-600 hover:underline">${inv.invoice_number}</a>
-                </td>
-                <td class="px-4 py-3 text-gray-600">${inv.client_name}</td>
-                <td class="px-4 py-3 text-right font-medium text-gray-900">${formatCurrency(inv.gross_amount)}</td>
-                <td class="px-4 py-3 text-center">${statusBadge(inv.status)}</td>
-                <td class="px-4 py-3 text-right text-gray-600">${formatDate(inv.invoice_date)}</td>
-                <td class="px-4 py-3 text-right text-gray-600 ${isOverdue ? "text-red-600 font-medium" : ""}">${formatDate(inv.due_date)}${isOverdue ? " ⚠" : ""}</td>
-              </tr>
-            `;
-          })}
-        </tbody>
-      </table>
-    </div>
-  `;
+  const rows = invoices.map((inv) => {
+    const isOverdue = inv.status === "sent" && inv.due_date < now;
+    return TableRow({
+      children: [
+        Td({
+          children: html`<a href="/rechnungen/${inv.id}" class="font-medium text-primary hover:underline">${inv.invoice_number}</a>`,
+        }),
+        Td({ children: html`<span class="text-text-secondary">${inv.client_name}</span>` }),
+        Td({
+          align: "right",
+          children: html`<span class="font-medium text-text-primary">${formatCurrency(inv.gross_amount)}</span>`,
+        }),
+        Td({ align: "center", children: statusBadge(inv.status) }),
+        Td({
+          align: "right",
+          children: html`<span class="text-text-secondary">${formatDate(inv.invoice_date)}</span>`,
+        }),
+        Td({
+          align: "right",
+          extraClass: isOverdue ? " text-accent-danger font-medium" : " text-text-secondary",
+          children: html`${formatDate(inv.due_date)}${isOverdue ? html` ⚠` : ""}`,
+        }),
+      ],
+    });
+  });
+
+  return Table({ columns: INVOICE_COLUMNS, rows });
 }
