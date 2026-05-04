@@ -23,7 +23,7 @@ States: default, hover, disabled, loading
 ```
 Usage: secondary navigation, cancel dialogs
 Classes: rounded-md px-4 py-2 text-sm font-medium text-primary
-         bg-primary-subtle hover:bg-primary 
+         bg-primary-subtle hover:bg-primary hover:text-white
          transition-colors
 ```
 

@@ -180,6 +180,7 @@ const STATUS_BADGE_MAP: Record<string, { label: string; className: string }> = {
   draft: { label: "Entwurf", className: "bg-status-draft-bg text-status-draft-text" },
   sent: { label: "Versendet", className: "bg-status-open-bg text-status-open-text" },
   paid: { label: "Bezahlt", className: "bg-status-paid-bg text-status-paid-text" },
+  overdue: { label: "Überfällig", className: "bg-status-overdue-bg text-status-overdue-text" },
   cancelled: { label: "Storniert", className: "bg-status-cancelled-bg text-status-cancelled-text" },
 };
 ```
