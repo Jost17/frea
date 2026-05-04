@@ -65,9 +65,13 @@
       height: 16px;
       display: inline-block;
     }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+    .focus\:not-sr-only:focus { position: static; width: auto; height: auto; padding: inherit; margin: inherit; overflow: visible; clip: auto; white-space: normal; }
   </style>
 </head>
 <body>
+  <a href="#main-content" class="sr-only focus:not-sr-only bg-primary text-white px-4 py-2 fixed top-0 left-0 z-50">Zum Hauptinhalt springen</a>
   <div class="flex h-screen flex-col">
     <!-- Header -->
     <header class="border-b border-border-subtle bg-bg-surface px-8 py-4">
@@ -97,7 +101,7 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="flex-1 overflow-auto bg-bg-surface p-8">
+    <main id="main-content" class="flex-1 overflow-auto bg-bg-surface p-8">
       <!-- Page Title with Status -->
       <div class="mb-6">
         <div class="flex items-baseline gap-4 mb-4">
