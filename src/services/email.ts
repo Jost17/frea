@@ -46,7 +46,10 @@ export class EmailService {
     try {
       return await import("nodemailer");
     } catch (err) {
-      console.debug("[email] nodemailer not available:", err instanceof Error ? err.message : String(err));
+      console.debug(
+        "[email] nodemailer not available:",
+        err instanceof Error ? err.message : String(err),
+      );
       return null;
     }
   }

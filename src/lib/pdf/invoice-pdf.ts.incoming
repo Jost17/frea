@@ -3,8 +3,8 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Browser } from "puppeteer";
 import puppeteer from "puppeteer";
-import { buildInvoiceHtml, type InvoicePdfData } from "./invoice-html";
 import { embedZUGFeRDInPDF } from "./zugferd-embed";
+import { buildInvoiceHtml, type InvoicePdfData } from "./invoice-html";
 
 const PDF_OUTPUT_DIR = join(import.meta.dir, "../../../../data/pdfs");
 
@@ -45,10 +45,7 @@ export interface GeneratePdfOptions {
   zugferdXml?: string;
 }
 
-export async function generateInvoicePdf(
-  data: InvoicePdfData,
-  options?: GeneratePdfOptions,
-): Promise<PdfResult> {
+export async function generateInvoicePdf(data: InvoicePdfData, options?: GeneratePdfOptions): Promise<PdfResult> {
   ensurePdfDir();
 
   const html = buildInvoiceHtml(data);
@@ -75,6 +72,7 @@ export async function generateInvoicePdf(
       const embedResult = await embedZUGFeRDInPDF(filePath, options.zugferdXml);
       if (!embedResult.success) {
         console.warn(`[invoice-pdf] ZUGFeRD embedding failed: ${embedResult.error}`);
+        // Nicht abbrechen — PDF ist immer noch gültig ohne ZUGFeRD
       }
     }
 
