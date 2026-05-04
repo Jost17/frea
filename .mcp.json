@@ -1,0 +1,20 @@
+{
+  "name": "FREA",
+  "version": "1.0.0",
+  "description": "German Invoicing Compliance Framework — Real-time validation for freelancers",
+  "author": "FREA Team",
+  "license": "Private",
+  "homepage": "https://frea.tool",
+  "command": "curl",
+  "args": ["-s", "-X", "POST", "http://localhost:4114/mcp/server", "-H", "Content-Type: application/json"],
+  "env": {
+    "FREA_MCP_ENABLED": "true"
+  },
+  "resources": [
+    "frea://legal/invoicing-requirements-de",
+    "frea://setup/freelancer-onboarding"
+  ],
+  "tools": [
+    "frea:validate_invoice"
+  ]
+}

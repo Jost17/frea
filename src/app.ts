@@ -12,6 +12,7 @@ import { apiRoutes } from "./routes/api";
 import { clientRoutes } from "./routes/clients";
 import { dashboardRoutes } from "./routes/dashboard";
 import { invoiceRoutes } from "./routes/invoices";
+import { mcpRoutes } from "./routes/mcp";
 import { projectRoutes } from "./routes/projects";
 import { settingsRoutes } from "./routes/settings";
 import { timeRoutes } from "./routes/times";
@@ -32,7 +33,11 @@ const isTest = process.env.NODE_ENV === "test";
 
 if (!isTest) {
   app.use("*", logger());
-  app.use("*", csrf());
+  // Skip CSRF for MCP endpoint — AI clients don't have CSRF tokens
+  app.use("*", async (c, next) => {
+    if (c.req.path.startsWith("/mcp")) return next();
+    return csrf()(c, next);
+  });
 }
 
 app.use("*", securityHeaders);
@@ -66,3 +71,4 @@ app.route("/zeiten", timeRoutes);
 app.route("/rechnungen", invoiceRoutes);
 app.route("/einstellungen", settingsRoutes);
 app.route("/api", apiRoutes);
+app.route("/mcp", mcpRoutes);
