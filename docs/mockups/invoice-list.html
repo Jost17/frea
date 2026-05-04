@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FREA · Rechnungen</title>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+  <style>
+    :root {
+      --color-primary: oklch(72% 0.17 165);
+      --color-primary-hover: oklch(65% 0.17 165);
+      --color-primary-subtle: oklch(96% 0.04 165);
+      --color-bg-primary: oklch(98.5% 0.003 265);
+      --color-bg-surface: oklch(100% 0 0);
+      --color-bg-surface-raised: oklch(97% 0.005 265);
+      --color-border-subtle: oklch(93% 0.006 265);
+      --color-border-medium: oklch(88% 0.01 265);
+      --color-text-primary: oklch(21% 0.02 265);
+      --color-text-secondary: oklch(45% 0.02 265);
+      --color-text-muted: oklch(65% 0.015 265);
+      --color-accent-danger: oklch(58% 0.18 25);
+      --color-status-paid-bg: oklch(93% 0.06 155);
+      --color-status-paid-text: oklch(35% 0.14 155);
+      --color-status-open-bg: oklch(94% 0.06 165);
+      --color-status-open-text: oklch(38% 0.14 165);
+      --color-status-overdue-bg: oklch(94% 0.06 25);
+      --color-status-overdue-text: oklch(38% 0.18 25);
+      --color-status-draft-bg: oklch(95% 0.01 265);
+      --color-status-draft-text: oklch(45% 0.02 265);
+      --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06);
+    }
+
+    [data-theme="dark"] {
+      --color-primary: oklch(78% 0.18 165);
+      --color-primary-hover: oklch(83% 0.18 165);
+      --color-primary-subtle: oklch(22% 0.06 165);
+      --color-bg-primary: oklch(13% 0.015 265);
+      --color-bg-surface: oklch(16% 0.015 265);
+      --color-bg-surface-raised: oklch(20% 0.015 265);
+      --color-border-subtle: oklch(22% 0.015 265);
+      --color-border-medium: oklch(28% 0.015 265);
+      --color-text-primary: oklch(93% 0.005 265);
+      --color-text-secondary: oklch(65% 0.01 265);
+      --color-text-muted: oklch(45% 0.01 265);
+      --color-accent-danger: oklch(65% 0.2 25);
+    }
+
+    html {
+      background-color: var(--color-bg-primary);
+      color: var(--color-text-primary);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    .nav {
+      background-color: var(--color-bg-surface);
+      border-bottom: 1px solid var(--color-border-subtle);
+      padding: 1rem;
+    }
+
+    .nav a {
+      display: inline-block;
+      margin-right: 1rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background-color 0.2s, color 0.2s;
+      color: var(--color-text-secondary);
+    }
+
+    .nav a:hover {
+      background-color: var(--color-bg-surface-raised);
+      color: var(--color-text-primary);
+    }
+
+    .nav a.active {
+      background-color: var(--color-primary-subtle);
+      color: var(--color-primary);
+    }
+
+    .main {
+      max-width: 80rem;
+      margin: 0 auto;
+      padding: 1.5rem 1rem;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-size: 1.875rem;
+      font-weight: bold;
+      color: var(--color-text-primary);
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      text-decoration: none;
+    }
+
+    .button-primary {
+      background-color: var(--color-primary);
+      color: white;
+    }
+
+    .button-primary:hover {
+      background-color: var(--color-primary-hover);
+    }
+
+    .table-container {
+      background-color: var(--color-bg-surface);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    thead {
+      background-color: var(--color-bg-surface-raised);
+    }
+
+    th {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--color-border-subtle);
+      color: var(--color-text-primary);
+    }
+
+    tbody tr:hover {
+      background-color: var(--color-bg-surface-raised);
+    }
+
+    .invoice-number {
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .invoice-number:hover {
+      text-decoration: underline;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .amount {
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .status-paid {
+      background-color: var(--color-status-paid-bg);
+      color: var(--color-status-paid-text);
+    }
+
+    .status-open {
+      background-color: var(--color-status-open-bg);
+      color: var(--color-status-open-text);
+    }
+
+    .status-overdue {
+      background-color: var(--color-status-overdue-bg);
+      color: var(--color-status-overdue-text);
+    }
+
+    .status-draft {
+      background-color: var(--color-status-draft-bg);
+      color: var(--color-status-draft-text);
+    }
+
+    .overdue-warning {
+      color: var(--color-accent-danger);
+      font-weight: 500;
+    }
+
+    .dark-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      padding: 0.5rem;
+      background-color: var(--color-bg-surface);
+      border: 1px solid var(--color-border-medium);
+      border-radius: 0.375rem;
+      cursor: pointer;
+    }
+
+    svg {
+      width: 1rem;
+      height: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav">
+  <a href="#">Dashboard</a>
+  <a href="#" class="active">Rechnungen</a>
+  <a href="#">Kunden</a>
+  <a href="#">Einstellungen</a>
+</nav>
+
+<!-- Dark Mode Toggle -->
+<button class="dark-toggle" onclick="toggleDarkMode()">🌙</button>
+
+<!-- Main Content -->
+<main class="main">
+  <div class="page-header">
+    <h1 class="page-title">Rechnungen</h1>
+    <a href="#" class="button button-primary">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Neue Rechnung
+    </a>
+  </div>
+
+  <!-- Invoice Table -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Rechnungsnummer</th>
+          <th>Kunde</th>
+          <th class="text-right">Betrag</th>
+          <th class="text-center">Status</th>
+          <th class="text-right">Rechnungsdatum</th>
+          <th class="text-right">Fällig</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="#" class="invoice-number">INV-2026-001</a></td>
+          <td>Acme GmbH</td>
+          <td class="text-right amount">€ 2.500,00</td>
+          <td class="text-center"><span class="status-badge status-paid">Bezahlt</span></td>
+          <td class="text-right">2026-04-01</td>
+          <td class="text-right">2026-04-30</td>
+        </tr>
+        <tr>
+          <td><a href="#" class="invoice-number">INV-2026-002</a></td>
+          <td>TechStart AG</td>
+          <td class="text-right amount">€ 3.750,50</td>
+          <td class="text-center"><span class="status-badge status-open">Offen</span></td>
+          <td class="text-right">2026-04-15</td>
+          <td class="text-right">2026-05-15</td>
+        </tr>
+        <tr>
+          <td><a href="#" class="invoice-number">INV-2026-003</a></td>
+          <td>Digital Solutions</td>
+          <td class="text-right amount">€ 1.200,00</td>
+          <td class="text-center"><span class="status-badge status-overdue">Überfällig</span></td>
+          <td class="text-right">2026-03-20</td>
+          <td class="text-right"><span class="overdue-warning">2026-04-20 ⚠</span></td>
+        </tr>
+        <tr>
+          <td><a href="#" class="invoice-number">INV-2026-004</a></td>
+          <td>WebVenture GmbH</td>
+          <td class="text-right amount">€ 4.200,00</td>
+          <td class="text-center"><span class="status-badge status-open">Offen</span></td>
+          <td class="text-right">2026-04-20</td>
+          <td class="text-right">2026-05-20</td>
+        </tr>
+        <tr>
+          <td><a href="#" class="invoice-number">INV-2026-005</a></td>
+          <td>CloudCore Ltd</td>
+          <td class="text-right amount">€ 5.900,75</td>
+          <td class="text-center"><span class="status-badge status-paid">Bezahlt</span></td>
+          <td class="text-right">2026-03-10</td>
+          <td class="text-right">2026-04-10</td>
+        </tr>
+        <tr>
+          <td><a href="#" class="invoice-number">INV-2026-006</a></td>
+          <td>Startup Nexus</td>
+          <td class="text-right amount">€ 2.100,00</td>
+          <td class="text-center"><span class="status-badge status-draft">Entwurf</span></td>
+          <td class="text-right">—</td>
+          <td class="text-right">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+function toggleDarkMode() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+});
+</script>
+
+</body>
+</html>
