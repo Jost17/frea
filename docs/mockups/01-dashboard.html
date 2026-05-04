@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FREA Dashboard — UI Redesign Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      /* Brand Colors (FREA Emerald) */
+      --color-primary: oklch(45% 0.18 160);
+      --color-primary-hover: oklch(40% 0.20 160);
+      --color-primary-subtle: oklch(94% 0.03 160);
+
+      /* Text Colors */
+      --color-text-primary: oklch(20% 0.01 265);
+      --color-text-secondary: oklch(50% 0.05 265);
+      --color-text-muted: oklch(70% 0.02 265);
+
+      /* Background Colors */
+      --color-bg-surface: oklch(98% 0.01 265);
+      --color-bg-surface-raised: oklch(95% 0.01 265);
+
+      /* Border Colors */
+      --color-border-subtle: oklch(90% 0.02 265);
+      --color-border-medium: oklch(80% 0.04 265);
+
+      /* Accent/Status Colors */
+      --color-accent-danger: oklch(50% 0.22 25);
+      --color-status-draft-bg: oklch(95% 0.01 265);
+      --color-status-draft-text: oklch(45% 0.02 265);
+      --color-status-open-bg: oklch(94% 0.06 165);
+      --color-status-open-text: oklch(38% 0.14 165);
+      --color-status-paid-bg: oklch(93% 0.06 155);
+      --color-status-paid-text: oklch(35% 0.14 155);
+      --color-status-overdue-bg: oklch(94% 0.06 25);
+      --color-status-overdue-text: oklch(38% 0.18 25);
+
+      /* Shadows */
+      --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+      --shadow-card-hover: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    body {
+      background-color: var(--color-bg-surface);
+      color: var(--color-text-primary);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .bg-primary {
+      background-color: var(--color-primary);
+    }
+    .hover\:bg-primary:hover {
+      background-color: var(--color-primary-hover);
+    }
+    .bg-primary-subtle {
+      background-color: var(--color-primary-subtle);
+    }
+    .text-primary {
+      color: var(--color-primary);
+    }
+
+    .bg-bg-surface {
+      background-color: var(--color-bg-surface);
+    }
+    .bg-bg-surface-raised {
+      background-color: var(--color-bg-surface-raised);
+    }
+    .text-text-primary {
+      color: var(--color-text-primary);
+    }
+    .text-text-secondary {
+      color: var(--color-text-secondary);
+    }
+    .text-text-muted {
+      color: var(--color-text-muted);
+    }
+
+    .border-border-subtle {
+      border-color: var(--color-border-subtle);
+    }
+    .divide-border-subtle > * + * {
+      border-top-color: var(--color-border-subtle);
+    }
+
+    .bg-status-open {
+      background-color: var(--color-status-open-bg);
+      color: var(--color-status-open-text);
+    }
+    .bg-status-paid {
+      background-color: var(--color-status-paid-bg);
+      color: var(--color-status-paid-text);
+    }
+    .bg-status-draft {
+      background-color: var(--color-status-draft-bg);
+      color: var(--color-status-draft-text);
+    }
+    .bg-status-overdue {
+      background-color: var(--color-status-overdue-bg);
+      color: var(--color-status-overdue-text);
+    }
+
+    .text-accent-danger {
+      color: var(--color-accent-danger);
+    }
+
+    .shadow-card {
+      box-shadow: var(--shadow-card);
+    }
+    .hover\:shadow-card-hover:hover {
+      box-shadow: var(--shadow-card-hover);
+    }
+
+    /* Component Styles */
+    .btn-primary {
+      @apply rounded-md px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary transition-colors duration-200;
+    }
+
+    .btn-secondary {
+      @apply rounded-md px-4 py-2 text-sm font-medium text-primary bg-primary-subtle hover:bg-primary transition-colors;
+    }
+
+    .btn-ghost {
+      @apply p-2 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-surface-raised transition-colors;
+    }
+
+    .card {
+      @apply bg-bg-surface border border-border-subtle rounded-lg shadow-card p-8;
+    }
+
+    .badge-status {
+      @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    }
+
+    .table-base {
+      @apply min-w-full divide-y divide-border-subtle text-sm;
+    }
+  </style>
+</head>
+<body>
+  <div class="flex h-screen flex-col">
+    <!-- Header -->
+    <header class="border-b border-border-subtle bg-bg-surface px-8 py-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold text-text-primary">FREA Dashboard</h1>
+        <div class="flex items-center gap-4">
+          <button class="btn-ghost">☀️</button>
+          <button class="btn-ghost">☰</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="border-b border-border-subtle bg-bg-surface px-8 py-3">
+      <div class="flex items-center gap-2 text-sm font-medium">
+        <a href="#" class="rounded-md bg-primary-subtle px-3 py-1.5 text-primary">Dashboard</a>
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Kunden</a>
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Projekte</a>
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Zeiten</a>
+        <a href="#" class="relative rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">
+          Rechnungen
+          <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent-danger text-xs font-bold text-white">
+            3
+          </span>
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto bg-bg-surface p-8">
+      <!-- Welcome -->
+      <div class="mb-8">
+        <h2 class="text-2xl font-semibold text-text-primary">Willkommen, Jost</h2>
+        <p class="text-text-secondary">Hier ist eine Übersicht deiner aktuellen Rechnungen und Projekte.</p>
+      </div>
+
+      <!-- KPI Cards Grid (2x2) -->
+      <div class="mb-8 grid grid-cols-2 gap-6">
+        <!-- Card 1: Rechnungen 2026 -->
+        <div class="card">
+          <div class="flex items-start justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-text-primary">Rechnungen 2026</h3>
+              <div class="mt-4 space-y-2 text-sm text-text-secondary">
+                <p><span class="font-medium">Gesamt:</span> €2.450,00</p>
+                <p><span class="font-medium">Gezahlt:</span> €1.200,00</p>
+                <p><span class="font-medium text-primary">Offen:</span> €1.250,00</p>
+              </div>
+            </div>
+            <div class="text-3xl">📊</div>
+          </div>
+        </div>
+
+        <!-- Card 2: Überfällige -->
+        <div class="card">
+          <div class="flex items-start justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-text-primary">Überfällige</h3>
+              <div class="mt-4 space-y-2 text-sm text-text-secondary">
+                <p><span class="font-medium">Anzahl:</span> <span class="text-accent-danger font-medium">3</span></p>
+                <p><span class="font-medium">Betrag:</span> <span class="text-accent-danger font-medium">€820,00</span></p>
+              </div>
+            </div>
+            <div class="text-3xl">⚠️</div>
+          </div>
+        </div>
+
+        <!-- Card 3: Aktive Projekte -->
+        <div class="card col-span-2">
+          <h3 class="text-lg font-semibold text-text-primary mb-6">Aktive Projekte</h3>
+          <div class="space-y-6">
+            <!-- Project 1 -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <p class="font-medium text-text-primary">ClientABC</p>
+                  <p class="text-sm text-text-secondary">Marketing Website</p>
+                </div>
+                <p class="text-sm font-medium text-text-primary">16h</p>
+              </div>
+              <div class="h-2 w-full rounded-full bg-bg-surface-raised overflow-hidden">
+                <div class="h-full w-4/5 rounded-full bg-primary"></div>
+              </div>
+              <p class="mt-1 text-xs text-text-muted">80% Complete</p>
+            </div>
+
+            <!-- Project 2 -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <p class="font-medium text-text-primary">Tech Startup</p>
+                  <p class="text-sm text-text-secondary">Cloud Infra Audit</p>
+                </div>
+                <p class="text-sm font-medium text-text-primary">8h</p>
+              </div>
+              <div class="h-2 w-full rounded-full bg-bg-surface-raised overflow-hidden">
+                <div class="h-full w-1/5 rounded-full bg-primary"></div>
+              </div>
+              <p class="mt-1 text-xs text-text-muted">20% Complete</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Letzte Rechnungen -->
+        <div class="card col-span-2">
+          <h3 class="text-lg font-semibold text-text-primary mb-4">Letzte Rechnungen</h3>
+          <div class="overflow-x-auto">
+            <table class="table-base">
+              <thead class="bg-bg-surface-raised">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold text-text-primary">#</th>
+                  <th class="px-4 py-3 text-left font-semibold text-text-primary">Kunde</th>
+                  <th class="px-4 py-3 text-left font-semibold text-text-primary">Betrag</th>
+                  <th class="px-4 py-3 text-left font-semibold text-text-primary">Status</th>
+                  <th class="px-4 py-3 text-left font-semibold text-text-primary">Fällig</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border-subtle">
+                <tr class="hover:bg-bg-surface-raised">
+                  <td class="px-4 py-3 text-primary hover:underline cursor-pointer">2026-0042</td>
+                  <td class="px-4 py-3 text-text-primary">ClientABC</td>
+                  <td class="px-4 py-3 font-medium text-text-primary">€850,00</td>
+                  <td class="px-4 py-3">
+                    <span class="badge-status bg-status-open">Offen</span>
+                  </td>
+                  <td>
+                    <div class="text-sm text-text-primary">28.04.2026</div>
+                    <div class="text-xs text-accent-danger font-medium">⚠ 4 Tage überfällig</div>
+                  </td>
+                </tr>
+                <tr class="hover:bg-bg-surface-raised">
+                  <td class="px-4 py-3 text-primary hover:underline cursor-pointer">2026-0041</td>
+                  <td class="px-4 py-3 text-text-primary">Startup Inc.</td>
+                  <td class="px-4 py-3 font-medium text-text-primary">€600,00</td>
+                  <td class="px-4 py-3">
+                    <span class="badge-status bg-status-paid">Bezahlt</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-text-primary">12.04.2026</td>
+                </tr>
+                <tr class="hover:bg-bg-surface-raised">
+                  <td class="px-4 py-3 text-primary hover:underline cursor-pointer">2026-0040</td>
+                  <td class="px-4 py-3 text-text-primary">ClientXYZ</td>
+                  <td class="px-4 py-3 font-medium text-text-primary">€1.200,00</td>
+                  <td class="px-4 py-3">
+                    <span class="badge-status bg-status-draft">Entwurf</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-text-primary">01.05.2026</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FREA Rechnungsdetail — UI Redesign Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --color-primary: oklch(45% 0.18 160);
+      --color-primary-hover: oklch(40% 0.20 160);
+      --color-primary-subtle: oklch(94% 0.03 160);
+      --color-text-primary: oklch(20% 0.01 265);
+      --color-text-secondary: oklch(50% 0.05 265);
+      --color-text-muted: oklch(70% 0.02 265);
+      --color-bg-surface: oklch(98% 0.01 265);
+      --color-bg-surface-raised: oklch(95% 0.01 265);
+      --color-border-subtle: oklch(90% 0.02 265);
+      --color-border-medium: oklch(80% 0.04 265);
+      --color-accent-danger: oklch(50% 0.22 25);
+      --color-status-open-bg: oklch(94% 0.06 165);
+      --color-status-open-text: oklch(38% 0.14 165);
+      --color-accent-color: var(--color-primary);
+      --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+
+    body {
+      background-color: var(--color-bg-surface);
+      color: var(--color-text-primary);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .bg-primary { background-color: var(--color-primary); }
+    .hover\:bg-primary:hover { background-color: var(--color-primary-hover); }
+    .bg-primary-subtle { background-color: var(--color-primary-subtle); }
+    .text-primary { color: var(--color-primary); }
+    .text-text-primary { color: var(--color-text-primary); }
+    .text-text-secondary { color: var(--color-text-secondary); }
+    .text-text-muted { color: var(--color-text-muted); }
+    .border-border-subtle { border-color: var(--color-border-subtle); }
+    .border-border-medium { border-color: var(--color-border-medium); }
+    .divide-border-subtle > * + * { border-top-color: var(--color-border-subtle); }
+    .bg-status-open { background-color: var(--color-status-open-bg); color: var(--color-status-open-text); }
+    .text-accent-danger { color: var(--color-accent-danger); }
+    .shadow-card { box-shadow: var(--shadow-card); }
+
+    .btn-primary {
+      @apply inline-flex items-center gap-1 rounded-md px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary transition-colors duration-200;
+    }
+    .btn-secondary {
+      @apply inline-flex items-center gap-1 rounded-md px-4 py-2 text-sm font-medium text-primary bg-primary-subtle hover:bg-primary transition-colors;
+    }
+    .btn-ghost { @apply p-2 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-surface-raised transition-colors; }
+    .card {
+      @apply bg-bg-surface border border-border-subtle rounded-lg shadow-card p-8;
+    }
+    .card-accent {
+      border-top: 4px solid var(--color-accent-color);
+    }
+    .badge-status { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
+    .table-base { @apply w-full divide-y divide-border-subtle text-sm; }
+
+    .icon-small {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="flex h-screen flex-col">
+    <!-- Header -->
+    <header class="border-b border-border-subtle bg-bg-surface px-8 py-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold text-text-primary">FREA Rechnungen</h1>
+        <div class="flex items-center gap-4">
+          <button class="btn-ghost">☀️</button>
+          <button class="btn-ghost">☰</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="border-b border-border-subtle bg-bg-surface px-8 py-3">
+      <div class="flex items-center gap-2 text-sm font-medium">
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Dashboard</a>
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Kunden</a>
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Projekte</a>
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Zeiten</a>
+        <a href="#" class="relative rounded-md bg-primary-subtle px-3 py-1.5 text-primary">
+          Rechnungen
+          <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent-danger text-xs font-bold text-white">
+            3
+          </span>
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto bg-bg-surface p-8">
+      <!-- Page Title with Status -->
+      <div class="mb-6">
+        <div class="flex items-baseline gap-4 mb-4">
+          <h1 class="text-2xl font-semibold text-text-primary">Rechnung FREA-2026-0042</h1>
+          <span class="badge-status bg-status-open">Offen</span>
+          <span class="text-sm text-accent-danger font-medium">⚠ 4 Tage überfällig</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="mb-6 flex gap-3">
+        <button class="btn-primary">
+          📥 PDF herunterladen
+        </button>
+        <button class="btn-secondary">
+          ✉️ Per Email versenden
+        </button>
+        <button class="btn-secondary">
+          ✓ Als Bezahlt markieren
+        </button>
+      </div>
+
+      <!-- Invoice Detail Card -->
+      <div class="card card-accent max-w-4xl">
+        <!-- Header Section -->
+        <div class="mb-8 grid grid-cols-2 gap-8">
+          <!-- Left: Rechnungssteller -->
+          <div>
+            <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase">Rechnungssteller</h3>
+            <p class="font-medium text-text-primary">Musterfirma GmbH</p>
+            <p class="text-sm text-text-secondary">Musterstraße 1</p>
+            <p class="text-sm text-text-secondary">12345 Musterstadt</p>
+          </div>
+
+          <!-- Right: Invoice Details -->
+          <div class="space-y-2">
+            <div class="flex justify-between">
+              <span class="text-sm text-text-secondary">Rechnungsnummer:</span>
+              <span class="font-medium text-text-primary">2026-0042</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-text-secondary">Rechnungsdatum:</span>
+              <span class="font-medium text-text-primary">24.04.2026</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-text-secondary">Leistungszeitraum:</span>
+              <span class="font-medium text-text-primary">15.04.2026 – 21.04.2026</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-text-secondary">Fällig:</span>
+              <span class="font-medium text-text-primary">28.04.2026</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-text-secondary">Bestellnr.:</span>
+              <span class="font-medium text-text-primary">PO-2026-001</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-border-medium my-8"></div>
+
+        <!-- Rechnungsempfänger -->
+        <div class="mb-8">
+          <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase">Rechnungsempfänger</h3>
+          <p class="font-medium text-text-primary">ClientABC GmbH</p>
+          <p class="text-sm text-text-secondary">Kundenstraße 42</p>
+          <p class="text-sm text-text-secondary">67890 Kundenstadt</p>
+          <p class="text-sm text-text-secondary mt-2">USt-IdNr.: DE1234567890</p>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-border-medium my-8"></div>
+
+        <!-- Line Items Table -->
+        <div class="mb-8 overflow-x-auto">
+          <table class="table-base">
+            <thead>
+              <tr class="border-b-2 border-border-medium">
+                <th class="px-4 py-3 text-left font-semibold text-text-primary">Nr.</th>
+                <th class="px-4 py-3 text-left font-semibold text-text-primary">Beschreibung</th>
+                <th class="px-4 py-3 text-left font-semibold text-text-primary">Zeitraum</th>
+                <th class="px-4 py-3 text-right font-semibold text-text-primary">Tage</th>
+                <th class="px-4 py-3 text-right font-semibold text-text-primary">Satz</th>
+                <th class="px-4 py-3 text-right font-semibold text-text-primary">Gesamtbetrag</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle">
+              <tr>
+                <td class="px-4 py-3 text-text-primary font-medium">1.</td>
+                <td class="px-4 py-3 text-text-primary">
+                  <p class="font-medium">Projektleitung Marketing</p>
+                  <p class="text-xs text-text-muted">Beratung und Koordination</p>
+                </td>
+                <td class="px-4 py-3 text-sm text-text-primary">15.04 – 21.04</td>
+                <td class="px-4 py-3 text-right text-sm text-text-primary">5,00</td>
+                <td class="px-4 py-3 text-right text-sm text-text-primary">€250/Tag</td>
+                <td class="px-4 py-3 text-right font-medium text-text-primary">€1.250,00</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-text-primary font-medium">2.</td>
+                <td class="px-4 py-3 text-text-primary">
+                  <p class="font-medium">Design-Work Website</p>
+                  <p class="text-xs text-text-muted">UI/UX und Grafiken</p>
+                </td>
+                <td class="px-4 py-3 text-sm text-text-primary">15.04 – 21.04</td>
+                <td class="px-4 py-3 text-right text-sm text-text-primary">3,50</td>
+                <td class="px-4 py-3 text-right text-sm text-text-primary">€300/Tag</td>
+                <td class="px-4 py-3 text-right font-medium text-text-primary">€1.050,00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-border-medium my-8"></div>
+
+        <!-- Summary Section -->
+        <div class="mb-8 space-y-2 text-sm">
+          <div class="flex justify-end gap-8">
+            <span class="text-text-secondary">Zwischensumme (Netto):</span>
+            <span class="w-32 text-right font-medium text-text-primary">€2.300,00</span>
+          </div>
+          <div class="flex justify-end gap-8">
+            <span class="text-text-secondary">MwSt (19%):</span>
+            <span class="w-32 text-right font-medium text-text-primary">€437,00</span>
+          </div>
+          <div class="border-t-2 border-border-medium my-3"></div>
+          <div class="flex justify-end gap-8">
+            <span class="font-semibold text-text-primary">Gesamtbetrag:</span>
+            <span class="w-32 text-right text-xl font-bold text-primary">€2.737,00</span>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-border-medium my-8"></div>
+
+        <!-- Payment Details -->
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase">Zahlungsdetails</h3>
+          <div class="space-y-1 text-sm text-text-primary">
+            <p><span class="font-medium">Kontoinhaber:</span> Musterfirma GmbH</p>
+            <p><span class="font-medium">IBAN:</span> DE89 3704 0044 0532 0130 00</p>
+            <p><span class="font-medium">BIC:</span> COBADEFFXXX</p>
+          </div>
+        </div>
+
+        <!-- Payment Terms -->
+        <div>
+          <h3 class="text-sm font-semibold text-text-secondary mb-3 uppercase">Zahlungsbedingungen</h3>
+          <p class="text-sm text-text-primary">Netto 14 Tage ab Rechnungsdatum</p>
+          <p class="text-sm text-text-primary">Skonto 2% bei Zahlung innerhalb von 7 Tagen</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

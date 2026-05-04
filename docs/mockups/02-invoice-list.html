@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FREA Rechnungen — UI Redesign Mockup</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --color-primary: oklch(45% 0.18 160);
+      --color-primary-hover: oklch(40% 0.20 160);
+      --color-primary-subtle: oklch(94% 0.03 160);
+      --color-text-primary: oklch(20% 0.01 265);
+      --color-text-secondary: oklch(50% 0.05 265);
+      --color-text-muted: oklch(70% 0.02 265);
+      --color-bg-surface: oklch(98% 0.01 265);
+      --color-bg-surface-raised: oklch(95% 0.01 265);
+      --color-border-subtle: oklch(90% 0.02 265);
+      --color-accent-danger: oklch(50% 0.22 25);
+      --color-status-draft-bg: oklch(95% 0.01 265);
+      --color-status-draft-text: oklch(45% 0.02 265);
+      --color-status-open-bg: oklch(94% 0.06 165);
+      --color-status-open-text: oklch(38% 0.14 165);
+      --color-status-paid-bg: oklch(93% 0.06 155);
+      --color-status-paid-text: oklch(35% 0.14 155);
+      --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+
+    body {
+      background-color: var(--color-bg-surface);
+      color: var(--color-text-primary);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .bg-primary { background-color: var(--color-primary); }
+    .hover\:bg-primary:hover { background-color: var(--color-primary-hover); }
+    .bg-primary-subtle { background-color: var(--color-primary-subtle); }
+    .text-primary { color: var(--color-primary); }
+    .bg-bg-surface { background-color: var(--color-bg-surface); }
+    .bg-bg-surface-raised { background-color: var(--color-bg-surface-raised); }
+    .text-text-primary { color: var(--color-text-primary); }
+    .text-text-secondary { color: var(--color-text-secondary); }
+    .text-text-muted { color: var(--color-text-muted); }
+    .border-border-subtle { border-color: var(--color-border-subtle); }
+    .divide-border-subtle > * + * { border-top-color: var(--color-border-subtle); }
+    .bg-status-open { background-color: var(--color-status-open-bg); color: var(--color-status-open-text); }
+    .bg-status-paid { background-color: var(--color-status-paid-bg); color: var(--color-status-paid-text); }
+    .bg-status-draft { background-color: var(--color-status-draft-bg); color: var(--color-status-draft-text); }
+    .text-accent-danger { color: var(--color-accent-danger); }
+    .shadow-card { box-shadow: var(--shadow-card); }
+
+    .btn-primary { @apply rounded-md px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary transition-colors duration-200; }
+    .btn-secondary { @apply rounded-md px-4 py-2 text-sm font-medium text-primary bg-primary-subtle hover:bg-primary transition-colors; }
+    .btn-ghost { @apply p-2 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-surface-raised transition-colors; }
+    .card { @apply bg-bg-surface border border-border-subtle rounded-lg shadow-card p-8; }
+    .badge-status { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
+    .table-base { @apply min-w-full divide-y divide-border-subtle text-sm; }
+  </style>
+</head>
+<body>
+  <div class="flex h-screen flex-col">
+    <!-- Header -->
+    <header class="border-b border-border-subtle bg-bg-surface px-8 py-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold text-text-primary">FREA Rechnungen</h1>
+        <div class="flex items-center gap-4">
+          <button class="btn-ghost">☀️</button>
+          <button class="btn-ghost">☰</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="border-b border-border-subtle bg-bg-surface px-8 py-3">
+      <div class="flex items-center gap-2 text-sm font-medium">
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Dashboard</a>
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Kunden</a>
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Projekte</a>
+        <a href="#" class="rounded-md px-3 py-1.5 text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary">Zeiten</a>
+        <a href="#" class="relative rounded-md bg-primary-subtle px-3 py-1.5 text-primary">
+          Rechnungen
+          <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent-danger text-xs font-bold text-white">
+            3
+          </span>
+        </a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto bg-bg-surface p-8">
+      <!-- Page Header -->
+      <div class="mb-6">
+        <h2 class="text-2xl font-semibold text-text-primary">Rechnungen</h2>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="mb-6 flex items-center gap-4">
+        <button class="btn-primary">+ Neue Rechnung</button>
+        <button class="rounded-md border border-border-subtle px-4 py-2 text-sm font-medium text-text-secondary hover:bg-bg-surface-raised transition-colors">
+          Filter ▼
+        </button>
+      </div>
+
+      <!-- Invoice List Card -->
+      <div class="card">
+        <div class="overflow-x-auto">
+          <table class="table-base">
+            <thead class="bg-bg-surface-raised">
+              <tr>
+                <th class="px-4 py-3 text-left font-semibold text-text-primary">Rech.Nr.</th>
+                <th class="px-4 py-3 text-left font-semibold text-text-primary">Kunde</th>
+                <th class="px-4 py-3 text-right font-semibold text-text-primary">Betrag</th>
+                <th class="px-4 py-3 text-left font-semibold text-text-primary">Status</th>
+                <th class="px-4 py-3 text-left font-semibold text-text-primary">Fällig</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle">
+              <!-- Row 1: Overdue -->
+              <tr class="hover:bg-bg-surface-raised cursor-pointer transition-colors">
+                <td class="px-4 py-3 text-primary hover:underline font-medium">2026-0042</td>
+                <td class="px-4 py-3 text-text-primary">ClientABC</td>
+                <td class="px-4 py-3 text-right text-text-primary font-medium">€850,00</td>
+                <td class="px-4 py-3">
+                  <span class="badge-status bg-status-open">Offen</span>
+                </td>
+                <td>
+                  <div class="text-sm text-text-primary">28.04.2026</div>
+                  <div class="text-xs text-accent-danger font-medium">⚠ 4 Tage überfällig</div>
+                </td>
+              </tr>
+
+              <!-- Row 2: Paid -->
+              <tr class="hover:bg-bg-surface-raised cursor-pointer transition-colors">
+                <td class="px-4 py-3 text-primary hover:underline font-medium">2026-0041</td>
+                <td class="px-4 py-3 text-text-primary">Startup Inc.</td>
+                <td class="px-4 py-3 text-right text-text-primary font-medium">€600,00</td>
+                <td class="px-4 py-3">
+                  <span class="badge-status bg-status-paid">Bezahlt</span>
+                </td>
+                <td class="px-4 py-3 text-sm text-text-primary">12.04.2026</td>
+              </tr>
+
+              <!-- Row 3: Draft -->
+              <tr class="hover:bg-bg-surface-raised cursor-pointer transition-colors">
+                <td class="px-4 py-3 text-primary hover:underline font-medium">2026-0040</td>
+                <td class="px-4 py-3 text-text-primary">ClientXYZ</td>
+                <td class="px-4 py-3 text-right text-text-primary font-medium">€1.200,00</td>
+                <td class="px-4 py-3">
+                  <span class="badge-status bg-status-draft">Entwurf</span>
+                </td>
+                <td class="px-4 py-3 text-sm text-text-primary">01.05.2026</td>
+              </tr>
+
+              <!-- Row 4: Sent -->
+              <tr class="hover:bg-bg-surface-raised cursor-pointer transition-colors">
+                <td class="px-4 py-3 text-primary hover:underline font-medium">2026-0039</td>
+                <td class="px-4 py-3 text-text-primary">Tech Partner</td>
+                <td class="px-4 py-3 text-right text-text-primary font-medium">€2.100,00</td>
+                <td class="px-4 py-3">
+                  <span class="badge-status bg-status-open">Versendet</span>
+                </td>
+                <td class="px-4 py-3 text-sm text-text-primary">15.04.2026</td>
+              </tr>
+
+              <!-- Row 5: Draft -->
+              <tr class="hover:bg-bg-surface-raised cursor-pointer transition-colors">
+                <td class="px-4 py-3 text-primary hover:underline font-medium">2026-0038</td>
+                <td class="px-4 py-3 text-text-primary">Design Studio</td>
+                <td class="px-4 py-3 text-right text-text-primary font-medium">€950,00</td>
+                <td class="px-4 py-3">
+                  <span class="badge-status bg-status-draft">Entwurf</span>
+                </td>
+                <td class="px-4 py-3 text-sm text-text-primary">20.05.2026</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="mt-6 flex items-center justify-between text-sm text-text-secondary">
+        <p>Seite 1 von 5</p>
+        <div class="flex gap-2">
+          <button class="rounded-md border border-border-subtle px-3 py-2 text-text-primary hover:bg-bg-surface-raised transition-colors disabled:opacity-50" disabled>
+            ← Vorherige
+          </button>
+          <button class="rounded-md border border-border-subtle px-3 py-2 text-text-primary hover:bg-bg-surface-raised transition-colors">
+            Nächste →
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
