@@ -2,17 +2,8 @@ import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { getDashboardStats } from "../db/dashboard-queries";
-import {
-  createInvoice,
-  getAllInvoices,
-  updateInvoiceStatus,
-} from "../db/invoice-queries";
-import {
-  getProject,
-  getSettings,
-  getTimeEntriesForProject,
-  updateSettings,
-} from "../db/queries";
+import { createInvoice, getAllInvoices, updateInvoiceStatus } from "../db/invoice-queries";
+import { getProject, getSettings, getTimeEntriesForProject, updateSettings } from "../db/queries";
 import { db } from "../db/schema";
 import { AppError, logAndRespond } from "../middleware/error-handler";
 import {
@@ -36,7 +27,9 @@ const requireLocalhost: MiddlewareHandler = async (c, next) => {
     addr = info.remote.address ?? "";
   } catch (err) {
     if (process.env.NODE_ENV === "test") {
-      console.warn("[requireLocalhost] getConnInfo nicht verfügbar (Test-Kontext) — Guard übersprungen");
+      console.warn(
+        "[requireLocalhost] getConnInfo nicht verfügbar (Test-Kontext) — Guard übersprungen",
+      );
       return next();
     }
     console.error("[requireLocalhost] getConnInfo fehlgeschlagen:", err);
