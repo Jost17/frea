@@ -1,4 +1,5 @@
 import { html } from "hono/html";
+import { Button } from "./components/button";
 
 export interface OnboardingPageProps {
   errorMsg?: string;
@@ -183,12 +184,7 @@ export function OnboardingPage({ errorMsg }: OnboardingPageProps) {
         </fieldset>
 
         <div class="flex justify-end border-t border-gray-200 pt-6">
-          <button
-            type="submit"
-            class="rounded-md bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          >
-            Einrichtung abschließen
-          </button>
+          ${Button({ type: "submit", children: "Einrichtung abschließen" })}
         </div>
       </form>
     </main>
