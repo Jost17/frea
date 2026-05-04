@@ -54,7 +54,8 @@ timeRoutes.get("/", (c) => {
           ${
             byClient.size === 0
               ? EmptyState({
-                  message: "Keine Zeiteinträge vorhanden. Erstelle einen Zeiteintrag, um geleistete Stunden zu dokumentieren.",
+                  message:
+                    "Keine Zeiteinträge vorhanden. Erstelle einen Zeiteintrag, um geleistete Stunden zu dokumentieren.",
                   actionHref: "/zeiten/new",
                   actionLabel: "Zeit erfassen",
                 })
@@ -160,7 +161,8 @@ timeRoutes.post("/", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, TIME_ENTRY_FIELDS);
     const result = timeEntrySchema.safeParse(data);
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     const id = createTimeEntry(result.data);
     if (!id) throw new AppError("Zeiteintrag konnte nicht erstellt werden", 500);
 
@@ -179,7 +181,8 @@ timeRoutes.post("/:id", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, TIME_ENTRY_FIELDS);
     const result = timeEntrySchema.safeParse(data);
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     updateTimeEntry(id, result.data);
 
     return c.redirect(`/zeiten/${id}`);

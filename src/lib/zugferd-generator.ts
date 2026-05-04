@@ -70,8 +70,18 @@ export interface ZUGFeRDInvoiceData {
 }
 
 const MONTH_NAMES = [
-  "Januar", "Februar", "März", "April", "Mai", "Juni",
-  "Juli", "August", "September", "Oktober", "November", "Dezember",
+  "Januar",
+  "Februar",
+  "März",
+  "April",
+  "Mai",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Dezember",
 ];
 
 export function generateZUGFeRDXML(data: ZUGFeRDInvoiceData): string {

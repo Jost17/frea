@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import type { AppEnv } from "../env";
-import { Layout } from "../templates/layout";
-import { getDashboardStats, type DashboardStats } from "../db/dashboard-queries";
+import { type DashboardStats, getDashboardStats } from "../db/dashboard-queries";
 import { hasNoClients } from "../db/queries";
+import type { AppEnv } from "../env";
 import { AppError } from "../middleware/error-handler";
+import { Layout } from "../templates/layout";
 
 export const dashboardRoutes = new Hono<AppEnv>();
 

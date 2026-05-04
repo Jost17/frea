@@ -3,8 +3,8 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Browser } from "puppeteer";
 import puppeteer from "puppeteer";
-import { buildInvoiceHtml, type InvoicePdfData } from "./invoice-html";
 import { embedZUGFeRDInPDF } from "./zugferd-embed";
+import { buildInvoiceHtml, type InvoicePdfData } from "./invoice-html";
 
 const PDF_OUTPUT_DIR = join(import.meta.dir, "../../../../data/pdfs");
 
@@ -27,18 +27,6 @@ async function getBrowser(): Promise<Browser> {
   return browserSingleton;
 }
 
-export async function closeBrowserSingleton(): Promise<void> {
-  if (browserSingleton?.connected) {
-    try {
-      await browserSingleton.close();
-      browserSingleton = null;
-      console.log("[invoice-pdf] Browser singleton closed");
-    } catch (err) {
-      console.warn("[invoice-pdf] Error closing browser singleton:", err);
-    }
-  }
-}
-
 export interface PdfGenerationResult {
   success: true;
   filePath: string;
@@ -57,10 +45,7 @@ export interface GeneratePdfOptions {
   zugferdXml?: string;
 }
 
-export async function generateInvoicePdf(
-  data: InvoicePdfData,
-  options?: GeneratePdfOptions,
-): Promise<PdfResult> {
+export async function generateInvoicePdf(data: InvoicePdfData, options?: GeneratePdfOptions): Promise<PdfResult> {
   ensurePdfDir();
 
   const html = buildInvoiceHtml(data);
@@ -68,8 +53,9 @@ export async function generateInvoicePdf(
   const fileName = `${safeInvoiceNumber}.pdf`;
   const filePath = join(PDF_OUTPUT_DIR, fileName);
 
+  let browser: Browser | undefined;
   try {
-    const browser = await getBrowser();
+    browser = await getBrowser();
 
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
@@ -95,6 +81,12 @@ export async function generateInvoicePdf(
     const message = err instanceof Error ? err.message : "Unbekannter Fehler";
     console.error("[invoice-pdf] PDF generation failed:", message);
     return { success: false, error: message };
+  } finally {
+    if (browser) {
+      await browser.close().catch((closeErr: unknown) => {
+        console.warn("[invoice-pdf] Browser close failed:", closeErr);
+      });
+    }
   }
 }
 

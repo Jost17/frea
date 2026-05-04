@@ -20,8 +20,8 @@ import {
 import type { AppEnv } from "../env";
 import { generateInvoicePdf } from "../lib/pdf/invoice-pdf";
 import { generateZUGFeRDXML, type ZUGFeRDInvoiceData } from "../lib/zugferd-generator";
-import { EmailService } from "../services/email";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
+import { EmailService } from "../services/email";
 import { renderInvoiceClientSelection } from "../templates/invoice-create-client";
 import { renderInvoiceProjectSelection } from "../templates/invoice-create-project";
 import { renderInvoiceDetailPage } from "../templates/invoice-detail";

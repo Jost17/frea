@@ -6,8 +6,8 @@
 import { execFile } from "node:child_process";
 import { unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
@@ -95,10 +95,7 @@ export async function embedZUGFeRDInPDF(pdfPath: string, xmlContent: string): Pr
         console.warn("ZUGFeRD Warnungen:", stderr);
       }
     } catch (error) {
-      console.error(
-        "Mustang CLI Fehler:",
-        error instanceof Error ? error.message : String(error),
-      );
+      console.error("Mustang CLI Fehler:", error instanceof Error ? error.message : String(error));
       return {
         success: false,
         error: "Mustang CLI nicht verfügbar oder XML-Embedding fehlgeschlagen",
