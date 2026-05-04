@@ -34,17 +34,17 @@ dashboardRoutes.get("/", (c) => {
   const firstTimeHint = noClients
     ? html`
         <div
-          class="rounded-lg border border-blue-200 bg-blue-50 p-4"
+          class="rounded-lg border border-accent-info bg-bg-surface-raised p-4"
           role="note"
           aria-label="Erste Schritte"
         >
-          <p class="text-sm font-medium text-blue-900">Alles eingerichtet.</p>
-          <p class="mt-1 text-sm text-blue-800">
+          <p class="text-sm font-medium text-text-primary">Alles eingerichtet.</p>
+          <p class="mt-1 text-sm text-text-secondary">
             Leg jetzt deinen ersten Kunden an — danach kannst du Projekte erstellen und Zeiten erfassen.
           </p>
           <a
             href="/kunden/new"
-            class="mt-2 inline-block text-sm font-medium text-blue-700 hover:underline"
+            class="mt-2 inline-block text-sm font-medium text-primary hover:underline focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
           >
             Ersten Kunden anlegen →
           </a>
@@ -54,42 +54,42 @@ dashboardRoutes.get("/", (c) => {
 
   const content = html`
     <div class="space-y-6">
-      <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Dashboard</h1>
+      <h1 class="text-xl font-semibold text-text-primary">Dashboard</h1>
       ${firstTimeHint}
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
         <!-- Offene Rechnungen -->
-        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-4">
-          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Offene Rechnungen</p>
-          <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">${stats.open_invoices_count}</p>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">${formatEuro(stats.open_invoices_sum)}</p>
+        <div class="rounded-lg border border-border-subtle bg-bg-surface shadow-card p-4">
+          <p class="text-xs font-medium text-text-muted uppercase tracking-wide">Offene Rechnungen</p>
+          <p class="mt-2 text-2xl font-semibold text-text-primary">${stats.open_invoices_count}</p>
+          <p class="mt-1 text-sm text-text-secondary">${formatEuro(stats.open_invoices_sum)}</p>
         </div>
 
         <!-- Umsatz diesen Monat -->
-        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-4">
-          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Umsatz diesen Monat</p>
-          <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">${formatEuro(stats.revenue_current_month)}</p>
+        <div class="rounded-lg border border-border-subtle bg-bg-surface shadow-card p-4">
+          <p class="text-xs font-medium text-text-muted uppercase tracking-wide">Umsatz diesen Monat</p>
+          <p class="mt-2 text-2xl font-semibold text-text-primary">${formatEuro(stats.revenue_current_month)}</p>
         </div>
 
         <!-- Überfällige Rechnungen -->
-        <div class="rounded-lg border ${hasOverdue ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"} shadow-sm p-4">
-          <p class="text-xs font-medium ${hasOverdue ? "text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"} uppercase tracking-wide">Überfällig</p>
-          <p class="mt-2 text-2xl font-semibold ${hasOverdue ? "text-red-700 dark:text-red-300" : "text-gray-400 dark:text-gray-500"}">${stats.overdue_invoices_count}</p>
-          <p class="mt-1 text-sm ${hasOverdue ? "text-red-600 dark:text-red-400" : "text-gray-400 dark:text-gray-500"}">
+        <div class="rounded-lg border ${hasOverdue ? "border-accent-danger bg-status-overdue-bg" : "border-border-subtle bg-bg-surface"} shadow-card p-4">
+          <p class="text-xs font-medium ${hasOverdue ? "text-accent-danger" : "text-text-muted"} uppercase tracking-wide">Überfällig</p>
+          <p class="mt-2 text-2xl font-semibold ${hasOverdue ? "text-accent-danger" : "text-text-muted"}">${stats.overdue_invoices_count}</p>
+          <p class="mt-1 text-sm ${hasOverdue ? "text-accent-danger" : "text-text-muted"}">
             ${hasOverdue ? "Rechnungen überfällig" : "Keine überfälligen Rechnungen"}
           </p>
         </div>
 
         <!-- Aktive Kunden -->
-        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-4">
-          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Aktive Kunden</p>
-          <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">${stats.active_clients_count}</p>
+        <div class="rounded-lg border border-border-subtle bg-bg-surface shadow-card p-4">
+          <p class="text-xs font-medium text-text-muted uppercase tracking-wide">Aktive Kunden</p>
+          <p class="mt-2 text-2xl font-semibold text-text-primary">${stats.active_clients_count}</p>
         </div>
 
         <!-- Aktive Projekte -->
-        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-4">
-          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Aktive Projekte</p>
-          <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">${stats.active_projects_count}</p>
+        <div class="rounded-lg border border-border-subtle bg-bg-surface shadow-card p-4">
+          <p class="text-xs font-medium text-text-muted uppercase tracking-wide">Aktive Projekte</p>
+          <p class="mt-2 text-2xl font-semibold text-text-primary">${stats.active_projects_count}</p>
         </div>
 
       </div>
@@ -100,10 +100,10 @@ dashboardRoutes.get("/", (c) => {
   const children = onboardingDone
     ? html`
         <div
-          class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4"
+          class="mb-6 rounded-lg border border-accent-success bg-bg-surface-raised p-4"
           role="status"
         >
-          <p class="text-sm font-medium text-green-800">
+          <p class="text-sm font-medium text-text-primary">
             Einrichtung abgeschlossen! Firmendaten wurden gespeichert.
           </p>
         </div>

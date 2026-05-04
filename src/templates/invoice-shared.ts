@@ -15,14 +15,14 @@ export function formatDate(dateStr: string): string {
 }
 
 const STATUS_BADGE_MAP: Record<string, { label: string; className: string }> = {
-  draft: { label: "Entwurf", className: "bg-gray-100 text-gray-700" },
-  sent: { label: "Versendet", className: "bg-blue-100 text-blue-700" },
-  paid: { label: "Bezahlt", className: "bg-green-100 text-green-700" },
-  cancelled: { label: "Storniert", className: "bg-red-100 text-red-700" },
+  draft: { label: "Entwurf", className: "bg-status-draft-bg text-status-draft-text" },
+  sent: { label: "Versendet", className: "bg-status-open-bg text-status-open-text" },
+  paid: { label: "Bezahlt", className: "bg-status-paid-bg text-status-paid-text" },
+  cancelled: { label: "Storniert", className: "bg-status-cancelled-bg text-status-cancelled-text" },
 };
 
 export function statusBadge(status: string): HtmlEscapedString | Promise<HtmlEscapedString> {
-  const fallback = { label: status, className: "bg-gray-100 text-gray-700" };
+  const fallback = { label: status, className: "bg-status-draft-bg text-status-draft-text" };
   const { label, className } = STATUS_BADGE_MAP[status] ?? fallback;
   return html`<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${className}">${label}</span>`;
 }
