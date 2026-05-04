@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Categories on FREA — Rechnungen &amp; Zeiterfassung für Freelancer</title>
+    <link>https://frea.app/categories/</link>
+    <description>Recent content in Categories on FREA — Rechnungen &amp; Zeiterfassung für Freelancer</description>
+    <generator>Hugo</generator>
+    <language>de-DE</language>
+    <atom:link href="https://frea.app/categories/index.xml" rel="self" type="application/rss+xml" />
+  </channel>
+</rss>

@@ -13,6 +13,7 @@ import { clientRoutes } from "./routes/clients";
 import { dashboardRoutes } from "./routes/dashboard";
 import { invoiceRoutes } from "./routes/invoices";
 import { projectRoutes } from "./routes/projects";
+import { reportRoutes } from "./routes/reports";
 import { settingsRoutes } from "./routes/settings";
 import { timeRoutes } from "./routes/times";
 
@@ -64,5 +65,6 @@ app.route("/kunden", clientRoutes);
 app.route("/projekte", projectRoutes);
 app.route("/zeiten", timeRoutes);
 app.route("/rechnungen", invoiceRoutes);
+app.route("/berichte", reportRoutes);
 app.route("/einstellungen", settingsRoutes);
 app.route("/api", apiRoutes);
