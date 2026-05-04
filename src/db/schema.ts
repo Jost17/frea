@@ -161,6 +161,32 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id)");
 
+  // SEO Pages (programmatic content)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS seo_pages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      keyword TEXT NOT NULL UNIQUE,
+      slug TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      meta_description TEXT NOT NULL,
+      content_html TEXT NOT NULL,
+      type TEXT NOT NULL,
+      city TEXT NOT NULL,
+      priority TEXT DEFAULT 'P2',
+      status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'review', 'published', 'archived')),
+      indexed_at TEXT,
+      impressions INTEGER DEFAULT 0,
+      clicks INTEGER DEFAULT 0,
+      ctr REAL DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+  db.run("CREATE INDEX IF NOT EXISTS idx_seo_pages_slug ON seo_pages(slug)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_seo_pages_status ON seo_pages(status)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_seo_pages_city ON seo_pages(city)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_seo_pages_type ON seo_pages(type)");
+
   // GoBD: Audit Log ist append-only (keine Aenderungen/Loeschungen erlaubt)
   db.run(`
     CREATE TRIGGER IF NOT EXISTS audit_log_no_update

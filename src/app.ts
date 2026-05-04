@@ -14,6 +14,7 @@ import { dashboardRoutes } from "./routes/dashboard";
 import { invoiceRoutes } from "./routes/invoices";
 import { projectRoutes } from "./routes/projects";
 import { settingsRoutes } from "./routes/settings";
+import seoRoutes from "./routes/seo-pages";
 import { timeRoutes } from "./routes/times";
 
 try {
@@ -65,4 +66,5 @@ app.route("/projekte", projectRoutes);
 app.route("/zeiten", timeRoutes);
 app.route("/rechnungen", invoiceRoutes);
 app.route("/einstellungen", settingsRoutes);
+app.route("/seo", seoRoutes);
 app.route("/api", apiRoutes);
