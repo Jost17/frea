@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { Browser } from "puppeteer";
 import puppeteer from "puppeteer";
 import { buildInvoiceHtml, type InvoicePdfData } from "./invoice-html";
+import { embedZUGFeRDInPDF } from "./zugferd-embed";
 
 const PDF_OUTPUT_DIR = join(import.meta.dir, "../../../../data/pdfs");
 
@@ -51,7 +52,15 @@ export interface PdfGenerationError {
 
 export type PdfResult = PdfGenerationResult | PdfGenerationError;
 
-export async function generateInvoicePdf(data: InvoicePdfData): Promise<PdfResult> {
+export interface GeneratePdfOptions {
+  embedZugferd?: true;
+  zugferdXml?: string;
+}
+
+export async function generateInvoicePdf(
+  data: InvoicePdfData,
+  options?: GeneratePdfOptions,
+): Promise<PdfResult> {
   ensurePdfDir();
 
   const html = buildInvoiceHtml(data);
@@ -72,6 +81,14 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<PdfResul
     });
 
     await writeFile(filePath, pdfBytes);
+
+    if (options?.embedZugferd && options.zugferdXml) {
+      const embedResult = await embedZUGFeRDInPDF(filePath, options.zugferdXml);
+      if (!embedResult.success) {
+        console.warn(`[invoice-pdf] ZUGFeRD embedding failed: ${embedResult.error}`);
+        // Nicht abbrechen — PDF ist immer noch gültig ohne ZUGFeRD
+      }
+    }
 
     return { success: true, filePath, fileName };
   } catch (err) {
