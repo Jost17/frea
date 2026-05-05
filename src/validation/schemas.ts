@@ -52,6 +52,11 @@ export const settingsSchema = z
     invoice_prefix: z.string().default("RE"),
     next_invoice_number: z.number().default(1),
     kleinunternehmer: z.number().default(0),
+    smtp_host: z.string().optional(),
+    smtp_port: z.number().int().min(1).max(65535).optional(),
+    smtp_user: z.string().optional(),
+    smtp_password: z.string().optional(),
+    smtp_from: z.string().email("SMTP From muss gültige E-Mail sein").optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.tax_number?.trim() && !data.ust_id?.trim()) {
