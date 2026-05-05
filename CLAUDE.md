@@ -61,6 +61,7 @@ Full details: `docs/adr/001-eu-compliance.md`
 
 Reference implementation (read-only): `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/freelancer_tool/`
 Full roadmap: See FREA-3 plan document in Paperclip.
+`docs/solutions/` — dokumentierte Lösungen vergangener Probleme (Bugs, Best Practices, Workflow-Patterns), nach Kategorie organisiert mit YAML-Frontmatter (`module`, `tags`, `problem_type`). Relevant beim Implementieren oder Debuggen in dokumentierten Bereichen.
 
 ## Paul's Learnings (2026-04-22)
 
