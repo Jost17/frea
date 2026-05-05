@@ -26,6 +26,11 @@ const SETTINGS_FIELDS = {
   payment_days: "int",
   invoice_prefix: "string",
   kleinunternehmer: "bool",
+  smtp_host: "string",
+  smtp_port: "int",
+  smtp_user: "string",
+  smtp_password: "string",
+  smtp_from: "string",
 } as const;
 
 settingsRoutes.get("/", (c) => {
@@ -306,6 +311,75 @@ settingsRoutes.get("/", (c) => {
                       />
                       <p id="payment-days-hint" class="mt-1 text-xs text-gray-500">Frist in Tagen, die dein Kunde zum Bezahlen hat. Standard: 28 Tage.</p>
                     </div>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend class="mb-4 text-lg font-semibold text-gray-900">E-Mail-Versand (SMTP)</legend>
+                <p class="mb-4 text-sm text-gray-600">Konfiguriere SMTP-Einstellungen für den automatischen Rechnungsversand per E-Mail.</p>
+                <div class="space-y-4">
+                  <div>
+                    <label for="smtp_host" class="block text-sm font-medium text-gray-700">SMTP-Server</label>
+                    <input
+                      type="text"
+                      id="smtp_host"
+                      name="smtp_host"
+                      placeholder="z.B. mail.example.com"
+                      value="${settings.smtp_host || ""}"
+                      class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label for="smtp_port" class="block text-sm font-medium text-gray-700">Port</label>
+                      <input
+                        type="number"
+                        id="smtp_port"
+                        name="smtp_port"
+                        placeholder="587 oder 465"
+                        value="${settings.smtp_port || ""}"
+                        min="1"
+                        max="65535"
+                        class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label for="smtp_user" class="block text-sm font-medium text-gray-700">Benutzer</label>
+                      <input
+                        type="text"
+                        id="smtp_user"
+                        name="smtp_user"
+                        placeholder="dein@email.com"
+                        value="${settings.smtp_user || ""}"
+                        class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label for="smtp_password" class="block text-sm font-medium text-gray-700">Passwort</label>
+                    <input
+                      type="password"
+                      id="smtp_password"
+                      name="smtp_password"
+                      placeholder="Dein SMTP-Passwort"
+                      value="${settings.smtp_password || ""}"
+                      class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label for="smtp_from" class="block text-sm font-medium text-gray-700">Von-Adresse</label>
+                    <input
+                      type="email"
+                      id="smtp_from"
+                      name="smtp_from"
+                      placeholder="z.B. rechnungen@example.com"
+                      value="${settings.smtp_from || ""}"
+                      class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                    />
                   </div>
                 </div>
               </fieldset>

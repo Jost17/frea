@@ -19,6 +19,7 @@ import {
 } from "../db/queries";
 import type { AppEnv } from "../env";
 import { generateInvoicePdf } from "../lib/pdf/invoice-pdf";
+import { EmailService } from "../services/email";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { renderInvoiceClientSelection } from "../templates/invoice-create-client";
 import { renderInvoiceProjectSelection } from "../templates/invoice-create-project";
@@ -309,5 +310,50 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "PDF konnte nicht geladen werden", 500);
+  }
+});
+
+// POST: Send invoice by email
+invoiceRoutes.post("/:id/send", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
+
+    const invoice = getInvoice(id);
+    if (!invoice) throw new AppError("Rechnung nicht gefunden", 404);
+
+    const client = getClient(invoice.client_id);
+    const settings = getSettings();
+
+    if (!client || !settings) throw new AppError("Daten fehlen", 500);
+    if (!client.email) throw new AppError("Kunde hat keine E-Mail-Adresse", 400);
+
+    // Auto-regenerate PDF if missing
+    let pdfPath = invoice.pdf_path;
+    if (!pdfPath) {
+      const items = getInvoiceItems(id);
+      const result = await generateInvoicePdf({ invoice, items, client, settings });
+      if (!result.success) {
+        throw new AppError(`PDF konnte nicht erstellt werden: ${result.error}`, 500);
+      }
+      pdfPath = result.filePath;
+      saveInvoicePdfPath(id, result.filePath);
+    }
+
+    // Send email with PDF attachment
+    const emailService = new EmailService(settings);
+    await emailService.sendInvoice({
+      to: client.email,
+      subject: `Rechnung ${invoice.invoice_number}`,
+      attachmentPath: pdfPath,
+    });
+
+    // Update invoice status to 'sent'
+    updateInvoiceStatus(id, "sent");
+
+    return c.json({ success: true, message: "Rechnung versendet" });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    return logAndRespond(c, err, "Rechnung konnte nicht versendet werden", 500);
   }
 });

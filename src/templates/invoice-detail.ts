@@ -42,6 +42,16 @@ export function renderInvoiceDetailPage(args: {
           ${
             invoice.status === "draft"
               ? html`
+                  <button
+                    type="button"
+                    hx-post="/rechnungen/${invoice.id}/send"
+                    hx-confirm="Rechnung per E-Mail an ${client.email} versenden?"
+                    hx-on::after-request="if(event.detail.xhr.status === 200) location.reload()"
+                    class="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 flex items-center gap-1"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                    Per E-Mail versenden
+                  </button>
                   <form method="post" action="/rechnungen/${invoice.id}/status" class="inline">
                     <input type="hidden" name="status" value="sent" />
                     <button type="submit" class="rounded-md px-4 py-2 text-sm font-medium text-white" style="background-color: ${accent}">
