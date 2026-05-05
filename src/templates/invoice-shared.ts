@@ -33,10 +33,7 @@ export function parseInvoiceLayoutConfig(settings: Settings): InvoiceLayoutConfi
     const parsed = JSON.parse(raw) as unknown;
     return invoiceLayoutConfigSchema.parse(parsed);
   } catch (err) {
-    console.warn(
-      "[invoice-shared] Invalid invoice_layout_config, falling back to defaults:",
-      err,
-    );
+    console.warn("[invoice-shared] Invalid invoice_layout_config, falling back to defaults:", err);
     return invoiceLayoutConfigSchema.parse({});
   }
 }

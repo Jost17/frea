@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "bunx @biomejs/biome lint .",
     "format": "bunx @biomejs/biome format --write .",
-    "check": "bunx @biomejs/biome check --write ."
+    "check": "bunx @biomejs/biome check --write .",
+    "setup:hooks": "bash scripts/setup-hooks.sh"
   },
   "dependencies": {
     "hono": "^4.12.16",

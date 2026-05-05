@@ -68,7 +68,10 @@ export const settingsSchema = z
     }
   });
 
-export type Settings = z.infer<typeof settingsSchema> & { id: number; invoice_layout_config?: string };
+export type Settings = z.infer<typeof settingsSchema> & {
+  id: number;
+  invoice_layout_config?: string;
+};
 
 // ─── Invoice Layout Config ─────────────────────────────────────────────────────
 
@@ -240,20 +243,24 @@ export const VALID_INVOICE_FILTER_VALUES = new Set([
 
 const DEFAULT_COMPANY_NAME = "Mein Unternehmen";
 
-export const onboardingCompletionSchema = z.object({
-  company_name: z
-    .string()
-    .min(1)
-    .refine((v) => v !== DEFAULT_COMPANY_NAME),
-  address: z.string().min(1),
-  postal_code: z.string().refine((v) => /^\d{5}$/.test(v)),
-  city: z.string().min(1),
-  email: z.string().email(),
-  iban: z.string().min(1).refine((v) => isValidIban(v)),
-  bic: z.string().min(1),
-  tax_number: z.string().optional().default(""),
-  ust_id: z.string().optional().default(""),
-}).refine(
-  (data) => !!(data.tax_number?.trim() || data.ust_id?.trim()),
-  { message: "Steuernummer oder Ust-IdNr. erforderlich" },
-);
+export const onboardingCompletionSchema = z
+  .object({
+    company_name: z
+      .string()
+      .min(1)
+      .refine((v) => v !== DEFAULT_COMPANY_NAME),
+    address: z.string().min(1),
+    postal_code: z.string().refine((v) => /^\d{5}$/.test(v)),
+    city: z.string().min(1),
+    email: z.string().email(),
+    iban: z
+      .string()
+      .min(1)
+      .refine((v) => isValidIban(v)),
+    bic: z.string().min(1),
+    tax_number: z.string().optional().default(""),
+    ust_id: z.string().optional().default(""),
+  })
+  .refine((data) => !!(data.tax_number?.trim() || data.ust_id?.trim()), {
+    message: "Steuernummer oder Ust-IdNr. erforderlich",
+  });

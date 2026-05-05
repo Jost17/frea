@@ -54,7 +54,8 @@ clientRoutes.get("/", (c) => {
           ${
             clients.length === 0
               ? EmptyState({
-                  message: "Noch keine Kunden angelegt. Erstelle deinen ersten Kunden, um Projekte und Rechnungen zuordnen zu können.",
+                  message:
+                    "Noch keine Kunden angelegt. Erstelle deinen ersten Kunden, um Projekte und Rechnungen zuordnen zu können.",
                   actionHref: "/kunden/new",
                   actionLabel: "Neuen Kunden anlegen",
                 })
@@ -143,7 +144,8 @@ clientRoutes.post("/", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, CLIENT_FIELDS);
     const result = clientSchema.safeParse({ ...data, country: "Deutschland" });
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     const id = createClient(result.data);
     if (!id) throw new AppError("Kunde konnte nicht erstellt werden", 500);
 
@@ -162,7 +164,8 @@ clientRoutes.post("/:id", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, CLIENT_FIELDS);
     const result = clientSchema.safeParse({ ...data, country: "Deutschland" });
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     updateClient(id, result.data);
 
     return c.redirect(`/kunden/${id}`);

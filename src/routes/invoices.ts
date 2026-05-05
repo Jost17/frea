@@ -19,8 +19,8 @@ import {
 } from "../db/queries";
 import type { AppEnv } from "../env";
 import { generateInvoicePdf } from "../lib/pdf/invoice-pdf";
-import { EmailService } from "../services/email";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
+import { EmailService } from "../services/email";
 import { renderInvoiceClientSelection } from "../templates/invoice-create-client";
 import { renderInvoiceProjectSelection } from "../templates/invoice-create-project";
 import { renderInvoiceDetailPage } from "../templates/invoice-detail";

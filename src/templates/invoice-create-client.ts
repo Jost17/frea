@@ -2,9 +2,7 @@ import { html } from "hono/html";
 import type { Client } from "../validation/schemas";
 import { EmptyState } from "./components/empty-state";
 
-export function renderInvoiceClientSelection(
-  clients: Omit<Client, "created_at" | "archived">[],
-) {
+export function renderInvoiceClientSelection(clients: Omit<Client, "created_at" | "archived">[]) {
   if (clients.length === 0) {
     return EmptyState({
       message: "Bitte erstelle zuerst einen Kunden und ein Projekt mit Zeiteinträgen.",
