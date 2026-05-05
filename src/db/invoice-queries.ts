@@ -259,7 +259,7 @@ export function getAllInvoices(status?: string): InvoiceListItem[] {
   return db.query<InvoiceListItem, []>(`${base} ORDER BY i.invoice_date DESC`).all();
 }
 
-const VALID_TRANSITIONS: Record<string, readonly string[]> = {
+const VALID_TRANSITIONS: Record<Invoice["status"], readonly Invoice["status"][]> = {
   draft: ["sent", "cancelled"],
   sent: ["paid", "cancelled"],
   paid: [],

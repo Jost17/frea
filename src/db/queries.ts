@@ -66,7 +66,7 @@ export function appendAuditLog(
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
-export function isFirstTimeUser(): boolean {
+export function hasNoClients(): boolean {
   const result = db.query<{ count: number }, []>("SELECT COUNT(*) as count FROM clients").get();
   return (result?.count ?? 0) === 0;
 }

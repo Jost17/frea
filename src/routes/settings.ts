@@ -333,8 +333,9 @@ settingsRoutes.post("/", async (c) => {
     const firstSetup = !isOnboardingComplete();
     const body = await c.req.formData();
     const data = parseFormFields(body, SETTINGS_FIELDS);
-    const validated = settingsSchema.parse({ ...data, country: "Deutschland", mobile: "" });
-    updateSettings(validated);
+    const result = settingsSchema.safeParse({ ...data, country: "Deutschland" });
+    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    updateSettings(result.data);
 
     if (firstSetup) {
       completeOnboarding();

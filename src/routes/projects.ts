@@ -152,8 +152,9 @@ projectRoutes.post("/", async (c) => {
   try {
     const body = await c.req.formData();
     const data = parseFormFields(body, PROJECT_FIELDS);
-    const validated = projectSchema.parse(data);
-    const id = createProject(validated);
+    const result = projectSchema.safeParse(data);
+    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    const id = createProject(result.data);
     if (!id) throw new AppError("Projekt konnte nicht erstellt werden", 500);
 
     return c.redirect(`/projekte/${id}`);
@@ -170,8 +171,9 @@ projectRoutes.post("/:id", async (c) => {
 
     const body = await c.req.formData();
     const data = parseFormFields(body, PROJECT_FIELDS);
-    const validated = projectSchema.parse(data);
-    updateProject(id, validated);
+    const result = projectSchema.safeParse(data);
+    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    updateProject(id, result.data);
 
     return c.redirect(`/projekte/${id}`);
   } catch (err) {

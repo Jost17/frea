@@ -3,7 +3,7 @@ import { html } from "hono/html";
 import type { AppEnv } from "../env";
 import { Layout } from "../templates/layout";
 import { getDashboardStats, type DashboardStats } from "../db/dashboard-queries";
-import { isFirstTimeUser } from "../db/queries";
+import { hasNoClients } from "../db/queries";
 import { AppError } from "../middleware/error-handler";
 
 export const dashboardRoutes = new Hono<AppEnv>();
@@ -19,10 +19,10 @@ function formatEuro(amount: number): string {
 
 dashboardRoutes.get("/", (c) => {
   let stats: DashboardStats;
-  let firstTime: boolean;
+  let noClients: boolean;
   try {
     stats = getDashboardStats();
-    firstTime = isFirstTimeUser();
+    noClients = hasNoClients();
   } catch (err) {
     console.error("[dashboard] Failed to load stats:", err);
     throw new AppError("Dashboard-Daten konnten nicht geladen werden", 500);
@@ -31,7 +31,7 @@ dashboardRoutes.get("/", (c) => {
   const overdueCount = c.get("overdueCount") ?? 0;
   const hasOverdue = stats.overdue_invoices_count > 0;
 
-  const firstTimeHint = firstTime
+  const firstTimeHint = noClients
     ? html`
         <div
           class="rounded-lg border border-blue-200 bg-blue-50 p-4"
