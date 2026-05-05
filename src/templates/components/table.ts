@@ -64,13 +64,7 @@ export function Td({
   return html`<td class="px-4 py-3 ${ALIGN[align]}${extraClass ? ` ${extraClass}` : ""}">${children}</td>`;
 }
 
-export function TableEmptyState({
-  colSpan,
-  message,
-}: {
-  colSpan: number;
-  message: string;
-}) {
+export function TableEmptyState({ colSpan, message }: { colSpan: number; message: string }) {
   return html`<tr>
     <td colspan="${colSpan}" class="px-4 py-10 text-center text-sm text-text-muted">${message}</td>
   </tr>`;
