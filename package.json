@@ -10,6 +10,7 @@
     "start": "bun run css:build && bun run src/index.ts",
     "db:setup": "bun run src/db/setup.ts",
     "test": "bun test",
+    "test:zugferd": "bun test tests/zugferd/ --pass-with-no-tests",
     "test:watch": "bun test --watch",
     "typecheck": "tsc --noEmit",
     "lint": "bunx @biomejs/biome lint .",

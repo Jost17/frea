@@ -293,9 +293,10 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
 
     if (!client || !settings) throw new AppError("Daten fehlen", 500);
 
-    // Generate ZUGFeRD XML if not Kleinunternehmer
+    // ZUGFeRD XML für alle Rechnungen — Kleinunternehmer erhalten Category E
     let zugferdXml: string | undefined;
-    if (!settings.kleinunternehmer && items.length > 0) {
+    if (items.length > 0) {
+      const isKleinunternehmer = Boolean(settings.kleinunternehmer);
       const data: ZUGFeRDInvoiceData = {
         invoiceNumber: invoice.invoice_number,
         invoiceDate: invoice.invoice_date,
@@ -312,6 +313,7 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
           country: "Deutschland",
           email: settings.email,
           taxNumber: settings.tax_number,
+          vatId: settings.ust_id || undefined,
         },
         buyer: {
           name: client.name,
@@ -320,13 +322,19 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
           city: client.city || null,
           country: "Deutschland",
           email: client.email || undefined,
+          vatId: client.vat_id || undefined,
           reference: invoice.po_number || invoice.invoice_number,
         },
         payment: {
           iban: settings.iban,
           bic: settings.bic,
         },
-        vat: { categoryCode: "S" },
+        vat: isKleinunternehmer
+          ? {
+              categoryCode: "E",
+              exemptionReason: "Umsatzsteuerbefreiung gemäß § 19 UStG",
+            }
+          : { categoryCode: "S" },
         lineItems: items.map((item) => ({
           description: item.description,
           quantity: item.days,
@@ -387,9 +395,10 @@ invoiceRoutes.post("/:id/send", async (c) => {
     if (!pdfPath) {
       const items = getInvoiceItems(id);
 
-      // Generate ZUGFeRD XML if not Kleinunternehmer
+      // ZUGFeRD XML für alle Rechnungen — Kleinunternehmer erhalten Category E
       let zugferdXml: string | undefined;
-      if (!settings.kleinunternehmer && items.length > 0) {
+      if (items.length > 0) {
+        const isKleinunternehmer = Boolean(settings.kleinunternehmer);
         const data: ZUGFeRDInvoiceData = {
           invoiceNumber: invoice.invoice_number,
           invoiceDate: invoice.invoice_date,
@@ -406,6 +415,7 @@ invoiceRoutes.post("/:id/send", async (c) => {
             country: "Deutschland",
             email: settings.email,
             taxNumber: settings.tax_number,
+            vatId: settings.ust_id || undefined,
           },
           buyer: {
             name: client.name,
@@ -414,13 +424,19 @@ invoiceRoutes.post("/:id/send", async (c) => {
             city: client.city || null,
             country: "Deutschland",
             email: client.email || undefined,
+            vatId: client.vat_id || undefined,
             reference: invoice.po_number || invoice.invoice_number,
           },
           payment: {
             iban: settings.iban,
             bic: settings.bic,
           },
-          vat: { categoryCode: "S" },
+          vat: isKleinunternehmer
+            ? {
+                categoryCode: "E",
+                exemptionReason: "Umsatzsteuerbefreiung gemäß § 19 UStG",
+              }
+            : { categoryCode: "S" },
           lineItems: items.map((item) => ({
             description: item.description,
             quantity: item.days,

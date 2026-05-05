@@ -38,3 +38,6 @@ jobs:
 
       - name: Test
         run: bun test --pass-with-no-tests
+
+      - name: ZUGFeRD Compliance Tests
+        run: bun run test:zugferd

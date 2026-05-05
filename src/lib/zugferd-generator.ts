@@ -94,8 +94,11 @@ export function generateZUGFeRDXML(data: ZUGFeRDInvoiceData): string {
                           xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
                           xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
   <rsm:ExchangedDocumentContext>
+    <ram:BusinessProcessSpecifiedDocumentContextParameter>
+      <ram:ID>urn:ferd:CrossIndustryInvoice:relaxed:2p0</ram:ID>
+    </ram:BusinessProcessSpecifiedDocumentContextParameter>
     <ram:GuidelineSpecifiedDocumentContextParameter>
-      <ram:ID>urn:cen.eu:en16931:2017</ram:ID>
+      <ram:ID>urn:cen.eu:en16931:2017#compliant#urn:zugferd.de:2p0:en16931</ram:ID>
     </ram:GuidelineSpecifiedDocumentContextParameter>
   </rsm:ExchangedDocumentContext>
   <rsm:ExchangedDocument>
@@ -133,6 +136,9 @@ function buildLineItem(
   vatCategoryCode: VATCategory,
   vatPercent: string,
 ): string {
+  // BR-CO-10: LineTotalAmount = BilledQuantity * ChargeAmount (kaufmännisch gerundet)
+  const lineTotal = Math.round(item.quantity * item.unitPrice * 100) / 100;
+
   return `    <ram:IncludedSupplyChainTradeLineItem>
       <ram:AssociatedDocumentLineDocument>
         <ram:LineID>${index + 1}</ram:LineID>
@@ -158,7 +164,7 @@ function buildLineItem(
           <ram:RateApplicablePercent>${vatPercent}</ram:RateApplicablePercent>
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
-          <ram:LineTotalAmount>${formatAmount(item.netAmount)}</ram:LineTotalAmount>
+          <ram:LineTotalAmount>${formatAmount(lineTotal)}</ram:LineTotalAmount>
         </ram:SpecifiedTradeSettlementLineMonetarySummation>
       </ram:SpecifiedLineTradeSettlement>
     </ram:IncludedSupplyChainTradeLineItem>
