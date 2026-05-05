@@ -14,7 +14,8 @@ export const onboardingGuard = createMiddleware<AppEnv>(async (c, next) => {
   // /static and /api are excluded: static assets need no guard,
   // API routes (health, stats) must remain accessible during setup.
   // NOTE: Any future API endpoint that mutates data should check onboarding individually.
-  const isExcludedPath = path.startsWith("/static") || path.startsWith("/api");
+  const isExcludedPath =
+    path.startsWith("/static") || path.startsWith("/api") || path.startsWith("/mcp");
 
   if (isSettingsPath || isExcludedPath) return next();
 
