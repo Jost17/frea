@@ -49,6 +49,14 @@ Full details: `docs/adr/001-eu-compliance.md`
     - 400–1.000 LOC: Review erfordert explizite Begründung warum kein Split möglich war
     - Über 1.000 LOC: Automatisch abgelehnt — erst splitten, dann einreichen
 
+## CI Workflow (enforced — PR #40)
+
+17. **Lokal `bun run check` VOR jedem Push** — CI nutzt `bunx @biomejs/biome ci .` (no-write, strict). Format/Import-Sort-Drift im Push = roter CI-Run. Pflicht-Schritt vor jedem Push, vor allem nach `git pull`/`gh pr update-branch` weil neue main-Commits Drift einschleppen können. Siehe `.github/workflows/ci.yml`.
+18. **PR-Size-Guard ist hart automatisiert** — `.github/workflows/pr-size-guard.yml` blockt >1.000 LOC, warnt ab >400 LOC mit Begründungspflicht im PR-Body. Splitting vor Push, nicht danach. Lockfiles (`bun.lock`/`bun.lockb`/`package-lock.json`) und `public/static/styles.css` sind exkludiert.
+19. **CSS-Build läuft in CI** — `bun run css:build` ist eigener CI-Step. Tailwind-Class-Typos failen direkt. Lokal als Smoke-Test vor Push wenn du `src/styles/input.css` oder Templates angefasst hast.
+20. **Dependabot Auto-Merge ist aktiv** — patch/minor mit grünem CI mergen sich selbst (squash). Major bleibt manuell. Bei Group-PRs (`npm-non-major`) trotzdem Diff prüfen. Workflow: `.github/workflows/dependabot-auto-merge.yml`.
+21. **PR-Body braucht `## Test Plan` mit Evidence** — jedes Item ist entweder `[x]` mit konkretem Beleg (Log-Snippet, CI-Run-ID, Test-PR-Nummer) ODER explizit `deferred — wartet auf X` für Items die organisch passieren müssen (z.B. nächster Dependabot-Run). Unchecked Items ohne Marker = nicht ship-ready. Verifier: `~/.claude/skills/pr-ship-verifier/verify.sh <PR>`.
+
 ## Reference
 
 Reference implementation (read-only): `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/freelancer_tool/`
