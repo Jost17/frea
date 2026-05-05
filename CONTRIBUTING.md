@@ -5,7 +5,7 @@ Diese Regeln sind verbindlich für alle Beiträge im Repository.
 ## Branching-Workflow
 
 1. Arbeite nie direkt auf `main`.
-2. **Branche immer von `main`, niemals von anderen Feature-Branches.** Branch-from-Branch führt zu PRs mit fremden Commits und 4.000+ LOC Diffs (siehe `.github/workflows/branch-from-main.yml`).
+2. **Branche immer von `main`, niemals von anderen Feature-Branches.** Branch-from-Branch führt zu PRs mit fremden Commits und 4.000+ LOC Diffs (siehe Job `branch-hygiene` in `.github/workflows/ci.yml`).
 3. Korrekter Start eines neuen Branches:
 
 ```bash
@@ -34,7 +34,7 @@ Aktiviert den Pre-Push-Hook unter `.githooks/pre-push`, der vor Push warnt, wenn
 - Commits des Branches auch auf anderem lokalen Feature-Branch liegen (Branch-from-Branch).
 - Der Abzweigpunkt mehr als 50 Commits hinter `origin/main` liegt (stale Branch).
 
-Der Hook **blockiert nicht hart** — die echte Durchsetzung läuft im CI-Workflow `branch-from-main.yml`, der PRs mit Drift > 50 Commits ablehnt.
+Der Hook **blockiert nicht hart** — die echte Durchsetzung läuft im CI-Job `branch-hygiene` (in `.github/workflows/ci.yml`), der PRs mit Drift > 50 Commits ablehnt.
 
 ## Pull-Requests und Merge
 
