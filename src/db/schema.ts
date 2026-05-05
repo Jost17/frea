@@ -33,6 +33,11 @@ export function initializeSchema() {
       invoice_prefix TEXT DEFAULT 'RE',
       next_invoice_number INTEGER DEFAULT 1,
       kleinunternehmer INTEGER DEFAULT 0,
+      smtp_host TEXT,
+      smtp_port INTEGER,
+      smtp_user TEXT,
+      smtp_password TEXT,
+      smtp_from TEXT,
       CHECK (id = 1)
     )
   `);
@@ -180,9 +185,18 @@ export function initializeSchema() {
       db.run("ALTER TABLE settings ADD COLUMN onboarding_complete INTEGER DEFAULT 0");
       console.log("[migration] Added onboarding_complete column to settings");
     }
+    // Migration: add SMTP columns if not present
+    if (!settingsCols.some((c) => c.name === "smtp_host")) {
+      db.run("ALTER TABLE settings ADD COLUMN smtp_host TEXT");
+      db.run("ALTER TABLE settings ADD COLUMN smtp_port INTEGER");
+      db.run("ALTER TABLE settings ADD COLUMN smtp_user TEXT");
+      db.run("ALTER TABLE settings ADD COLUMN smtp_password TEXT");
+      db.run("ALTER TABLE settings ADD COLUMN smtp_from TEXT");
+      console.log("[migration] Added SMTP columns to settings");
+    }
   } catch (err) {
-    console.error("[migration] Failed to add onboarding_complete column:", err);
-    throw new Error("Database migration failed: could not add onboarding_complete column", { cause: err });
+    console.error("[migration] Failed to add columns to settings:", err);
+    throw new Error("Database migration failed: could not add columns to settings", { cause: err });
   }
 
   // Initialize default settings if not present

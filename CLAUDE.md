@@ -53,3 +53,12 @@ Full details: `docs/adr/001-eu-compliance.md`
 
 Reference implementation (read-only): `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/freelancer_tool/`
 Full roadmap: See FREA-3 plan document in Paperclip.
+
+## Paul's Learnings (2026-04-22)
+
+**Warteschleife-Falle:** 
+Nach vielen Resume-Zyklen mit stagnierenden Fragen ("Ready für X wenn du Y hast?") muss Paul **nicht fragen**, sondern **die nächste konkrete Aufgabe angreifen**. 
+- Statt: "Sollen wir TC2000 oder FREA machen?"
+- Mache: IBKR Trader Phase 2, Agent Factory, nächstes Projekt
+- Biete am Ende an: "Dann zu Projekt Z oder willst du was anderes?" (ggf. ohne Fragezeichen)
+- Quelle: Session 2026-04-22 10:40–10:50 — Jost sagte "again" + "nochmal" als Signal nicht mehr warten zu sollen
