@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { Hono } from "hono";
 import { html } from "hono/html";
 import {
@@ -6,6 +7,7 @@ import {
   getAllInvoices,
   getInvoice,
   getInvoiceItems,
+  saveInvoicePdfPath,
   updateInvoiceStatus,
 } from "../db/invoice-queries";
 import {
@@ -16,6 +18,7 @@ import {
   getTimeEntriesForProject,
 } from "../db/queries";
 import type { AppEnv } from "../env";
+import { generateInvoicePdf } from "../lib/pdf/invoice-pdf";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { renderInvoiceClientSelection } from "../templates/invoice-create-client";
 import { renderInvoiceProjectSelection } from "../templates/invoice-create-project";
@@ -160,7 +163,8 @@ invoiceRoutes.post("/create", async (c) => {
 
     const fields = parseFormFields(formData, INVOICE_CREATE_FIELDS);
     const parseResult = invoiceCreateSchema.safeParse({ ...fields, time_entry_ids: timeEntryIds });
-    if (!parseResult.success) throw new AppError(parseResult.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!parseResult.success)
+      throw new AppError(parseResult.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     const data = parseResult.data;
 
     const settings = getSettings();
@@ -254,9 +258,10 @@ invoiceRoutes.post("/:id/status", async (c) => {
 
     const body = await c.req.parseBody();
     const parsed = invoiceStatusUpdateSchema.safeParse({
-      status: typeof body === "object" && body !== null
-        ? (body as Record<string, unknown>).status
-        : undefined,
+      status:
+        typeof body === "object" && body !== null
+          ? (body as Record<string, unknown>).status
+          : undefined,
     });
     if (!parsed.success) {
       return logAndRespond(c, parsed.error, "Ungültiger Status", 422);
@@ -268,5 +273,41 @@ invoiceRoutes.post("/:id/status", async (c) => {
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "Status konnte nicht aktualisiert werden", 500);
+  }
+});
+
+// GET: Download invoice PDF
+invoiceRoutes.get("/:id/pdf", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
+
+    const invoice = getInvoice(id);
+    if (!invoice) throw new AppError("Rechnung nicht gefunden", 404);
+
+    const items = getInvoiceItems(id);
+    const client = getClient(invoice.client_id);
+    const settings = getSettings();
+
+    if (!client || !settings) throw new AppError("Daten fehlen", 500);
+
+    const result = await generateInvoicePdf({ invoice, items, client, settings });
+
+    if (!result.success) {
+      throw new AppError(`PDF konnte nicht erstellt werden: ${result.error}`, 500);
+    }
+
+    saveInvoicePdfPath(id, result.filePath);
+
+    const fileName = result.fileName;
+    const fileBuffer = await readFile(result.filePath);
+
+    c.header("Content-Type", "application/pdf");
+    c.header("Content-Disposition", `attachment; filename="${fileName}"`);
+
+    return c.body(fileBuffer);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    return logAndRespond(c, err, "PDF konnte nicht geladen werden", 500);
   }
 });
