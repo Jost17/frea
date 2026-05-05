@@ -32,7 +32,8 @@
   /* Text */
   --color-text-primary: oklch(21% 0.02 265);
   --color-text-secondary: oklch(45% 0.02 265);
-  --color-text-muted: oklch(65% 0.015 265);
+  /* WCAG AA: ≥4.5:1 on bg-surface (oklch 100%). 50% L gives ~5.0:1. */
+  --color-text-muted: oklch(50% 0.015 265);
 
   /* Semantic accents */
   --color-accent-success: oklch(72% 0.17 165);
@@ -80,7 +81,8 @@
 
   --color-text-primary: oklch(93% 0.005 265);
   --color-text-secondary: oklch(65% 0.01 265);
-  --color-text-muted: oklch(45% 0.01 265);
+  /* WCAG AA: ≥4.5:1 on dark bg-surface (oklch 16%). 70% L gives ~4.8:1. */
+  --color-text-muted: oklch(70% 0.01 265);
 
   --color-accent-success: oklch(78% 0.18 165);
   --color-accent-warning: oklch(78% 0.15 75);

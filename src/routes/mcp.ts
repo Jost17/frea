@@ -125,8 +125,7 @@ const ONBOARDING_RESOURCE_CONTENT = {
     label: "Grunddaten eingeben",
     fields: ["Firmenname", "IBAN", "BIC", "Steuernummer oder USt-IdNr.", "MwSt-Satz"],
     required: true,
-    description:
-      "Vollständige Firmendaten sind Voraussetzung für §14-UStG-konforme Rechnungen.",
+    description: "Vollständige Firmendaten sind Voraussetzung für §14-UStG-konforme Rechnungen.",
   },
   first_client: {
     label: "Ersten Kunden anlegen",
@@ -289,7 +288,9 @@ function handleResourcesRead(id: string | number | null, params: unknown) {
   }
   if (p.uri === LEGAL_RESOURCE_URI) {
     return jsonRpcSuccess(id, {
-      contents: [{ uri: LEGAL_RESOURCE_URI, mimeType: "text/markdown", text: LEGAL_RESOURCE_CONTENT }],
+      contents: [
+        { uri: LEGAL_RESOURCE_URI, mimeType: "text/markdown", text: LEGAL_RESOURCE_CONTENT },
+      ],
     });
   }
   if (p.uri === ONBOARDING_RESOURCE_URI) {
@@ -395,7 +396,12 @@ mcpRoutes.post("/server", async (c) => {
     return c.json(jsonRpcError(null, -32700, "Parse error: invalid JSON"), 400);
   }
 
-  const req = body as { jsonrpc?: string; id?: string | number | null; method?: string; params?: unknown };
+  const req = body as {
+    jsonrpc?: string;
+    id?: string | number | null;
+    method?: string;
+    params?: unknown;
+  };
 
   if (req.jsonrpc !== "2.0" || !req.method) {
     return c.json(jsonRpcError(req.id ?? null, -32600, "Invalid Request"), 400);

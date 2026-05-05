@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Branch-Hygiene-Guard: warnt vor Branch-from-Branch und stalem Branch.
+# Aktivierung: bun run setup:hooks  (oder: git config core.hooksPath .githooks)
+# Hard-Block ist bewusst NICHT aktiv — legitime Stacked-Branches sollen
+# nicht blockiert werden. CI (.github/workflows/branch-from-main.yml) ist
+# die echte Durchsetzung.
+
+set -u
+
+REMOTE="${1:-origin}"
+DEFAULT_BRANCH="main"
+DRIFT_LIMIT=50
+
+current_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+# Nur Feature-Branches prüfen, nicht main selbst
+if [ "$current_branch" = "$DEFAULT_BRANCH" ] || [ "$current_branch" = "HEAD" ]; then
+  exit 0
+fi
+
+# Stilles Fetch (best-effort, blockiert nicht bei Offline)
+git fetch --quiet "$REMOTE" "$DEFAULT_BRANCH" 2>/dev/null || true
+
+base_ref="$REMOTE/$DEFAULT_BRANCH"
+if ! git rev-parse --verify --quiet "$base_ref" >/dev/null; then
+  exit 0
+fi
+
+merge_base="$(git merge-base "$base_ref" HEAD 2>/dev/null || true)"
+if [ -z "$merge_base" ]; then
+  exit 0
+fi
+
+# Drift-Check: Wie weit ist der Abzweigpunkt hinter origin/main?
+drift="$(git rev-list --count "$merge_base..$base_ref" 2>/dev/null || echo 0)"
+
+# Branch-from-Branch-Check: Liegen unsere Commits auch auf anderen lokalen Feature-Branches?
+contaminated_commits=""
+while IFS= read -r commit; do
+  [ -z "$commit" ] && continue
+  other_branches="$(git branch --contains "$commit" --format='%(refname:short)' 2>/dev/null \
+    | grep -vE "^(${current_branch}|${DEFAULT_BRANCH})$" || true)"
+  if [ -n "$other_branches" ]; then
+    short="$(git rev-parse --short "$commit")"
+    contaminated_commits+="  ${short}  (auch auf: $(echo "$other_branches" | tr '\n' ',' | sed 's/,$//'))\n"
+  fi
+done < <(git rev-list "$base_ref..HEAD" 2>/dev/null)
+
+if [ -z "$contaminated_commits" ] && [ "$drift" -le "$DRIFT_LIMIT" ]; then
+  exit 0
+fi
+
+printf '\n\033[33m⚠️  Branch-Hygiene-Warnung\033[0m\n'
+printf '   Branch: %s  →  Push nach %s\n\n' "$current_branch" "$REMOTE"
+
+if [ -n "$contaminated_commits" ]; then
+  printf '   \033[31mBranch-from-Branch erkannt:\033[0m\n'
+  printf '   Folgende Commits liegen auch auf anderen lokalen Feature-Branches:\n'
+  printf "$contaminated_commits"
+  printf '   → Resultat: PR enthält fremde Commits, Diff explodiert.\n\n'
+fi
+
+if [ "$drift" -gt "$DRIFT_LIMIT" ]; then
+  printf '   \033[31mAbzweigpunkt veraltet:\033[0m %s Commits hinter %s (Limit: %s)\n' \
+    "$drift" "$base_ref" "$DRIFT_LIMIT"
+  printf '   → Rebase: git fetch origin && git rebase origin/%s\n\n' "$DEFAULT_BRANCH"
+fi
+
+printf '   \033[36mFix:\033[0m\n'
+printf '     git checkout %s && git pull\n' "$DEFAULT_BRANCH"
+printf '     git checkout -b feat/<neuer-name>\n'
+printf '     git cherry-pick <deine-commits>\n\n'
+printf '   Push trotzdem? Ctrl-C abbrechen, sonst Enter (3s)...\n'
+read -r -t 3 _ < /dev/tty 2>/dev/null || true
+exit 0

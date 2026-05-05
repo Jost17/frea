@@ -14,6 +14,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  branch-hygiene:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Verify branch forked from main (CLAUDE.md Rule 15)
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DRIFT_LIMIT: "50"
+        run: |
+          set -euo pipefail
+          # BASE_REF/HEAD_SHA via env vars, nie direkt im Script-Body interpoliert.
+          git fetch --no-tags origin "$BASE_REF" --depth=200
+          BASE_TIP="$(git rev-parse "origin/$BASE_REF")"
+          MERGE_BASE="$(git merge-base "$BASE_TIP" "$HEAD_SHA")"
+          DRIFT="$(git rev-list --count "$MERGE_BASE..$BASE_TIP")"
+          echo "Merge-base: ${MERGE_BASE:0:12} | Drift hinter origin/$BASE_REF: $DRIFT Commits"
+          if [ "$DRIFT" -gt "$DRIFT_LIMIT" ]; then
+            echo "::error::Branch zweigt $DRIFT Commits hinter origin/$BASE_REF ab (Limit: $DRIFT_LIMIT)."
+            echo "::error::Vermutlich Branch-from-Branch oder stale Branch."
+            echo "::error::Fix: git checkout $BASE_REF && git pull && git checkout -b feat/<name> && git cherry-pick <commits>"
+            exit 1
+          fi
+          echo "Branch zweigt sauber von origin/$BASE_REF ab."
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -27,14 +58,29 @@ jobs:
         with:
           bun-version: "1.2.9"
 
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
-      - name: Lint
-        run: bun run lint
+      - name: Biome check (lint + format)
+        run: bunx @biomejs/biome ci .
 
       - name: Typecheck
         run: bun run typecheck
 
+      - name: CSS build
+        run: bun run css:build
+
       - name: Test
         run: bun test --pass-with-no-tests
+
+      - name: Bun audit (non-blocking)
+        run: bun audit
+        continue-on-error: true
