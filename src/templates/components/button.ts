@@ -41,7 +41,9 @@ export function Button({
 }: ButtonProps) {
   const iconClass = icon ? " flex items-center gap-1" : "";
   const isLink = Boolean(href);
-  const disabledClass = disabled ? ` ${isLink ? DISABLED_LINK_CLASSES : DISABLED_BUTTON_CLASSES}` : "";
+  const disabledClass = disabled
+    ? ` ${isLink ? DISABLED_LINK_CLASSES : DISABLED_BUTTON_CLASSES}`
+    : "";
   const classes =
     VARIANT_CLASSES[variant] + iconClass + (extraClass ? ` ${extraClass}` : "") + disabledClass;
   const iconHtml = icon ? raw(`<span aria-hidden="true">${icon}</span>`) : raw("");

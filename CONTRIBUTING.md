@@ -5,12 +5,17 @@ Diese Regeln sind verbindlich für alle Beiträge im Repository.
 ## Branching-Workflow
 
 1. Arbeite nie direkt auf `main`.
-2. Erstelle pro Ticket einen kurzen Feature-Branch:
-   - `feat/<kurze-beschreibung>`
-   - `fix/<kurze-beschreibung>`
-   - `docs/<kurze-beschreibung>`
-3. Halte Branches kurzlebig (maximal 1-3 Tage bis zur PR).
-4. Synchronisiere deinen Branch regelmäßig:
+2. **Branche immer von `main`, niemals von anderen Feature-Branches.** Branch-from-Branch führt zu PRs mit fremden Commits und 4.000+ LOC Diffs (siehe `.github/workflows/branch-from-main.yml`).
+3. Korrekter Start eines neuen Branches:
+
+```bash
+git checkout main && git pull
+git checkout -b feat/<kurze-beschreibung>
+```
+
+4. Erlaubte Präfixe: `feat/`, `fix/`, `docs/`, `chore/`, `refactor/`, `test/`.
+5. Halte Branches kurzlebig (maximal 1-3 Tage bis zur PR).
+6. Synchronisiere deinen Branch regelmäßig:
 
 ```bash
 git fetch origin
@@ -18,6 +23,18 @@ git rebase origin/main
 ```
 
 Wichtig: Rebase nur auf deinem eigenen Feature-Branch nutzen, niemals auf geteilten Branches.
+
+### Branch-Hygiene-Hooks aktivieren (einmalig pro Clone)
+
+```bash
+bun run setup:hooks
+```
+
+Aktiviert den Pre-Push-Hook unter `.githooks/pre-push`, der vor Push warnt, wenn:
+- Commits des Branches auch auf anderem lokalen Feature-Branch liegen (Branch-from-Branch).
+- Der Abzweigpunkt mehr als 50 Commits hinter `origin/main` liegt (stale Branch).
+
+Der Hook **blockiert nicht hart** — die echte Durchsetzung läuft im CI-Workflow `branch-from-main.yml`, der PRs mit Drift > 50 Commits ablehnt.
 
 ## Pull-Requests und Merge
 

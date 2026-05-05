@@ -1,0 +1,48 @@
+name: PR Size Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  size-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Compute diff size vs base
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          SOFT_LIMIT: "400"
+          HARD_LIMIT: "1000"
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          STATS=$(git diff --numstat "$BASE_SHA" "$HEAD_SHA" \
+            -- . \
+            ':(exclude)bun.lock' \
+            ':(exclude)bun.lockb' \
+            ':(exclude)package-lock.json' \
+            ':(exclude)yarn.lock' \
+            ':(exclude)public/static/styles.css')
+          ADDED=$(echo "$STATS" | awk '{a+=$1} END {print a+0}')
+          DELETED=$(echo "$STATS" | awk '{d+=$2} END {print d+0}')
+          TOTAL=$((ADDED + DELETED))
+          echo "Diff size: +$ADDED / -$DELETED = $TOTAL LOC (excludes lockfiles + generated CSS)"
+          if [ "$TOTAL" -gt "$HARD_LIMIT" ]; then
+            echo "::error::PR is $TOTAL LOC, exceeds hard limit of $HARD_LIMIT (CLAUDE.md Regel 16). Bitte splitten."
+            exit 1
+          elif [ "$TOTAL" -gt "$SOFT_LIMIT" ]; then
+            echo "::warning::PR is $TOTAL LOC, exceeds soft limit of $SOFT_LIMIT. Begründung im PR-Body warum kein Split möglich war."
+          else
+            echo "PR size OK ($TOTAL LOC <= $SOFT_LIMIT)."
+          fi

@@ -59,7 +59,8 @@ projectRoutes.get("/", (c) => {
           ${
             byClient.size === 0
               ? EmptyState({
-                  message: "Keine Projekte vorhanden. Lege zuerst einen Kunden an, dann kannst du ein Projekt erstellen.",
+                  message:
+                    "Keine Projekte vorhanden. Lege zuerst einen Kunden an, dann kannst du ein Projekt erstellen.",
                   actionHref: "/projekte/new",
                   actionLabel: "Neues Projekt anlegen",
                 })
@@ -153,7 +154,8 @@ projectRoutes.post("/", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, PROJECT_FIELDS);
     const result = projectSchema.safeParse(data);
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     const id = createProject(result.data);
     if (!id) throw new AppError("Projekt konnte nicht erstellt werden", 500);
 
@@ -172,7 +174,8 @@ projectRoutes.post("/:id", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, PROJECT_FIELDS);
     const result = projectSchema.safeParse(data);
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     updateProject(id, result.data);
 
     return c.redirect(`/projekte/${id}`);

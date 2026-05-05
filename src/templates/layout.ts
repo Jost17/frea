@@ -21,7 +21,13 @@ const navItems: NavItem[] = [
   { href: "/kunden", label: "Kunden", icon: "users", key: "kunden" },
   { href: "/projekte", label: "Projekte", icon: "folder-kanban", key: "projekte" },
   { href: "/zeiten", label: "Zeiten", icon: "clock", key: "zeiten" },
-  { href: "/rechnungen", label: "Rechnungen", icon: "file-text", key: "rechnungen", showBadge: true },
+  {
+    href: "/rechnungen",
+    label: "Rechnungen",
+    icon: "file-text",
+    key: "rechnungen",
+    showBadge: true,
+  },
   { href: "/einstellungen", label: "Einstellungen", icon: "settings", key: "einstellungen" },
 ];
 
@@ -30,7 +36,11 @@ const overdueBadge = (count: number) =>
     ? html`<span class="ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-accent-danger rounded-full">${count}</span>`
     : "";
 
-const desktopNavLink = (item: NavItem, activeNav: LayoutProps["activeNav"], overdueCount: number) => html`
+const desktopNavLink = (
+  item: NavItem,
+  activeNav: LayoutProps["activeNav"],
+  overdueCount: number,
+) => html`
   <a
     href="${item.href}"
     class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -45,7 +55,11 @@ const desktopNavLink = (item: NavItem, activeNav: LayoutProps["activeNav"], over
   </a>
 `;
 
-const mobileNavLink = (item: NavItem, activeNav: LayoutProps["activeNav"], overdueCount: number) => html`
+const mobileNavLink = (
+  item: NavItem,
+  activeNav: LayoutProps["activeNav"],
+  overdueCount: number,
+) => html`
   <a
     href="${item.href}"
     class="flex items-center gap-2 rounded-md mx-2 px-3 py-2 text-base font-medium transition-colors ${

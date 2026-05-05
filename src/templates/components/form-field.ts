@@ -90,7 +90,7 @@ export function FormField({
     >
       ${options.map(
         (opt) =>
-          html`<option value="${opt.value}"${raw(String(value) === opt.value ? " selected" : "")}>${opt.label}</option>`
+          html`<option value="${opt.value}"${raw(String(value) === opt.value ? " selected" : "")}>${opt.label}</option>`,
       )}
     </select>`;
   } else {
@@ -111,12 +111,16 @@ export function FormField({
         ${label}${raw(required ? ' <span aria-hidden="true" class="text-accent-danger">*</span>' : "")}
       </label>
       ${inputEl}
-      ${hint && !error
-        ? html`<p id="${hintId}" class="mt-1 text-xs text-text-muted">${hint}</p>`
-        : ""}
-      ${error
-        ? html`<p id="${errorId}" class="mt-1 text-xs text-accent-danger" role="alert">${error}</p>`
-        : ""}
+      ${
+        hint && !error
+          ? html`<p id="${hintId}" class="mt-1 text-xs text-text-muted">${hint}</p>`
+          : ""
+      }
+      ${
+        error
+          ? html`<p id="${errorId}" class="mt-1 text-xs text-accent-danger" role="alert">${error}</p>`
+          : ""
+      }
     </div>
   `;
 }

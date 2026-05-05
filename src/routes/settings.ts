@@ -1,6 +1,11 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import { completeOnboarding, getSettings, isOnboardingComplete, updateSettings } from "../db/queries";
+import {
+  completeOnboarding,
+  getSettings,
+  isOnboardingComplete,
+  updateSettings,
+} from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { invalidateOnboardingCache } from "../middleware/onboarding-guard";
@@ -49,8 +54,9 @@ settingsRoutes.get("/", (c) => {
         overdueCount,
         children: html`
           <div class="max-w-2xl">
-            ${onboarding
-              ? html`
+            ${
+              onboarding
+                ? html`
                   <div
                     class="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4"
                     role="status"
@@ -64,7 +70,8 @@ settingsRoutes.get("/", (c) => {
                     </p>
                   </div>
                 `
-              : ""}
+                : ""
+            }
             <h1 class="mb-2 text-2xl font-semibold">Firmeneinstellungen</h1>
             <p class="mb-6 text-sm text-gray-500">
               Deine Firmendaten und Rechnungseinstellungen. Änderungen wirken sich auf neue Rechnungen aus — bereits
@@ -413,7 +420,8 @@ settingsRoutes.post("/", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, SETTINGS_FIELDS);
     const result = settingsSchema.safeParse({ ...data, country: "Deutschland" });
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     updateSettings(result.data);
 
     if (firstSetup) {

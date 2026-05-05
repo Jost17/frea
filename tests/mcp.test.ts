@@ -76,7 +76,9 @@ describe("MCP Server — JSON-RPC POST /mcp/server", () => {
       result: { contents: Array<{ mimeType: string; text: string }> };
     };
     expect(body.result.contents[0].mimeType).toBe("application/json");
-    const parsed = JSON.parse(body.result.contents[0].text) as { stammdaten: { required: boolean } };
+    const parsed = JSON.parse(body.result.contents[0].text) as {
+      stammdaten: { required: boolean };
+    };
     expect(parsed.stammdaten.required).toBe(true);
   });
 

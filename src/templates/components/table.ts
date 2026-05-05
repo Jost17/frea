@@ -30,7 +30,7 @@ export function Table({ columns, rows, extraClass = "" }: TableProps) {
                 html`<th
                   scope="col"
                   class="px-4 py-3 font-semibold text-text-secondary ${ALIGN[col.align ?? "left"]}${col.extraClass ? ` ${col.extraClass}` : ""}"
-                >${col.label}</th>`
+                >${col.label}</th>`,
             )}
           </tr>
         </thead>

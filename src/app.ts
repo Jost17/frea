@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
-import { logger } from "hono/logger";
 import { csrf } from "hono/csrf";
+import { logger } from "hono/logger";
 import { initializeSchema } from "./db/schema";
 import type { AppEnv } from "./env";
 import { globalErrorHandler, globalNotFoundHandler } from "./middleware/error-handler";

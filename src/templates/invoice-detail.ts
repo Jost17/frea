@@ -17,7 +17,6 @@ const ICON_DOWNLOAD =
 const ICON_EMAIL =
   '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
 
-
 export function renderInvoiceDetailPage(args: {
   invoice: Invoice;
   items: InvoiceItem[];
@@ -32,9 +31,10 @@ export function renderInvoiceDetailPage(args: {
   const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
   const accent = config.accent_color;
 
-  const vatHeader = effectiveVatRate > 0
-    ? [{ label: `MwSt ${(effectiveVatRate * 100).toFixed(0)}%`, align: "right" as const }]
-    : [{ label: "MwSt", align: "right" as const }];
+  const vatHeader =
+    effectiveVatRate > 0
+      ? [{ label: `MwSt ${(effectiveVatRate * 100).toFixed(0)}%`, align: "right" as const }]
+      : [{ label: "MwSt", align: "right" as const }];
 
   const itemColumns = [
     { label: "Nr." },
@@ -59,11 +59,23 @@ export function renderInvoiceDetailPage(args: {
         Td({ children: html`<span class="text-text-secondary">${i + 1}</span>` }),
         Td({ children: html`<span class="text-text-primary">${item.description}</span>` }),
         Td({ align: "right", extraClass: " text-xs text-text-secondary", children: periodStr }),
-        Td({ align: "right", children: html`<span class="text-text-secondary">${item.days.toFixed(2)}</span>` }),
-        Td({ align: "right", children: html`<span class="text-text-secondary">${formatCurrency(item.daily_rate)}</span>` }),
-        Td({ align: "right", children: html`<span class="font-medium text-text-primary">${formatCurrency(item.net_amount)}</span>` }),
+        Td({
+          align: "right",
+          children: html`<span class="text-text-secondary">${item.days.toFixed(2)}</span>`,
+        }),
+        Td({
+          align: "right",
+          children: html`<span class="text-text-secondary">${formatCurrency(item.daily_rate)}</span>`,
+        }),
+        Td({
+          align: "right",
+          children: html`<span class="font-medium text-text-primary">${formatCurrency(item.net_amount)}</span>`,
+        }),
         vatCell,
-        Td({ align: "right", children: html`<span class="font-medium text-text-primary">${formatCurrency(item.gross_amount)}</span>` }),
+        Td({
+          align: "right",
+          children: html`<span class="font-medium text-text-primary">${formatCurrency(item.gross_amount)}</span>`,
+        }),
       ],
     });
   });
@@ -83,8 +95,9 @@ export function renderInvoiceDetailPage(args: {
             icon: ICON_DOWNLOAD,
             children: "PDF herunterladen",
           })}
-          ${invoice.status === "draft"
-            ? html`
+          ${
+            invoice.status === "draft"
+              ? html`
                 ${Button({
                   variant: "primary",
                   type: "button",
@@ -99,23 +112,26 @@ export function renderInvoiceDetailPage(args: {
                   </button>
                 </form>
               `
-            : invoice.status === "sent"
-              ? html`
+              : invoice.status === "sent"
+                ? html`
                   <form method="post" action="/rechnungen/${invoice.id}/status" class="inline">
                     <input type="hidden" name="status" value="paid" />
                     ${Button({ variant: "primary", type: "submit", children: "Als bezahlt markieren" })}
                   </form>
                 `
-              : ""}
+                : ""
+          }
         </div>
       </div>
 
       <div class="rounded-lg border border-border-subtle bg-bg-surface p-8" style="border-top: 4px solid ${accent}">
         <div class="mb-8 flex justify-between">
           <div>
-            ${config.show_logo
-              ? html`<div class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-md bg-bg-surface-raised text-xs font-semibold text-text-muted">Logo</div>`
-              : ""}
+            ${
+              config.show_logo
+                ? html`<div class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-md bg-bg-surface-raised text-xs font-semibold text-text-muted">Logo</div>`
+                : ""
+            }
             <p class="text-xs text-text-muted mb-1">Rechnungssteller:</p>
             <p class="font-semibold text-text-primary">${settings.company_name}</p>
             <p class="text-sm text-text-secondary">${settings.address || ""}</p>
@@ -148,17 +164,21 @@ export function renderInvoiceDetailPage(args: {
               <span class="text-text-secondary">Zwischensumme (Netto):</span>
               <span class="font-medium text-text-primary">${formatCurrency(invoice.net_amount)}</span>
             </div>
-            ${effectiveVatRate > 0
-              ? html`
+            ${
+              effectiveVatRate > 0
+                ? html`
                   <div class="flex justify-between text-sm">
                     <span class="text-text-secondary">MwSt (${(effectiveVatRate * 100).toFixed(0)}%):</span>
                     <span class="font-medium text-text-primary">${formatCurrency(invoice.vat_amount)}</span>
                   </div>
                 `
-              : ""}
-            ${isKleinunternehmer
-              ? html`<p class="text-sm text-accent-success italic">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</p>`
-              : ""}
+                : ""
+            }
+            ${
+              isKleinunternehmer
+                ? html`<p class="text-sm text-accent-success italic">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</p>`
+                : ""
+            }
             <div class="flex justify-between border-t border-border-subtle pt-2 text-lg">
               <span class="font-semibold text-text-primary">Gesamtbetrag:</span>
               <span class="font-bold text-text-primary">${formatCurrency(invoice.gross_amount)}</span>
