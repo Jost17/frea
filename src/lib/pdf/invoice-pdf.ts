@@ -26,6 +26,18 @@ async function getBrowser(): Promise<Browser> {
   return browserSingleton;
 }
 
+export async function closeBrowserSingleton(): Promise<void> {
+  if (browserSingleton?.connected) {
+    try {
+      await browserSingleton.close();
+      browserSingleton = null;
+      console.log("[invoice-pdf] Browser singleton closed");
+    } catch (err) {
+      console.warn("[invoice-pdf] Error closing browser singleton:", err);
+    }
+  }
+}
+
 export interface PdfGenerationResult {
   success: true;
   filePath: string;
@@ -47,9 +59,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<PdfResul
   const fileName = `${safeInvoiceNumber}.pdf`;
   const filePath = join(PDF_OUTPUT_DIR, fileName);
 
-  let browser: Browser | undefined;
   try {
-    browser = await getBrowser();
+    const browser = await getBrowser();
 
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
@@ -67,12 +78,6 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<PdfResul
     const message = err instanceof Error ? err.message : "Unbekannter Fehler";
     console.error("[invoice-pdf] PDF generation failed:", message);
     return { success: false, error: message };
-  } finally {
-    if (browser) {
-      await browser.close().catch((closeErr: unknown) => {
-        console.warn("[invoice-pdf] Browser close failed:", closeErr);
-      });
-    }
   }
 }
 
