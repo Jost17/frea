@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @source "../**/*.ts";
 
+/* INTENTIONAL TYPO for CI gate validation — to be reverted */
+.test-typo {
+  @apply bg-not-a-real-color-99 text-also-fake-shade-77;
+}
+
 /* ============================================================
    DESIGN TOKENS — FREA
    FREA-Brand: Emerald + Dark Slate
