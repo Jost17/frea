@@ -336,6 +336,7 @@ settingsRoutes.get("/", (c) => {
                       value="${settings.smtp_host || ""}"
                       class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
                     />
+                    <p class="mt-1 text-xs text-gray-500">Hostname deines Mail-Servers — meist unter „E-Mail-Einstellungen" bei deinem Hosting-Anbieter.</p>
                   </div>
 
                   <div class="grid grid-cols-2 gap-4">
@@ -351,6 +352,7 @@ settingsRoutes.get("/", (c) => {
                         max="65535"
                         class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
                       />
+                      <p class="mt-1 text-xs text-gray-500">587 für STARTTLS (empfohlen) · 465 für SSL/TLS.</p>
                     </div>
                     <div>
                       <label for="smtp_user" class="block text-sm font-medium text-gray-700">Benutzer</label>
@@ -362,6 +364,7 @@ settingsRoutes.get("/", (c) => {
                         value="${settings.smtp_user || ""}"
                         class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
                       />
+                      <p class="mt-1 text-xs text-gray-500">Meist identisch mit der E-Mail-Adresse.</p>
                     </div>
                   </div>
 
@@ -375,6 +378,7 @@ settingsRoutes.get("/", (c) => {
                       value="${settings.smtp_password || ""}"
                       class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
                     />
+                    <p class="mt-1 text-xs text-gray-500">Bei Gmail oder Outlook: App-Passwort verwenden, nicht das normale Account-Passwort.</p>
                   </div>
 
                   <div>
@@ -387,6 +391,7 @@ settingsRoutes.get("/", (c) => {
                       value="${settings.smtp_from || ""}"
                       class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
                     />
+                    <p class="mt-1 text-xs text-gray-500">Erscheint beim Empfänger als Absender-Adresse.</p>
                   </div>
                 </div>
               </fieldset>
