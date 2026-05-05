@@ -7,6 +7,8 @@ export interface ButtonProps {
   href?: string;
   type?: "submit" | "button" | "reset";
   icon?: string;
+  iconOnly?: boolean;
+  loading?: boolean;
   disabled?: boolean;
   /** Raw HTML attributes string — for HTMX attrs. Server-controlled, never user input. */
   attrs?: string;
@@ -29,31 +31,50 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 const DISABLED_BUTTON_CLASSES = "opacity-50 cursor-not-allowed";
 const DISABLED_LINK_CLASSES = "opacity-50 cursor-not-allowed pointer-events-none";
 
+const SPINNER_SVG = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>`;
+
 export function Button({
   variant = "primary",
   href,
   type = "button",
   icon,
+  iconOnly = false,
+  loading = false,
   disabled = false,
   attrs = "",
   extraClass = "",
   children,
 }: ButtonProps) {
-  const iconClass = icon ? " flex items-center gap-1" : "";
+  const isEffectivelyDisabled = disabled || loading;
+  const hasIcon = Boolean(icon) || loading;
+  const iconClass = hasIcon && !iconOnly ? " flex items-center gap-1" : "";
+  const iconOnlyClass = iconOnly ? " p-2 aspect-square" : "";
   const isLink = Boolean(href);
-  const disabledClass = disabled
+  const disabledClass = isEffectivelyDisabled
     ? ` ${isLink ? DISABLED_LINK_CLASSES : DISABLED_BUTTON_CLASSES}`
     : "";
   const classes =
-    VARIANT_CLASSES[variant] + iconClass + (extraClass ? ` ${extraClass}` : "") + disabledClass;
-  const iconHtml = icon ? raw(`<span aria-hidden="true">${icon}</span>`) : raw("");
+    VARIANT_CLASSES[variant] +
+    iconClass +
+    iconOnlyClass +
+    (extraClass ? ` ${extraClass}` : "") +
+    disabledClass;
+
+  const spinnerHtml = loading ? raw(`<span aria-hidden="true">${SPINNER_SVG}</span>`) : raw("");
+  const iconHtml = !loading && icon ? raw(`<span aria-hidden="true">${icon}</span>`) : raw("");
+  const labelHtml = iconOnly ? raw(`<span class="sr-only">${children}</span>`) : children;
   const extraAttrs = raw(attrs ? ` ${attrs}` : "");
 
   if (isLink) {
-    const linkDisabledAttrs = disabled ? raw(' aria-disabled="true" tabindex="-1"') : raw("");
-    return html`<a href="${href}" class="${classes}"${linkDisabledAttrs}${extraAttrs}>${iconHtml}${children}</a>`;
+    const linkDisabledAttrs = isEffectivelyDisabled
+      ? raw(' aria-disabled="true" tabindex="-1"')
+      : raw("");
+    return html`<a href="${href}" class="${classes}"${linkDisabledAttrs}${extraAttrs}>${spinnerHtml}${iconHtml}${labelHtml}</a>`;
   }
 
-  const buttonDisabledAttrs = disabled ? raw(' disabled aria-disabled="true"') : raw("");
-  return html`<button type="${type}" class="${classes}"${buttonDisabledAttrs}${extraAttrs}>${iconHtml}${children}</button>`;
+  const buttonDisabledAttrs = isEffectivelyDisabled
+    ? raw(' disabled aria-disabled="true"')
+    : raw("");
+  const ariaLabel = loading ? raw(` aria-label="Wird geladen…"`) : raw("");
+  return html`<button type="${type}" class="${classes}"${buttonDisabledAttrs}${ariaLabel}${extraAttrs}>${spinnerHtml}${iconHtml}${labelHtml}</button>`;
 }
