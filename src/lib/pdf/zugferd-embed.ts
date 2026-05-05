@@ -8,6 +8,7 @@ import { unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { randomUUID } from "node:crypto";
 
 const execFileAsync = promisify(execFile);
 
@@ -19,29 +20,20 @@ const JAVA_BIN = process.env.JAVA_HOME
   ? join(process.env.JAVA_HOME, "bin/java")
   : "/opt/homebrew/opt/openjdk/bin/java";
 
-export interface EmbedZUGFeRDResult {
-  success: true;
-  filePath: string;
-}
-
-export interface EmbedZUGFeRDError {
-  success: false;
-  error: string;
-}
-
-export type EmbedResult = EmbedZUGFeRDResult | EmbedZUGFeRDError;
-
 /**
  * Bettet ZUGFeRD XML in ein PDF ein.
  * Pipeline:
  * 1. PDF zu PDF/A-3 konvertieren (Ghostscript)
  * 2. XML via Mustang CLI einbetten
  * 3. Ergebnis über Original-Datei schreiben
+ *
+ * Wirft Error falls Mustang CLI, Ghostscript oder andere Abhängigkeiten fehlen.
  */
-export async function embedZUGFeRDInPDF(pdfPath: string, xmlContent: string): Promise<EmbedResult> {
-  const xmlTmpPath = pdfPath.replace(/\.pdf$/, ".zugferd.xml");
-  const pdfA3Path = pdfPath.replace(/\.pdf$/, ".pdfa3.pdf");
-  const outputTmpPath = pdfPath.replace(/\.pdf$/, ".zugferd-out.pdf");
+export async function embedZUGFeRDInPDF(pdfPath: string, xmlContent: string): Promise<string> {
+  const tmpSuffix = `${randomUUID()}-${process.pid}`;
+  const xmlTmpPath = pdfPath.replace(/\.pdf$/, `.zugferd.${tmpSuffix}.xml`);
+  const pdfA3Path = pdfPath.replace(/\.pdf$/, `.pdfa3.${tmpSuffix}.pdf`);
+  const outputTmpPath = pdfPath.replace(/\.pdf$/, `.zugferd-out.${tmpSuffix}.pdf`);
 
   try {
     // Schritt 1: Zu PDF/A-3 konvertieren
@@ -60,10 +52,7 @@ export async function embedZUGFeRDInPDF(pdfPath: string, xmlContent: string): Pr
       ]);
     } catch (error) {
       console.error("Ghostscript Fehler:", error instanceof Error ? error.message : String(error));
-      return {
-        success: false,
-        error: "Ghostscript nicht verfügbar oder PDF-Konvertierung fehlgeschlagen",
-      };
+      throw new Error("Ghostscript nicht verfügbar oder PDF-Konvertierung zu PDF/A-3 fehlgeschlagen");
     }
 
     // Schritt 2: ZUGFeRD XML einbetten
@@ -96,10 +85,7 @@ export async function embedZUGFeRDInPDF(pdfPath: string, xmlContent: string): Pr
       }
     } catch (error) {
       console.error("Mustang CLI Fehler:", error instanceof Error ? error.message : String(error));
-      return {
-        success: false,
-        error: "Mustang CLI nicht verfügbar oder XML-Embedding fehlgeschlagen",
-      };
+      throw new Error("Mustang CLI nicht verfügbar oder XML-Embedding fehlgeschlagen");
     }
 
     // Schritt 3: Outputdatei über Original kopieren
@@ -107,11 +93,7 @@ export async function embedZUGFeRDInPDF(pdfPath: string, xmlContent: string): Pr
     await rename(outputTmpPath, pdfPath);
 
     console.log(`✓ ZUGFeRD XML eingebettet: ${pdfPath}`);
-    return { success: true, filePath: pdfPath };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error("ZUGFeRD Embedding Fehler:", msg);
-    return { success: false, error: msg };
+    return pdfPath;
   } finally {
     // Cleanup
     await Promise.all([
