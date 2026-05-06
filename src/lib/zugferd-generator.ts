@@ -94,6 +94,9 @@ export function generateZUGFeRDXML(data: ZUGFeRDInvoiceData): string {
                           xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
                           xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
   <rsm:ExchangedDocumentContext>
+    <ram:BusinessProcessSpecifiedDocumentContextParameter>
+      <ram:ID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</ram:ID>
+    </ram:BusinessProcessSpecifiedDocumentContextParameter>
     <ram:GuidelineSpecifiedDocumentContextParameter>
       <ram:ID>urn:cen.eu:en16931:2017</ram:ID>
     </ram:GuidelineSpecifiedDocumentContextParameter>
@@ -155,7 +158,9 @@ function buildLineItem(
         <ram:ApplicableTradeTax>
           <ram:TypeCode>VAT</ram:TypeCode>
           <ram:CategoryCode>${vatCategoryCode}</ram:CategoryCode>
-          <ram:RateApplicablePercent>${vatPercent}</ram:RateApplicablePercent>
+          <ram:RateApplicablePercent>${vatPercent}</ram:RateApplicablePercent>${
+            vatCategoryCode === "E" ? `\n          <ram:ExemptionReasonCode>VATEX-EU-132</ram:ExemptionReasonCode>` : ""
+          }
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
           <ram:LineTotalAmount>${formatAmount(item.netAmount)}</ram:LineTotalAmount>
@@ -223,7 +228,9 @@ function buildBuyerParty(buyer: BuyerInfo): string {
 function buildSettlement(data: ZUGFeRDInvoiceData, vatPercent: string): string {
   const exemptionLine = data.vat.exemptionReason
     ? `\n        <ram:ExemptionReason>${escapeXml(data.vat.exemptionReason)}</ram:ExemptionReason>`
-    : "";
+    : data.vat.categoryCode === "E"
+      ? `\n        <ram:ExemptionReasonCode>VATEX-EU-132</ram:ExemptionReasonCode>`
+      : "";
 
   return `    <ram:ApplicableHeaderTradeSettlement>
       <ram:PaymentReference>${escapeXml(data.invoiceNumber)}</ram:PaymentReference>
