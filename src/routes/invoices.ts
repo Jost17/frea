@@ -312,6 +312,7 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
           country: "Deutschland",
           email: settings.email,
           taxNumber: settings.tax_number,
+          vatId: settings.ust_id || undefined,
         },
         buyer: {
           name: client.name,
@@ -406,6 +407,7 @@ invoiceRoutes.post("/:id/send", async (c) => {
             country: "Deutschland",
             email: settings.email,
             taxNumber: settings.tax_number,
+            vatId: settings.ust_id || undefined,
           },
           buyer: {
             name: client.name,
