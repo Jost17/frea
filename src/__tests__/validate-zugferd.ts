@@ -67,9 +67,7 @@ function validateZUGFeRDXML(filePath: string): ValidationResult {
     return {
       file: filePath,
       valid: false,
-      errors: [
-        `Failed to validate: ${error instanceof Error ? error.message : String(error)}`,
-      ],
+      errors: [`Failed to validate: ${error instanceof Error ? error.message : String(error)}`],
     };
   }
 }

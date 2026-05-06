@@ -4,11 +4,11 @@
  */
 
 import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { randomUUID } from "node:crypto";
 
 const execFileAsync = promisify(execFile);
 
@@ -52,7 +52,9 @@ export async function embedZUGFeRDInPDF(pdfPath: string, xmlContent: string): Pr
       ]);
     } catch (error) {
       console.error("Ghostscript Fehler:", error instanceof Error ? error.message : String(error));
-      throw new Error("Ghostscript nicht verfügbar oder PDF-Konvertierung zu PDF/A-3 fehlgeschlagen");
+      throw new Error(
+        "Ghostscript nicht verfügbar oder PDF-Konvertierung zu PDF/A-3 fehlgeschlagen",
+      );
     }
 
     // Schritt 2: ZUGFeRD XML einbetten
