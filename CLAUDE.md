@@ -57,6 +57,30 @@ Full details: `docs/adr/001-eu-compliance.md`
 20. **Dependabot Auto-Merge ist aktiv** — patch/minor mit grünem CI mergen sich selbst (squash). Major bleibt manuell. Bei Group-PRs (`npm-non-major`) trotzdem Diff prüfen. Workflow: `.github/workflows/dependabot-auto-merge.yml`.
 21. **PR-Body braucht `## Test Plan` mit Evidence** — jedes Item ist entweder `[x]` mit konkretem Beleg (Log-Snippet, CI-Run-ID, Test-PR-Nummer) ODER explizit `deferred — wartet auf X` für Items die organisch passieren müssen (z.B. nächster Dependabot-Run). Unchecked Items ohne Marker = nicht ship-ready. Verifier: `~/.claude/skills/pr-ship-verifier/verify.sh <PR>`.
 
+## Git Workflow — Pre-flight Checks (enforced — FREA-215)
+
+22. **Pre-flight vor Branch-Erstellung** — Vor `git checkout -b`:
+    ```bash
+    git fetch origin main
+    git log origin/main..main --oneline  # main darf nicht divergieren
+    gh pr list --state open --json number,title,headRefName  # kein offener PR für gleiches Ticket
+    ```
+    Wenn `main` lokal divergiert oder ein PR mit demselben Ticket-Prefix bereits offen ist → **STOP, frag nach**. Parallele Implementierung desselben Tickets ist der teuerste Anti-Pattern.
+
+## Worktree-Default für lange Tasks (enforced — FREA-216)
+
+23. **Worktree für Tasks >5 Minuten oder >2 Files** — Statt direkt im Hauptrepo:
+    ```bash
+    git worktree add ../frea-paperclip-<task-id> -b feat/<ticket>
+    cd ../frea-paperclip-<task-id>
+    ```
+    Damit können Agents parallel arbeiten ohne Working-Tree-Kollision. Dies ist die strukturelle Lösung — der Branch-Hygiene-Guard fängt nur Symptome, nicht die Ursache (shared working tree).
+
+## Cleanup und Hook-Integrität (enforced — FREA-218)
+
+24. **Kein `--no-verify`** — Pre-push-Hooks sind Teil des CI-Contracts. `git push --no-verify` ist verboten. Wenn ein Hook fehlschlägt: Ursache fixen, nicht umgehen.
+25. **Cleanup-Step nach Rescue-Operationen** — Nach `frea-reconstruct` oder vergleichbaren Rescue-Skills: `git status` ausführen und alle untracked/orphan Files (`*.incoming`, 0-byte-Files) explizit entweder committen oder löschen. Niemals mit dirty working tree pushen.
+
 ## Reference
 
 Reference implementation (read-only): `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/freelancer_tool/`
