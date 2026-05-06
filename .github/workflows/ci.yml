@@ -81,6 +81,9 @@ jobs:
       - name: Test
         run: bun test --pass-with-no-tests
 
+      - name: Validate ZUGFeRD Fixtures
+        run: bun run test:zugferd
+
       - name: Bun audit (non-blocking)
         run: bun audit
         continue-on-error: true

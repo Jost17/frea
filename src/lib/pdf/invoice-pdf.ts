@@ -83,11 +83,7 @@ export async function generateInvoicePdf(
     await writeFile(filePath, pdfBytes);
 
     if (options?.embedZugferd && options.zugferdXml) {
-      const embedResult = await embedZUGFeRDInPDF(filePath, options.zugferdXml);
-      if (!embedResult.success) {
-        console.warn(`[invoice-pdf] ZUGFeRD embedding failed: ${embedResult.error}`);
-        // Nicht abbrechen — PDF ist immer noch gültig ohne ZUGFeRD
-      }
+      await embedZUGFeRDInPDF(filePath, options.zugferdXml);
     }
 
     return { success: true, filePath, fileName };
