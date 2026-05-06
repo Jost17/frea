@@ -159,7 +159,9 @@ function buildLineItem(
           <ram:TypeCode>VAT</ram:TypeCode>
           <ram:CategoryCode>${vatCategoryCode}</ram:CategoryCode>
           <ram:RateApplicablePercent>${vatPercent}</ram:RateApplicablePercent>${
-            vatCategoryCode === "E" ? `\n          <ram:ExemptionReasonCode>VATEX-EU-132</ram:ExemptionReasonCode>` : ""
+            vatCategoryCode === "E"
+              ? `\n          <ram:ExemptionReasonCode>VATEX-EU-132</ram:ExemptionReasonCode>`
+              : ""
           }
         </ram:ApplicableTradeTax>
         <ram:SpecifiedTradeSettlementLineMonetarySummation>
