@@ -107,9 +107,12 @@ export function renderInvoiceDetailPage(args: {
                 })}
                 <form method="post" action="/rechnungen/${invoice.id}/status" class="inline">
                   <input type="hidden" name="status" value="sent" />
-                  <button type="submit" class="rounded-md px-4 py-2 text-sm font-medium text-white" style="background-color: ${accent}">
-                    Als versendet markieren
-                  </button>
+                  ${Button({
+                    variant: "primary",
+                    type: "submit",
+                    attrs: `style="background-color: ${accent}"`,
+                    children: "Als versendet markieren",
+                  })}
                 </form>
               `
               : invoice.status === "sent"
