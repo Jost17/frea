@@ -1,7 +1,37 @@
 import { Database } from "bun:sqlite";
+import { renameSync } from "node:fs";
 import { join } from "node:path";
 
-const DB_PATH = Bun.env.FREA_DB_PATH || join(import.meta.dir, "../../data/frea.db");
+export const DB_PATH = Bun.env.FREA_DB_PATH || join(import.meta.dir, "../../data/frea.db");
+const RESTORE_PENDING_PATH = DB_PATH.replace(/\.db$/, ".db.restore");
+
+// Apply pending restore before opening the main DB
+function applyPendingRestore(): void {
+  const restoreFile = Bun.file(RESTORE_PENDING_PATH);
+  if (!restoreFile.size) return; // file doesn't exist or is empty
+
+  try {
+    const mainFile = DB_PATH;
+    // Validate the restore file before applying it
+    const tempDb = new Database(RESTORE_PENDING_PATH, { readonly: true });
+    const check = tempDb.query<{ integrity_check: string }, []>("PRAGMA integrity_check").get();
+    tempDb.close();
+    if (check?.integrity_check !== "ok") {
+      console.error(
+        "[restore] Pending restore file failed integrity check — aborting. Remove",
+        RESTORE_PENDING_PATH,
+        "manually.",
+      );
+      return;
+    }
+    renameSync(RESTORE_PENDING_PATH, mainFile);
+    console.log("[restore] Pending backup successfully restored to", mainFile);
+  } catch (err) {
+    console.error("[restore] Failed to apply pending restore:", err);
+  }
+}
+
+applyPendingRestore();
 
 export const db = new Database(DB_PATH, { create: true });
 
