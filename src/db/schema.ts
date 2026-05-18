@@ -199,6 +199,109 @@ export function initializeSchema() {
     throw new Error("Database migration failed: could not add columns to settings", { cause: err });
   }
 
+  // ViDA-Readiness Scaffold (FREA-246) — Future-Proofing 2030/2035
+  // All columns are nullable/additive; no user-facing functionality today.
+  // EN 16931 field references included for future implementors.
+  try {
+    const settingsCols2 = db.query<{ name: string }, []>("PRAGMA table_info(settings)").all();
+    const settingsNames = settingsCols2.map((c) => c.name);
+    // BT-34 / BT-35: Seller electronic address + scheme (Peppol routing)
+    if (!settingsNames.includes("peppol_id")) {
+      db.run("ALTER TABLE settings ADD COLUMN peppol_id TEXT");
+    }
+    if (!settingsNames.includes("electronic_address_scheme")) {
+      db.run("ALTER TABLE settings ADD COLUMN electronic_address_scheme TEXT");
+    }
+    console.log("[migration] ViDA: settings columns ensured");
+  } catch (err) {
+    console.error("[migration] ViDA: Failed to add settings columns:", err);
+    throw new Error("Database migration failed: ViDA settings columns", { cause: err });
+  }
+
+  try {
+    const clientCols = db.query<{ name: string }, []>("PRAGMA table_info(clients)").all();
+    const clientNames = clientCols.map((c) => c.name);
+    // BT-49 / BT-50: Buyer electronic address + scheme (Peppol routing)
+    if (!clientNames.includes("peppol_id")) {
+      db.run("ALTER TABLE clients ADD COLUMN peppol_id TEXT");
+    }
+    if (!clientNames.includes("electronic_address_scheme")) {
+      db.run("ALTER TABLE clients ADD COLUMN electronic_address_scheme TEXT");
+    }
+    console.log("[migration] ViDA: clients columns ensured");
+  } catch (err) {
+    console.error("[migration] ViDA: Failed to add clients columns:", err);
+    throw new Error("Database migration failed: ViDA clients columns", { cause: err });
+  }
+
+  try {
+    const invoiceCols = db.query<{ name: string }, []>("PRAGMA table_info(invoices)").all();
+    const invoiceNames = invoiceCols.map((c) => c.name);
+    // BT-3: Invoice type code (380=Commercial Invoice, 381=Credit Note, 384=Corrected Invoice)
+    if (!invoiceNames.includes("document_type_code")) {
+      db.run("ALTER TABLE invoices ADD COLUMN document_type_code TEXT DEFAULT '380'");
+    }
+    // BT-25 / BT-26: Preceding invoice reference (for credit notes / corrections)
+    if (!invoiceNames.includes("preceding_invoice_ref")) {
+      db.run("ALTER TABLE invoices ADD COLUMN preceding_invoice_ref TEXT");
+    }
+    if (!invoiceNames.includes("preceding_invoice_date")) {
+      db.run("ALTER TABLE invoices ADD COLUMN preceding_invoice_date TEXT");
+    }
+    // BG-13: Delivery information
+    if (!invoiceNames.includes("delivery_name")) {
+      db.run("ALTER TABLE invoices ADD COLUMN delivery_name TEXT");
+    }
+    if (!invoiceNames.includes("delivery_address")) {
+      db.run("ALTER TABLE invoices ADD COLUMN delivery_address TEXT");
+    }
+    if (!invoiceNames.includes("delivery_postal_code")) {
+      db.run("ALTER TABLE invoices ADD COLUMN delivery_postal_code TEXT");
+    }
+    if (!invoiceNames.includes("delivery_city")) {
+      db.run("ALTER TABLE invoices ADD COLUMN delivery_city TEXT");
+    }
+    if (!invoiceNames.includes("delivery_country")) {
+      db.run("ALTER TABLE invoices ADD COLUMN delivery_country TEXT");
+    }
+    // BT-72: Actual delivery date
+    if (!invoiceNames.includes("delivery_date")) {
+      db.run("ALTER TABLE invoices ADD COLUMN delivery_date TEXT");
+    }
+    // BT-7: Tax point date (Leistungsdatum if different from invoice date)
+    if (!invoiceNames.includes("tax_point_date")) {
+      db.run("ALTER TABLE invoices ADD COLUMN tax_point_date TEXT");
+    }
+    console.log("[migration] ViDA: invoices columns ensured");
+  } catch (err) {
+    console.error("[migration] ViDA: Failed to add invoices columns:", err);
+    throw new Error("Database migration failed: ViDA invoices columns", { cause: err });
+  }
+
+  try {
+    const itemCols = db.query<{ name: string }, []>("PRAGMA table_info(invoice_items)").all();
+    const itemNames = itemCols.map((c) => c.name);
+    // BT-130: Invoiced quantity unit of measure (UN/ECE rec 20: DAY, HUR, C62=piece, MTK=m²)
+    if (!itemNames.includes("unit_code")) {
+      db.run("ALTER TABLE invoice_items ADD COLUMN unit_code TEXT DEFAULT 'DAY'");
+    }
+    // BT-151: Item VAT category code (S=Standard, Z=Zero-rated, E=Exempt, K=Reverse charge)
+    if (!itemNames.includes("tax_category_code")) {
+      db.run("ALTER TABLE invoice_items ADD COLUMN tax_category_code TEXT DEFAULT 'S'");
+    }
+    // BT-120 / BT-121: Tax exemption reason text + VATEX code (required when not S)
+    if (!itemNames.includes("tax_exemption_reason")) {
+      db.run("ALTER TABLE invoice_items ADD COLUMN tax_exemption_reason TEXT");
+    }
+    if (!itemNames.includes("tax_exemption_reason_code")) {
+      db.run("ALTER TABLE invoice_items ADD COLUMN tax_exemption_reason_code TEXT");
+    }
+    console.log("[migration] ViDA: invoice_items columns ensured");
+  } catch (err) {
+    console.error("[migration] ViDA: Failed to add invoice_items columns:", err);
+    throw new Error("Database migration failed: ViDA invoice_items columns", { cause: err });
+  }
+
   // Initialize default settings if not present
   const existing = db.query("SELECT id FROM settings WHERE id = 1").get();
   if (!existing) {
