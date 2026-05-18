@@ -1,8 +1,10 @@
 import { html } from "hono/html";
 import type { Client } from "../validation/schemas";
 
+type ActiveClient = Omit<Client, "created_at" | "archived">;
+
 interface QuoteFormProps {
-  clients: Client[];
+  clients: ActiveClient[];
   vatRate: number;
   isKleinunternehmer: boolean;
 }
