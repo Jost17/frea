@@ -178,6 +178,94 @@ export function initializeSchema() {
     END
   `);
 
+  // Wiederkehrende Rechnungsvorlagen
+  db.run(`
+    CREATE TABLE IF NOT EXISTS recurring_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER NOT NULL REFERENCES clients(id),
+      title TEXT NOT NULL,
+      interval TEXT NOT NULL CHECK(interval IN ('monthly', 'quarterly', 'yearly')),
+      start_date TEXT NOT NULL,
+      end_date TEXT,
+      next_due TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS recurring_template_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER NOT NULL REFERENCES recurring_templates(id) ON DELETE CASCADE,
+      description TEXT NOT NULL,
+      quantity REAL NOT NULL,
+      unit_price REAL NOT NULL,
+      vat_rate REAL NOT NULL DEFAULT 19
+    )
+  `);
+
+  db.run(
+    "CREATE INDEX IF NOT EXISTS idx_recurring_templates_client ON recurring_templates(client_id)",
+  );
+  db.run(
+    "CREATE INDEX IF NOT EXISTS idx_recurring_templates_active_due ON recurring_templates(active, next_due)",
+  );
+  db.run(
+    "CREATE INDEX IF NOT EXISTS idx_recurring_items_template ON recurring_template_items(template_id)",
+  );
+
+  // Migration: make project_id nullable on invoices for template-generated invoices
+  // SQLite does not support DROP CONSTRAINT — we check existing rows and skip if already nullable.
+  // The simplest safe approach: rebuild the table. But that's a heavy operation.
+  // Instead: we check the CREATE TABLE DDL; if project_id is NOT NULL we rebuild.
+  // For new databases the schema already has the correct definition.
+  try {
+    const invoicesDdl = db
+      .query<{ sql: string }, []>(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='invoices'",
+      )
+      .get();
+    if (invoicesDdl?.sql && /project_id\s+INTEGER\s+NOT\s+NULL/.test(invoicesDdl.sql)) {
+      // Rebuild invoices table without NOT NULL on project_id (Expand/Contract)
+      db.run("PRAGMA foreign_keys = OFF");
+      db.run(`CREATE TABLE IF NOT EXISTS invoices_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        invoice_number TEXT NOT NULL UNIQUE,
+        client_id INTEGER NOT NULL REFERENCES clients(id),
+        project_id INTEGER REFERENCES projects(id),
+        invoice_date TEXT NOT NULL,
+        due_date TEXT NOT NULL,
+        period_month INTEGER NOT NULL,
+        period_year INTEGER NOT NULL,
+        net_amount REAL NOT NULL,
+        vat_amount REAL NOT NULL,
+        gross_amount REAL NOT NULL,
+        status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'cancelled')),
+        pdf_path TEXT,
+        po_number TEXT,
+        service_period_from TEXT,
+        service_period_to TEXT,
+        paid_date TEXT,
+        reminder_level INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now'))
+      )`);
+      db.run(`INSERT INTO invoices_new SELECT * FROM invoices`);
+      db.run("DROP TABLE invoices");
+      db.run("ALTER TABLE invoices_new RENAME TO invoices");
+      db.run("PRAGMA foreign_keys = ON");
+      // Re-create indexes
+      db.run("CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id)");
+      db.run("CREATE INDEX IF NOT EXISTS idx_invoices_status_due ON invoices(status, due_date)");
+      console.log(
+        "[migration] Made project_id nullable on invoices for template-generated invoices",
+      );
+    }
+  } catch (err) {
+    console.error("[migration] Failed to migrate invoices.project_id:", err);
+    throw new Error("Database migration failed: invoices.project_id nullable", { cause: err });
+  }
+
   // Migration: add onboarding_complete column if not present (safe for existing DBs)
   try {
     const settingsCols = db.query<{ name: string }, []>("PRAGMA table_info(settings)").all();
