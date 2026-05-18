@@ -19,6 +19,7 @@ import {
 } from "../db/queries";
 import type { AppEnv } from "../env";
 import { generateInvoicePdf } from "../lib/pdf/invoice-pdf";
+import { generateXRechnungXML } from "../lib/xrechnung-generator";
 import { generateZUGFeRDXML, type ZUGFeRDInvoiceData } from "../lib/zugferd-generator";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { EmailService } from "../services/email";
@@ -465,5 +466,85 @@ invoiceRoutes.post("/:id/send", async (c) => {
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "Rechnung konnte nicht versendet werden", 500);
+  }
+});
+
+// GET: Download XRechnung XML (B2G — öffentliche Auftraggeber)
+invoiceRoutes.get("/:id/xrechnung", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
+
+    const invoice = getInvoice(id);
+    if (!invoice) throw new AppError("Rechnung nicht gefunden", 404);
+
+    const items = getInvoiceItems(id);
+    const client = getClient(invoice.client_id);
+    const settings = getSettings();
+
+    if (!client || !settings) throw new AppError("Daten fehlen", 500);
+    if (settings.kleinunternehmer) {
+      throw new AppError("XRechnung ist für Kleinunternehmer nicht verfügbar", 400);
+    }
+    if (items.length === 0) throw new AppError("Keine Rechnungspositionen vorhanden", 400);
+
+    const data: ZUGFeRDInvoiceData = {
+      invoiceNumber: invoice.invoice_number,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      periodMonth: invoice.period_month,
+      periodYear: invoice.period_year,
+      periodStart: invoice.service_period_from || invoice.invoice_date,
+      periodEnd: invoice.service_period_to || invoice.invoice_date,
+      seller: {
+        name: settings.company_name,
+        address: settings.address || "",
+        postalCode: settings.postal_code || "",
+        city: settings.city || "",
+        country: "Deutschland",
+        email: settings.email,
+        taxNumber: settings.tax_number,
+        vatId: settings.ust_id || undefined,
+      },
+      buyer: {
+        name: client.name,
+        address: client.address || null,
+        postalCode: client.postal_code || null,
+        city: client.city || null,
+        country: "Deutschland",
+        email: client.email || undefined,
+        vatId: client.vat_id || undefined,
+        // BT-10: Leitweg-ID — mandatory for B2G; falls back to PO number or invoice number
+        reference: client.buyer_reference || invoice.po_number || invoice.invoice_number,
+      },
+      payment: {
+        iban: settings.iban,
+        bic: settings.bic,
+      },
+      vat: { categoryCode: "S" },
+      lineItems: items.map((item) => ({
+        description: item.description,
+        quantity: item.days,
+        unitPrice: item.daily_rate,
+        netAmount: item.net_amount,
+      })),
+      totals: {
+        netAmount: invoice.net_amount,
+        vatRate: settings.vat_rate,
+        vatAmount: invoice.vat_amount,
+        grossAmount: invoice.gross_amount,
+      },
+    };
+
+    const xml = generateXRechnungXML(data);
+    const fileName = `${invoice.invoice_number}_xrechnung.xml`;
+
+    c.header("Content-Type", "application/xml; charset=utf-8");
+    c.header("Content-Disposition", `attachment; filename="${fileName}"`);
+
+    return c.text(xml);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    return logAndRespond(c, err, "XRechnung konnte nicht erstellt werden", 500);
   }
 });

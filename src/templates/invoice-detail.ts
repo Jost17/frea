@@ -96,6 +96,16 @@ export function renderInvoiceDetailPage(args: {
             children: "PDF herunterladen",
           })}
           ${
+            !isKleinunternehmer
+              ? Button({
+                  variant: "secondary",
+                  href: `/rechnungen/${invoice.id}/xrechnung`,
+                  icon: ICON_DOWNLOAD,
+                  children: "XRechnung (B2G)",
+                })
+              : ""
+          }
+          ${
             invoice.status === "draft"
               ? html`
                 ${Button({
