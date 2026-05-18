@@ -57,6 +57,7 @@ export const settingsSchema = z
     smtp_user: z.string().optional(),
     smtp_password: z.string().optional(),
     smtp_from: z.string().email("SMTP From muss gültige E-Mail sein").optional(),
+    tax_reserve_rate: z.number().min(0).max(1).default(0.25),
   })
   .superRefine((data, ctx) => {
     if (!data.tax_number?.trim() && !data.ust_id?.trim()) {

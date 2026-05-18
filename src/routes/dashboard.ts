@@ -92,6 +92,16 @@ dashboardRoutes.get("/", (c) => {
           <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">${stats.active_projects_count}</p>
         </div>
 
+        <!-- Steuer-Rücklage -->
+        <div class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 shadow-sm p-4 sm:col-span-2 lg:col-span-3">
+          <p class="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wide">Empfohlene Steuer-Rücklage</p>
+          <p class="mt-2 text-2xl font-semibold text-amber-900 dark:text-amber-100">${formatEuro(stats.tax_reserve_recommended)}</p>
+          <p class="mt-1 text-sm text-amber-700 dark:text-amber-300">
+            ${Math.round(stats.tax_reserve_rate * 100)} % des Nettoumsatzes aus bezahlten Rechnungen ·
+            <a href="/einstellungen" class="underline hover:no-underline">Quote anpassen</a>
+          </p>
+        </div>
+
       </div>
     </div>
   `;

@@ -185,6 +185,11 @@ export function initializeSchema() {
       db.run("ALTER TABLE settings ADD COLUMN onboarding_complete INTEGER DEFAULT 0");
       console.log("[migration] Added onboarding_complete column to settings");
     }
+    // Migration: add tax_reserve_rate column if not present (FREA-261)
+    if (!settingsCols.some((c) => c.name === "tax_reserve_rate")) {
+      db.run("ALTER TABLE settings ADD COLUMN tax_reserve_rate REAL DEFAULT 0.25");
+      console.log("[migration] Added tax_reserve_rate column to settings");
+    }
     // Migration: add SMTP columns if not present
     if (!settingsCols.some((c) => c.name === "smtp_host")) {
       db.run("ALTER TABLE settings ADD COLUMN smtp_host TEXT");

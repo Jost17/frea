@@ -36,6 +36,7 @@ const SETTINGS_FIELDS = {
   smtp_user: "string",
   smtp_password: "string",
   smtp_from: "string",
+  tax_reserve_rate: "float",
 } as const;
 
 settingsRoutes.get("/", (c) => {
@@ -392,6 +393,31 @@ settingsRoutes.get("/", (c) => {
                       class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
                     />
                     <p class="mt-1 text-xs text-gray-500">Erscheint beim Empfänger als Absender-Adresse.</p>
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend class="mb-4 text-lg font-semibold text-gray-900">Steuer-Rücklage</legend>
+                <p class="mb-4 text-sm text-gray-600">Automatische Empfehlung für deine Steuerrücklage — berechnet aus dem Nettobetrag aller bezahlten Rechnungen.</p>
+                <div class="space-y-4">
+                  <div>
+                    <label for="tax_reserve_rate" class="block text-sm font-medium text-gray-700">Rücklage-Quote</label>
+                    <div class="mt-1 flex items-center gap-2">
+                      <input
+                        type="number"
+                        id="tax_reserve_rate"
+                        name="tax_reserve_rate"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value="${settings.tax_reserve_rate ?? 0.25}"
+                        class="block w-32 rounded border border-gray-300 px-3 py-2 text-sm"
+                        aria-describedby="tax-reserve-hint"
+                      />
+                      <span class="text-sm text-gray-500">= ${Math.round((settings.tax_reserve_rate ?? 0.25) * 100)} %</span>
+                    </div>
+                    <p id="tax-reserve-hint" class="mt-1 text-xs text-gray-500">Empfehlung: 25–30 % für Einkommensteuer + Umsatzsteuer. Das Dashboard zeigt dir den empfohlenen Rücklagenbetrag.</p>
                   </div>
                 </div>
               </fieldset>

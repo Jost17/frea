@@ -22,6 +22,7 @@ const SETTINGS_COLUMNS = new Set([
   "invoice_prefix",
   "next_invoice_number",
   "kleinunternehmer",
+  "tax_reserve_rate",
 ]);
 
 const CLIENT_COLUMNS = new Set([
@@ -100,7 +101,7 @@ export function getSettings() {
         id, company_name, address, postal_code, city, country,
         email, phone, mobile, bank_name, iban, bic, tax_number,
         ust_id, vat_rate, payment_days, invoice_prefix,
-        next_invoice_number, kleinunternehmer
+        next_invoice_number, kleinunternehmer, tax_reserve_rate
        FROM settings WHERE id = 1`,
     )
     .get();

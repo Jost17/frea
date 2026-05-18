@@ -22,6 +22,8 @@ export interface DashboardStats {
   active_clients_count: number;
   active_projects_count: number;
   overdue_invoices_count: number;
+  tax_reserve_recommended: number;
+  tax_reserve_rate: number;
 }
 
 export function getDashboardStats(): DashboardStats {
@@ -49,15 +51,26 @@ export function getDashboardStats(): DashboardStats {
           SELECT COUNT(*) AS cnt
           FROM invoices
           WHERE ${overdueInvoiceWhere()}
+        ),
+        cte_paid_net AS (
+          SELECT COALESCE(SUM(net_amount), 0) AS total
+          FROM invoices
+          WHERE status = 'paid'
+        ),
+        cte_reserve AS (
+          SELECT COALESCE(tax_reserve_rate, 0.25) AS rate FROM settings WHERE id = 1
         )
       SELECT
-        cte_open_inv.cnt        AS open_invoices_count,
-        cte_open_inv.total      AS open_invoices_sum,
-        cte_revenue.total       AS revenue_current_month,
-        cte_clients.cnt         AS active_clients_count,
-        cte_projects.cnt        AS active_projects_count,
-        cte_overdue.cnt         AS overdue_invoices_count
-      FROM cte_open_inv, cte_revenue, cte_clients, cte_projects, cte_overdue`,
+        cte_open_inv.cnt                                    AS open_invoices_count,
+        cte_open_inv.total                                  AS open_invoices_sum,
+        cte_revenue.total                                   AS revenue_current_month,
+        cte_clients.cnt                                     AS active_clients_count,
+        cte_projects.cnt                                    AS active_projects_count,
+        cte_overdue.cnt                                     AS overdue_invoices_count,
+        ROUND(cte_paid_net.total * cte_reserve.rate, 2)    AS tax_reserve_recommended,
+        cte_reserve.rate                                    AS tax_reserve_rate
+      FROM cte_open_inv, cte_revenue, cte_clients, cte_projects, cte_overdue,
+           cte_paid_net, cte_reserve`,
     )
     .get();
 
