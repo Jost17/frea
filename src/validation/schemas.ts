@@ -243,6 +243,56 @@ export const VALID_INVOICE_FILTER_VALUES = new Set([
 
 const DEFAULT_COMPANY_NAME = "Mein Unternehmen";
 
+// ─── Dunning (Mahnwesen) ──────────────────────────────────────────────────────
+
+export interface DunningLevel {
+  level: 1 | 2 | 3;
+  days_after_due: number;
+  fee_amount: number;
+  subject: string;
+  body: string;
+}
+
+export interface DunningRun {
+  id: number;
+  invoice_id: number;
+  level: number;
+  sent_at: string;
+  fee_amount: number;
+  notes: string | null;
+}
+
+export interface DunnableInvoice {
+  id: number;
+  invoice_number: string;
+  client_name: string;
+  due_date: string;
+  gross_amount: number;
+  reminder_level: number;
+  days_overdue: number;
+  next_days_threshold: number | null;
+  next_fee: number | null;
+}
+
+export const dunningSettingsSchema = z.object({
+  level1_days: z.number().int().min(1, "Mind. 1 Tag"),
+  level1_fee: z.number().min(0, "Gebühr darf nicht negativ sein"),
+  level1_subject: z.string().default(""),
+  level1_body: z.string().default(""),
+  level2_days: z.number().int().min(1, "Mind. 1 Tag"),
+  level2_fee: z.number().min(0, "Gebühr darf nicht negativ sein"),
+  level2_subject: z.string().default(""),
+  level2_body: z.string().default(""),
+  level3_days: z.number().int().min(1, "Mind. 1 Tag"),
+  level3_fee: z.number().min(0, "Gebühr darf nicht negativ sein"),
+  level3_subject: z.string().default(""),
+  level3_body: z.string().default(""),
+});
+
+export type DunningSettingsForm = z.infer<typeof dunningSettingsSchema>;
+
+// ─── Onboarding ────────────────────────────────────────────────────────────────
+
 export const onboardingCompletionSchema = z
   .object({
     company_name: z

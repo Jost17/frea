@@ -1,5 +1,5 @@
 import { html } from "hono/html";
-import type { Client, Invoice, InvoiceItem, Settings } from "../validation/schemas";
+import type { Client, DunningRun, Invoice, InvoiceItem, Settings } from "../validation/schemas";
 import { Button } from "./components/button";
 import { Table, TableRow, Td } from "./components/table";
 import {
@@ -23,8 +23,9 @@ export function renderInvoiceDetailPage(args: {
   client: Client;
   settings: Settings;
   isOverdue: boolean;
+  dunningRuns?: DunningRun[];
 }) {
-  const { invoice, items, client, settings, isOverdue } = args;
+  const { invoice, items, client, settings, isOverdue, dunningRuns = [] } = args;
   const config = parseInvoiceLayoutConfig(settings);
 
   const isKleinunternehmer = Boolean(settings.kleinunternehmer);
@@ -118,6 +119,21 @@ export function renderInvoiceDetailPage(args: {
                     <input type="hidden" name="status" value="paid" />
                     ${Button({ variant: "primary", type: "submit", children: "Als bezahlt markieren" })}
                   </form>
+                  ${
+                    isOverdue && invoice.reminder_level < 3
+                      ? html`
+                          <form method="post" action="/mahnwesen/${invoice.id}/mahnen" class="inline">
+                            <button
+                              type="submit"
+                              class="rounded-md bg-accent-danger px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                              onclick="return confirm('Mahnstufe ${invoice.reminder_level + 1} für Rechnung ${invoice.invoice_number} auslösen?')"
+                            >
+                              Mahnen (Stufe ${invoice.reminder_level + 1})
+                            </button>
+                          </form>
+                        `
+                      : ""
+                  }
                 `
                 : ""
           }
@@ -204,6 +220,32 @@ export function renderInvoiceDetailPage(args: {
           </div>
         </div>
       </div>
+
+      ${
+        dunningRuns.length > 0
+          ? html`
+              <div class="mt-4 rounded-lg border border-border-subtle bg-bg-surface p-4">
+                <h3 class="text-sm font-semibold text-text-primary mb-3">Mahnhistorie</h3>
+                <ul class="space-y-1">
+                  ${dunningRuns.map(
+                    (run) => html`
+                      <li class="flex items-center justify-between text-sm">
+                        <span class="text-text-secondary">
+                          Mahnstufe ${run.level} — ${run.sent_at.split("T")[0].split("-").reverse().join(".")}
+                        </span>
+                        ${
+                          run.fee_amount > 0
+                            ? html`<span class="text-text-muted">${run.fee_amount.toFixed(2)} € Gebühr</span>`
+                            : html`<span class="text-text-muted">Keine Gebühr</span>`
+                        }
+                      </li>
+                    `,
+                  )}
+                </ul>
+              </div>
+            `
+          : ""
+      }
     </div>
   `;
 }

@@ -199,6 +199,43 @@ export function initializeSchema() {
     throw new Error("Database migration failed: could not add columns to settings", { cause: err });
   }
 
+  // Mahnwesen: dunning level configuration (1 row per level, configurable)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS dunning_settings (
+      level INTEGER PRIMARY KEY CHECK (level IN (1, 2, 3)),
+      days_after_due INTEGER NOT NULL DEFAULT 7,
+      fee_amount REAL NOT NULL DEFAULT 0.0,
+      subject TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT ''
+    )
+  `);
+
+  // Mahnwesen: record of each dunning action taken
+  db.run(`
+    CREATE TABLE IF NOT EXISTS dunning_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+      level INTEGER NOT NULL CHECK (level IN (1, 2, 3)),
+      sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+      fee_amount REAL NOT NULL DEFAULT 0.0,
+      notes TEXT
+    )
+  `);
+
+  db.run("CREATE INDEX IF NOT EXISTS idx_dunning_runs_invoice ON dunning_runs(invoice_id)");
+
+  // Seed default dunning settings if not present
+  const dunningCount = db
+    .query<{ count: number }, []>("SELECT COUNT(*) as count FROM dunning_settings")
+    .get();
+  if (!dunningCount || dunningCount.count === 0) {
+    db.run(`INSERT INTO dunning_settings (level, days_after_due, fee_amount, subject, body) VALUES
+      (1, 7,  0.00, 'Freundliche Zahlungserinnerung – Rechnung ${"{invoice_number}"}', 'Sehr geehrte Damen und Herren,\n\nbitte beachten Sie, dass Rechnung ${"{invoice_number}"} vom ${"{invoice_date}"} über ${"{gross_amount}"} noch nicht beglichen wurde.\n\nWir bitten um Überweisung bis zum ${"{new_due_date}"}.\n\nMit freundlichen Grüßen'),
+      (2, 14, 5.00, '1. Mahnung – Rechnung ${"{invoice_number}"}',                   'Sehr geehrte Damen und Herren,\n\nbis heute ist kein Zahlungseingang für Rechnung ${"{invoice_number}"} über ${"{gross_amount}"} festzustellen. Wir fordern Sie hiermit zur sofortigen Zahlung auf.\n\nZahlbetrag inkl. Mahngebühr: ${"{total_with_fee}"}\n\nMit freundlichen Grüßen'),
+      (3, 28, 10.00,'Letzte Mahnung – Rechnung ${"{invoice_number}"}',                'Sehr geehrte Damen und Herren,\n\nTrotz unserer Mahnung ist Rechnung ${"{invoice_number}"} über ${"{gross_amount}"} weiterhin unbeglichen. Wir behalten uns rechtliche Schritte vor.\n\nZahlbetrag inkl. Mahngebühr: ${"{total_with_fee}"}\n\nMit freundlichen Grüßen')`);
+    console.log("[migration] Seeded default dunning_settings");
+  }
+
   // Initialize default settings if not present
   const existing = db.query("SELECT id FROM settings WHERE id = 1").get();
   if (!existing) {

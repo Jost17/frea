@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { Hono } from "hono";
 import { html } from "hono/html";
+import { getDunningRunsForInvoice } from "../db/dunning-queries";
 import {
   computeProjectPreviews,
   createInvoice,
@@ -231,6 +232,7 @@ invoiceRoutes.get("/:id", (c) => {
     const overdueCount = c.get("overdueCount");
     const now = new Date().toISOString().split("T")[0];
     const isOverdue = invoice.status === "sent" && invoice.due_date < now;
+    const dunningRuns = getDunningRunsForInvoice(id);
 
     return c.html(
       Layout({
@@ -243,6 +245,7 @@ invoiceRoutes.get("/:id", (c) => {
           client,
           settings,
           isOverdue,
+          dunningRuns,
         }),
       }),
     );
