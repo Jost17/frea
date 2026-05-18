@@ -1,10 +1,9 @@
-import { html } from "hono/html";
-import type { HtmlEscapedString } from "hono/utils/html";
 import {
   type InvoiceLayoutConfig,
   invoiceLayoutConfigSchema,
   type Settings,
 } from "../validation/schemas";
+import { Badge, type BadgeStatus } from "./components/badge";
 
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(value);
@@ -14,17 +13,13 @@ export function formatDate(dateStr: string): string {
   return new Intl.DateTimeFormat("de-DE").format(new Date(`${dateStr}T00:00:00`));
 }
 
-const STATUS_BADGE_MAP: Record<string, { label: string; className: string }> = {
-  draft: { label: "Entwurf", className: "bg-gray-100 text-gray-700" },
-  sent: { label: "Versendet", className: "bg-blue-100 text-blue-700" },
-  paid: { label: "Bezahlt", className: "bg-green-100 text-green-700" },
-  cancelled: { label: "Storniert", className: "bg-red-100 text-red-700" },
-};
+const VALID_STATUSES: BadgeStatus[] = ["draft", "sent", "paid", "cancelled", "overdue"];
 
-export function statusBadge(status: string): HtmlEscapedString | Promise<HtmlEscapedString> {
-  const fallback = { label: status, className: "bg-gray-100 text-gray-700" };
-  const { label, className } = STATUS_BADGE_MAP[status] ?? fallback;
-  return html`<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${className}">${label}</span>`;
+export function statusBadge(status: string) {
+  const safeStatus: BadgeStatus = VALID_STATUSES.includes(status as BadgeStatus)
+    ? (status as BadgeStatus)
+    : "draft";
+  return Badge({ status: safeStatus });
 }
 
 export function parseInvoiceLayoutConfig(settings: Settings): InvoiceLayoutConfig {
