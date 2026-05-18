@@ -1,0 +1,58 @@
+import { Hono } from "hono";
+import {
+  completeOnboarding,
+  isOnboardingComplete,
+  updateSettings,
+} from "../db/queries";
+import type { AppEnv } from "../env";
+import { AppError, handleMutationError } from "../middleware/error-handler";
+import { invalidateOnboardingCache } from "../middleware/onboarding-guard";
+import { parseFormFields } from "../utils/form-parser";
+import { settingsSchema } from "../validation/schemas";
+
+export const settingsApiRoutes = new Hono<AppEnv>();
+
+const SETTINGS_FIELDS = {
+  company_name: "string",
+  address: "string",
+  postal_code: "string",
+  city: "string",
+  email: "string",
+  phone: "string",
+  bank_name: "string",
+  iban: "string",
+  bic: "string",
+  tax_number: "string",
+  ust_id: "string",
+  vat_rate: "float",
+  payment_days: "int",
+  invoice_prefix: "string",
+  kleinunternehmer: "bool",
+  smtp_host: "string",
+  smtp_port: "int",
+  smtp_user: "string",
+  smtp_password: "string",
+  smtp_from: "string",
+} as const;
+
+settingsApiRoutes.post("/", async (c) => {
+  try {
+    const firstSetup = !isOnboardingComplete();
+    const body = await c.req.formData();
+    const data = parseFormFields(body, SETTINGS_FIELDS);
+    const result = settingsSchema.safeParse({ ...data, country: "Deutschland" });
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    updateSettings(result.data);
+
+    if (firstSetup) {
+      completeOnboarding();
+      invalidateOnboardingCache();
+      return c.redirect("/?onboarding_done=1");
+    }
+
+    return c.redirect("/einstellungen?success=1");
+  } catch (err) {
+    return handleMutationError(c, err, "Einstellungen konnten nicht gespeichert werden");
+  }
+});

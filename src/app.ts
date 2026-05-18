@@ -17,6 +17,7 @@ import { invoiceActionsRoutes } from "./routes/invoices-actions";
 import { mcpRoutes } from "./routes/mcp";
 import { projectRoutes } from "./routes/projects";
 import { settingsRoutes } from "./routes/settings";
+import { settingsApiRoutes } from "./routes/settings-api";
 import { timeRoutes } from "./routes/times";
 
 try {
@@ -74,6 +75,7 @@ app.route("/zeiten", timeRoutes);
 app.route("/rechnungen", invoiceRoutes);
 app.route("/rechnungen", invoiceActionsRoutes);
 app.route("/einstellungen", settingsRoutes);
+app.route("/einstellungen", settingsApiRoutes);
 app.route("/api", apiRoutes);
 app.route("/exporte", exportRoutes);
 app.route("/mcp", mcpRoutes);
