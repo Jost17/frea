@@ -60,12 +60,20 @@ invoiceRoutes.get("/", (c) => {
         children: html`
           <div class="flex items-center justify-between mb-6">
             <h1 class="text-2xl font-semibold">Rechnungen</h1>
-            <a
-              href="/rechnungen/create"
-              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              + Neue Rechnung
-            </a>
+            <div class="flex items-center gap-2">
+              <a
+                href="/bank-import"
+                class="rounded-md border border-border-subtle px-4 py-2 text-sm font-medium text-text-secondary hover:bg-bg-surface-raised"
+              >
+                Kontoauszug importieren
+              </a>
+              <a
+                href="/rechnungen/create"
+                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                + Neue Rechnung
+              </a>
+            </div>
           </div>
           ${renderInvoiceList(invoices, now)}
         `,
