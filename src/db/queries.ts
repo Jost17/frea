@@ -378,6 +378,83 @@ export function deleteTimeEntry(id: number) {
   appendAuditLog("time_entry", id, "delete", null);
 }
 
+// ─── Active Timers (FREA-264) ────────────────────────────────────────────────
+
+export interface ActiveTimer {
+  id: number;
+  project_id: number;
+  project_name: string;
+  client_name: string;
+  started_at: string;
+  description: string;
+  elapsed_seconds: number;
+}
+
+export function getAllActiveTimers(): ActiveTimer[] {
+  return db
+    .query<ActiveTimer, []>(
+      `SELECT
+        at.id, at.project_id, p.name as project_name, c.name as client_name,
+        at.started_at, at.description,
+        CAST((julianday('now') - julianday(at.started_at)) * 86400 AS INTEGER) as elapsed_seconds
+       FROM active_timers at
+       JOIN projects p ON at.project_id = p.id
+       JOIN clients c ON p.client_id = c.id
+       ORDER BY at.started_at`,
+    )
+    .all();
+}
+
+export function getActiveTimerForProject(projectId: number): ActiveTimer | undefined {
+  const result = db
+    .query<ActiveTimer, [number]>(
+      `SELECT
+        at.id, at.project_id, p.name as project_name, c.name as client_name,
+        at.started_at, at.description,
+        CAST((julianday('now') - julianday(at.started_at)) * 86400 AS INTEGER) as elapsed_seconds
+       FROM active_timers at
+       JOIN projects p ON at.project_id = p.id
+       JOIN clients c ON p.client_id = c.id
+       WHERE at.project_id = ?`,
+    )
+    .get(projectId);
+  return result ?? undefined;
+}
+
+export function startTimer(projectId: number, description: string): number | undefined {
+  const result = db
+    .query(
+      `INSERT INTO active_timers (project_id, description)
+       VALUES (?, ?)
+       RETURNING id`,
+    )
+    .get(projectId, description) as { id: number } | undefined;
+  return result?.id;
+}
+
+export function stopTimer(
+  timerId: number,
+): { projectId: number; durationHours: number; date: string } | undefined {
+  const row = db
+    .query<{ project_id: number; started_at: string }, [number]>(
+      "SELECT project_id, started_at FROM active_timers WHERE id = ?",
+    )
+    .get(timerId);
+  if (!row) return undefined;
+
+  const elapsedMs = Date.now() - new Date(`${row.started_at}Z`).getTime();
+  const elapsedHours = elapsedMs / 3_600_000;
+  const durationHours = Math.max(0.25, Math.round(elapsedHours * 4) / 4);
+  const date = new Date().toISOString().slice(0, 10);
+
+  db.query("DELETE FROM active_timers WHERE id = ?").run(timerId);
+  return { projectId: row.project_id, durationHours, date };
+}
+
+export function deleteTimer(timerId: number): void {
+  db.query("DELETE FROM active_timers WHERE id = ?").run(timerId);
+}
+
 // ─── Invoices — re-exported from invoice-queries ────────────────────────────
 export {
   createInvoice,
