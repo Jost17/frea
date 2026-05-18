@@ -212,9 +212,10 @@ export interface AuditLog {
   timestamp: string;
   entity_type: string;
   entity_id: number;
-  action: "create" | "update" | "delete" | "status_change";
+  action: "create" | "update" | "delete" | "status_change" | "archive";
   changes: string | null;
   source: "web" | "api";
+  content_hash: string | null;
 }
 
 // ─── Invoice List (moved from queries.ts for type colocation) ───────────────

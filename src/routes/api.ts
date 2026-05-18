@@ -1,6 +1,7 @@
 import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
+import { getAuditLogEntries, getInvoiceArchive, verifyAuditChain } from "../db/archive-queries";
 import { getDashboardStats } from "../db/dashboard-queries";
 import { createInvoice, getAllInvoices, updateInvoiceStatus } from "../db/invoice-queries";
 import { getProject, getSettings, getTimeEntriesForProject, updateSettings } from "../db/queries";
@@ -178,11 +179,67 @@ apiRoutes.patch("/invoices/:id/status", async (c) => {
   }
 
   try {
-    updateInvoiceStatus(id, parsed.data.status);
+    await updateInvoiceStatus(id, parsed.data.status);
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "Rechnungsstatus konnte nicht aktualisiert werden", 500);
   }
 
   return c.json({ success: true });
+});
+
+// GET /api/audit-log — GoBD Audit-Trail
+apiRoutes.get("/audit-log", (c) => {
+  try {
+    const entityType = c.req.query("entity_type");
+    const entityIdRaw = c.req.query("entity_id");
+    const limitRaw = c.req.query("limit");
+
+    const entityId = entityIdRaw ? parseInt(entityIdRaw, 10) : undefined;
+    if (entityIdRaw && (entityId === undefined || Number.isNaN(entityId))) {
+      throw new AppError("Ungültige entity_id", 400);
+    }
+
+    const limit = limitRaw ? Math.min(parseInt(limitRaw, 10), 1000) : 100;
+    if (Number.isNaN(limit) || limit < 1) {
+      throw new AppError("Ungültiger limit-Parameter", 400);
+    }
+
+    const entries = getAuditLogEntries(entityType, entityId, limit);
+    return c.json({ success: true, data: entries });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    return logAndRespond(c, err, "Audit-Log konnte nicht geladen werden", 500);
+  }
+});
+
+// GET /api/audit-log/integrity — Hash-Ketten-Verifikation
+apiRoutes.get("/audit-log/integrity", (c) => {
+  try {
+    const result = verifyAuditChain();
+    return c.json({ success: true, data: result });
+  } catch (err) {
+    return logAndRespond(c, err, "Integritätsprüfung fehlgeschlagen", 500);
+  }
+});
+
+// GET /api/invoices/:id/archive — GoBD Archivdaten
+apiRoutes.get("/invoices/:id/archive", (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
+
+    const archive = getInvoiceArchive(id);
+    if (!archive) {
+      return c.json({
+        success: true,
+        data: null,
+        message: "Keine Archivkopie vorhanden (Entwurf?)",
+      });
+    }
+    return c.json({ success: true, data: archive });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    return logAndRespond(c, err, "Archivdaten konnten nicht geladen werden", 500);
+  }
 });

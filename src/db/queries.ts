@@ -1,3 +1,4 @@
+import { computeHash } from "../lib/crypto";
 import type { AuditLog, Client, Project, Settings, TimeEntry } from "../validation/schemas";
 import { db } from "./schema";
 
@@ -80,10 +81,30 @@ export function appendAuditLog(
   changes: Record<string, unknown> | null,
   source: AuditLog["source"] = "web",
 ): void {
+  const changesJson = changes ? JSON.stringify(changes) : null;
+  const timestamp = new Date().toISOString().replace("T", " ").split(".")[0];
+
+  const prevRow = db
+    .query<{ content_hash: string | null }, []>(
+      "SELECT content_hash FROM audit_log ORDER BY id DESC LIMIT 1",
+    )
+    .get();
+  const prevHash = prevRow?.content_hash ?? "genesis";
+
+  const payload = [
+    prevHash,
+    timestamp,
+    entityType,
+    String(entityId),
+    action,
+    changesJson ?? "",
+  ].join("|");
+  const contentHash = computeHash(payload);
+
   db.query(
-    `INSERT INTO audit_log (entity_type, entity_id, action, changes, source)
-     VALUES (?, ?, ?, ?, ?)`,
-  ).run(entityType, entityId, action, changes ? JSON.stringify(changes) : null, source);
+    `INSERT INTO audit_log (timestamp, entity_type, entity_id, action, changes, source, content_hash)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(timestamp, entityType, entityId, action, changesJson, source, contentHash);
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────
