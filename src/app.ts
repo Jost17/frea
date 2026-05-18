@@ -14,6 +14,7 @@ import { dashboardRoutes } from "./routes/dashboard";
 import { invoiceRoutes } from "./routes/invoices";
 import { mcpRoutes } from "./routes/mcp";
 import { projectRoutes } from "./routes/projects";
+import { quoteRoutes } from "./routes/quotes";
 import { settingsRoutes } from "./routes/settings";
 import { timeRoutes } from "./routes/times";
 
@@ -49,6 +50,7 @@ app.use("/kunden/*", navContextMiddleware);
 app.use("/projekte/*", navContextMiddleware);
 app.use("/zeiten/*", navContextMiddleware);
 app.use("/rechnungen/*", navContextMiddleware);
+app.use("/angebote/*", navContextMiddleware);
 app.use("/einstellungen", navContextMiddleware);
 app.use("/einstellungen/*", navContextMiddleware);
 
@@ -69,6 +71,7 @@ app.route("/kunden", clientRoutes);
 app.route("/projekte", projectRoutes);
 app.route("/zeiten", timeRoutes);
 app.route("/rechnungen", invoiceRoutes);
+app.route("/angebote", quoteRoutes);
 app.route("/einstellungen", settingsRoutes);
 app.route("/api", apiRoutes);
 app.route("/mcp", mcpRoutes);

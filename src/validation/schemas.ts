@@ -51,6 +51,7 @@ export const settingsSchema = z
     payment_days: z.number().default(28),
     invoice_prefix: z.string().default("RE"),
     next_invoice_number: z.number().default(1),
+    next_quote_number: z.number().default(1),
     kleinunternehmer: z.number().default(0),
     smtp_host: z.string().optional(),
     smtp_port: z.number().int().min(1).max(65535).optional(),
@@ -238,6 +239,76 @@ export const VALID_INVOICE_FILTER_VALUES = new Set([
   "paid",
   "cancelled",
 ]);
+
+// ─── Quotes (Angebote / Kostenvoranschläge) ──────────────────────────────────
+
+export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected";
+
+export interface Quote {
+  id: number;
+  quote_number: string;
+  client_id: number;
+  subject: string;
+  notes: string | null;
+  valid_until: string | null;
+  status: QuoteStatus;
+  net_amount: number;
+  vat_amount: number;
+  gross_amount: number;
+  converted_invoice_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuoteItem {
+  id: number;
+  quote_id: number;
+  description: string;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  vat_rate: number;
+  net_amount: number;
+  vat_amount: number;
+  gross_amount: number;
+  sort_order: number;
+}
+
+export interface QuoteListItem {
+  id: number;
+  quote_number: string;
+  client_name: string;
+  subject: string;
+  gross_amount: number;
+  status: QuoteStatus;
+  valid_until: string | null;
+  created_at: string;
+}
+
+export const quoteItemInputSchema = z.object({
+  description: z.string().min(1, "Beschreibung erforderlich"),
+  quantity: z.number().positive("Menge muss positiv sein"),
+  unit: z.string().min(1, "Einheit erforderlich"),
+  unit_price: z.number().min(0, "Einzelpreis erforderlich"),
+  vat_rate: z.number().min(0).max(1),
+});
+
+export type QuoteItemInput = z.infer<typeof quoteItemInputSchema>;
+
+export const quoteCreateSchema = z.object({
+  client_id: z.number().int(),
+  subject: z.string().min(1, "Betreff erforderlich"),
+  notes: z.string().optional().default(""),
+  valid_until: z.string().optional().default(""),
+});
+
+export type QuoteCreate = z.infer<typeof quoteCreateSchema>;
+
+export const quoteStatusUpdateSchema = z.object({
+  status: z.enum(["sent", "accepted", "rejected"]),
+});
+
+export type QuoteStatusUpdate = z.infer<typeof quoteStatusUpdateSchema>;
 
 // ─── Onboarding Completion Schema (single source of truth for guard + wizard) ─
 

@@ -138,6 +138,42 @@ export function initializeSchema() {
     )
   `);
 
+  // Angebote / Kostenvoranschläge
+  db.run(`
+    CREATE TABLE IF NOT EXISTS quotes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      quote_number TEXT NOT NULL UNIQUE,
+      client_id INTEGER NOT NULL REFERENCES clients(id),
+      subject TEXT NOT NULL DEFAULT '',
+      notes TEXT,
+      valid_until TEXT,
+      status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'accepted', 'rejected')),
+      net_amount REAL NOT NULL DEFAULT 0,
+      vat_amount REAL NOT NULL DEFAULT 0,
+      gross_amount REAL NOT NULL DEFAULT 0,
+      converted_invoice_id INTEGER REFERENCES invoices(id),
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Angebotspositionen (MwSt pro Position — analog invoice_items)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS quote_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      quote_id INTEGER NOT NULL REFERENCES quotes(id),
+      description TEXT NOT NULL,
+      quantity REAL NOT NULL DEFAULT 1,
+      unit TEXT NOT NULL DEFAULT 'Tag',
+      unit_price REAL NOT NULL,
+      vat_rate REAL NOT NULL DEFAULT 0.19,
+      net_amount REAL NOT NULL,
+      vat_amount REAL NOT NULL,
+      gross_amount REAL NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+
   // GoBD Audit Log (append-only, trigger-geschuetzt)
   db.run(`
     CREATE TABLE IF NOT EXISTS audit_log (
@@ -160,6 +196,9 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_invoices_status_due ON invoices(status, due_date)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_quotes_client ON quotes(client_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_quote_items_quote ON quote_items(quote_id)");
 
   // GoBD: Audit Log ist append-only (keine Aenderungen/Loeschungen erlaubt)
   db.run(`
@@ -193,6 +232,10 @@ export function initializeSchema() {
       db.run("ALTER TABLE settings ADD COLUMN smtp_password TEXT");
       db.run("ALTER TABLE settings ADD COLUMN smtp_from TEXT");
       console.log("[migration] Added SMTP columns to settings");
+    }
+    if (!settingsCols.some((c) => c.name === "next_quote_number")) {
+      db.run("ALTER TABLE settings ADD COLUMN next_quote_number INTEGER DEFAULT 1");
+      console.log("[migration] Added next_quote_number column to settings");
     }
   } catch (err) {
     console.error("[migration] Failed to add columns to settings:", err);

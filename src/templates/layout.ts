@@ -4,7 +4,14 @@ import type { HtmlEscapedString } from "hono/utils/html";
 export interface LayoutProps {
   title: string;
   children: HtmlEscapedString | Promise<HtmlEscapedString>;
-  activeNav?: "dashboard" | "kunden" | "projekte" | "zeiten" | "rechnungen" | "einstellungen";
+  activeNav?:
+    | "dashboard"
+    | "kunden"
+    | "projekte"
+    | "zeiten"
+    | "rechnungen"
+    | "angebote"
+    | "einstellungen";
   overdueCount: number;
 }
 
@@ -28,6 +35,7 @@ const navItems: NavItem[] = [
     key: "rechnungen",
     showBadge: true,
   },
+  { href: "/angebote", label: "Angebote", icon: "file-plus", key: "angebote" },
   { href: "/einstellungen", label: "Einstellungen", icon: "settings", key: "einstellungen" },
 ];
 
