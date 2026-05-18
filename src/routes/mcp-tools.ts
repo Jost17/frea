@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { createInvoice, roundToEuro } from "../db/invoice-queries";
+import { appendAuditLog, getAllActiveProjectsWithClient, getSettings } from "../db/queries";
+import { db } from "../db/schema";
 
 export const PROTOCOL_VERSION = "2024-11-05";
 
@@ -288,6 +291,200 @@ export function handleResourcesRead(id: string | number | null, params: unknown)
   return jsonRpcError(id, -32602, `Unbekannte Ressource: ${p.uri}`);
 }
 
+// ─── Tool: create_invoice_from_times ─────────────────────────────────────────
+
+const GERMAN_MONTHS: Record<string, number> = {
+  januar: 1,
+  februar: 2,
+  märz: 3,
+  maerz: 3,
+  april: 4,
+  mai: 5,
+  juni: 6,
+  juli: 7,
+  august: 8,
+  september: 9,
+  oktober: 10,
+  november: 11,
+  dezember: 12,
+};
+
+function parseMonth(value: string | number): number | null {
+  if (typeof value === "number") return value >= 1 && value <= 12 ? value : null;
+  const lower = value.toLowerCase().trim();
+  if (GERMAN_MONTHS[lower]) return GERMAN_MONTHS[lower];
+  const n = parseInt(lower, 10);
+  return !Number.isNaN(n) && n >= 1 && n <= 12 ? n : null;
+}
+
+export const createInvoiceFromTimesSchema = z.object({
+  projectQuery: z.string().min(1, "Projektname oder -kürzel erforderlich"),
+  month: z.union([z.string(), z.number()]),
+  year: z.number().int().min(2020).max(2099),
+  invoiceDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD")
+    .optional(),
+});
+
+export type CreateInvoiceFromTimesInput = z.infer<typeof createInvoiceFromTimesSchema>;
+
+interface UnbilledTimeRow {
+  id: number;
+  project_id: number;
+  date: string;
+  duration: number;
+  description: string | null;
+  billable: number;
+  invoice_id: number | null;
+  created_at: string;
+}
+
+interface ProjectRow {
+  id: number;
+  client_id: number;
+  code: string;
+  name: string;
+  daily_rate: number;
+  start_date: string | null;
+  end_date: string | null;
+  budget_days: number | null;
+  service_description: string | null;
+  contract_number: string | null;
+  contract_date: string | null;
+  notes: string | null;
+  created_at: string;
+  archived: number;
+}
+
+export function handleCreateInvoiceFromTimes(
+  id: string | number | null,
+  args: CreateInvoiceFromTimesInput,
+): ReturnType<typeof jsonRpcSuccess | typeof jsonRpcError> {
+  const month = parseMonth(args.month);
+  if (!month) {
+    return jsonRpcError(id, -32602, `Ungültiger Monat: ${args.month}`);
+  }
+
+  const settings = getSettings();
+  if (!settings) {
+    return jsonRpcError(id, -32603, "Einstellungen nicht konfiguriert");
+  }
+
+  // Find matching project (case-insensitive name or code)
+  const allProjects = getAllActiveProjectsWithClient();
+  const query = args.projectQuery.toLowerCase();
+  const match = allProjects.find(
+    (p) => p.name.toLowerCase().includes(query) || p.code.toLowerCase().includes(query),
+  );
+
+  if (!match) {
+    const names = allProjects.map((p) => `${p.code} (${p.name})`).join(", ");
+    return jsonRpcError(
+      id,
+      -32602,
+      `Kein aktives Projekt gefunden für "${args.projectQuery}". Verfügbar: ${names || "keine"}`,
+    );
+  }
+
+  // Fetch full project row
+  const project = db
+    .query<ProjectRow, [number]>(
+      `SELECT id, client_id, code, name, daily_rate, start_date, end_date, budget_days,
+              service_description, contract_number, contract_date, notes, created_at, archived
+       FROM projects WHERE id = ?`,
+    )
+    .get(match.id);
+
+  if (!project) {
+    return jsonRpcError(id, -32603, `Projekt ${match.id} nicht gefunden`);
+  }
+
+  // Fetch unbilled time entries for this project in the given month/year
+  const monthStr = month.toString().padStart(2, "0");
+  const periodPrefix = `${args.year}-${monthStr}`;
+
+  const entries = db
+    .query<UnbilledTimeRow, [number, string]>(
+      `SELECT id, project_id, date, duration, description, billable, invoice_id, created_at
+       FROM time_entries
+       WHERE project_id = ? AND invoice_id IS NULL AND date LIKE ?
+       ORDER BY date`,
+    )
+    .all(match.id, `${periodPrefix}-%`);
+
+  if (entries.length === 0) {
+    return jsonRpcError(
+      id,
+      -32602,
+      `Keine abrechenbaren Zeiteinträge für Projekt "${match.name}" im ${monthStr}/${args.year} gefunden`,
+    );
+  }
+
+  const invoiceDate = args.invoiceDate ?? new Date().toISOString().split("T")[0];
+
+  // Build TimeEntry-compatible objects for createInvoice
+  const timeEntries = entries.map((e) => ({
+    id: e.id,
+    project_id: e.project_id,
+    date: e.date,
+    duration: e.duration,
+    description: e.description ?? "",
+    billable: e.billable,
+    invoice_id: e.invoice_id,
+    created_at: e.created_at,
+  }));
+
+  const invoiceData = {
+    client_id: match.client_id,
+    project_id: match.id,
+    time_entry_ids: entries.map((e) => e.id),
+    invoice_date: invoiceDate,
+    period_month: month,
+    period_year: args.year,
+    po_number: "",
+    service_period_from: `${periodPrefix}-01`,
+    service_period_to: new Date(args.year, month, 0).toISOString().split("T")[0],
+  };
+
+  const invoiceId = createInvoice(invoiceData, timeEntries, settings);
+
+  // Audit log for MCP source
+  appendAuditLog(
+    "invoice",
+    invoiceId,
+    "create",
+    { source_tool: "mcp:create_invoice_from_times" },
+    "api",
+  );
+
+  // Compute totals for response
+  const isKleinunternehmer = Boolean(settings.kleinunternehmer);
+  const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
+  const totalNet = roundToEuro(
+    timeEntries.reduce((sum, e) => sum + e.duration * project.daily_rate, 0),
+  );
+  const totalVat = roundToEuro(totalNet * effectiveVatRate);
+
+  const payload = {
+    invoiceId,
+    project: match.name,
+    client: match.client_name,
+    period: `${monthStr}/${args.year}`,
+    timeEntryCount: entries.length,
+    totalHours: roundToEuro(timeEntries.reduce((sum, e) => sum + e.duration, 0)),
+    totalNet,
+    totalVat,
+    totalGross: roundToEuro(totalNet + totalVat),
+    invoiceDate,
+    message: `Rechnung #${invoiceId} für "${match.name}" (${monthStr}/${args.year}) erstellt — ${entries.length} Zeiteinträge, ${totalNet.toFixed(2)} € netto`,
+  };
+
+  return jsonRpcSuccess(id, {
+    content: [{ type: "text", text: JSON.stringify(payload) }],
+  });
+}
+
 export function handleToolsList(id: string | number | null) {
   return jsonRpcSuccess(id, {
     tools: [
@@ -321,6 +518,36 @@ export function handleToolsList(id: string | number | null) {
           required: ["clientName", "invoiceDate", "dueDate", "items"],
         },
       },
+      {
+        name: "frea:create_invoice_from_times",
+        description:
+          "Creates a draft invoice from unbilled time entries for a project and month. Use natural language: project name or code, month (number or German name), year.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            projectQuery: {
+              type: "string",
+              description:
+                "Projektname oder Projektkürzel (Teilstring genügt, z.B. 'Acme' oder 'P-001')",
+            },
+            month: {
+              oneOf: [
+                { type: "number", minimum: 1, maximum: 12 },
+                {
+                  type: "string",
+                  description: "Monat als Zahl (1–12) oder deutsch ('Mai', 'Juni')",
+                },
+              ],
+            },
+            year: { type: "number", description: "Jahr (z.B. 2026)" },
+            invoiceDate: {
+              type: "string",
+              description: "Rechnungsdatum (YYYY-MM-DD), Standard: heute",
+            },
+          },
+          required: ["projectQuery", "month", "year"],
+        },
+      },
     ],
   });
 }
@@ -330,29 +557,53 @@ export function handleToolsCall(id: string | number | null, params: unknown) {
   if (!p?.name) {
     return jsonRpcError(id, -32602, "Fehlender Parameter: name");
   }
-  if (p.name !== "frea:validate_invoice") {
-    return jsonRpcError(id, -32602, `Unbekanntes Tool: ${p.name}`);
-  }
 
-  const parsed = validateInvoiceSchema.safeParse(p.arguments);
-  if (!parsed.success) {
+  if (p.name === "frea:validate_invoice") {
+    const parsed = validateInvoiceSchema.safeParse(p.arguments);
+    if (!parsed.success) {
+      return jsonRpcSuccess(id, {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              isCompliant: false,
+              violations: parsed.error.issues.map((i) => i.message),
+              suggestions: [],
+              calculatedTaxTotal: null,
+            }),
+          },
+        ],
+      });
+    }
+    const result = validateInvoice(parsed.data);
     return jsonRpcSuccess(id, {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            isCompliant: false,
-            violations: parsed.error.issues.map((i) => i.message),
-            suggestions: [],
-            calculatedTaxTotal: null,
-          }),
-        },
-      ],
+      content: [{ type: "text", text: JSON.stringify(result) }],
     });
   }
 
-  const result = validateInvoice(parsed.data);
-  return jsonRpcSuccess(id, {
-    content: [{ type: "text", text: JSON.stringify(result) }],
-  });
+  if (p.name === "frea:create_invoice_from_times") {
+    const parsed = createInvoiceFromTimesSchema.safeParse(p.arguments);
+    if (!parsed.success) {
+      return jsonRpcSuccess(id, {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              error: parsed.error.issues.map((i) => i.message).join("; "),
+            }),
+          },
+        ],
+      });
+    }
+    try {
+      return handleCreateInvoiceFromTimes(id, parsed.data);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unbekannter Fehler";
+      return jsonRpcSuccess(id, {
+        content: [{ type: "text", text: JSON.stringify({ error: msg }) }],
+      });
+    }
+  }
+
+  return jsonRpcError(id, -32602, `Unbekanntes Tool: ${p.name}`);
 }
