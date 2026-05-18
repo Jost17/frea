@@ -82,11 +82,11 @@ export function renderInvoiceDetailPage(args: {
 
   return html`
     <div class="${paperClass(config.paper_size)} mx-auto ${fontSizeClass(config.font_size)}">
+      ${isOverdue ? html`<div class="mb-4 rounded-lg bg-[oklch(94%_0.06_25)] border border-[oklch(85%_0.1_25)] px-4 py-3 flex items-center gap-2 text-sm text-accent-danger font-medium">⚠ Diese Rechnung ist überfällig. Bitte kontaktiere den Kunden oder markiere sie als bezahlt.</div>` : ""}
       <div class="mb-6 flex items-center justify-between">
         <div class="flex items-center gap-4">
           <h1 class="text-2xl font-semibold">Rechnung ${invoice.invoice_number}</h1>
           ${statusBadge(invoice.status)}
-          ${isOverdue ? html`<span class="text-sm text-accent-danger font-medium">Überfällig ⚠</span>` : ""}
         </div>
         <div class="flex gap-2">
           ${Button({
@@ -159,7 +159,7 @@ export function renderInvoiceDetailPage(args: {
         </div>
 
         <div class="mb-8 flex justify-end">
-          <div class="w-72 space-y-2 border-t border-border-subtle pt-4">
+          <div class="w-80 space-y-2 border-t border-border-subtle pt-4">
             <div class="flex justify-between text-sm">
               <span class="text-text-secondary">Zwischensumme (Netto):</span>
               <span class="font-medium text-text-primary">${formatCurrency(invoice.net_amount)}</span>
@@ -179,9 +179,9 @@ export function renderInvoiceDetailPage(args: {
                 ? html`<p class="text-sm text-accent-success italic">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</p>`
                 : ""
             }
-            <div class="flex justify-between border-t border-border-subtle pt-2 text-lg">
-              <span class="font-semibold text-text-primary">Gesamtbetrag:</span>
-              <span class="font-bold text-text-primary">${formatCurrency(invoice.gross_amount)}</span>
+            <div class="flex justify-between items-baseline rounded-lg bg-primary-subtle border border-border-subtle px-4 py-3 mt-2">
+              <span class="text-sm font-semibold text-text-primary">Gesamtbetrag:</span>
+              <span class="text-2xl font-bold text-primary">${formatCurrency(invoice.gross_amount)}</span>
             </div>
           </div>
         </div>
