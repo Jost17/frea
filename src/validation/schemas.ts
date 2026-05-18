@@ -239,6 +239,31 @@ export const VALID_INVOICE_FILTER_VALUES = new Set([
   "cancelled",
 ]);
 
+// ─── Recurring Templates ──────────────────────────────────────────────────────
+
+export const recurringTemplateItemSchema = z.object({
+  description: z.string().min(1, "Beschreibung erforderlich"),
+  quantity: z.number().positive("Menge muss positiv sein"),
+  unit_price: z.number().nonnegative("Einzelpreis darf nicht negativ sein"),
+  vat_rate: z.number().min(0).max(100).default(19),
+});
+
+export const recurringTemplateSchema = z.object({
+  client_id: z.number().int().positive("Kunde erforderlich"),
+  title: z.string().min(1, "Titel erforderlich"),
+  interval: z
+    .enum(["monthly", "quarterly", "yearly"])
+    .refine((v) => ["monthly", "quarterly", "yearly"].includes(v), {
+      message: "Ungültiges Intervall",
+    }),
+  start_date: z.string().min(1, "Startdatum erforderlich"),
+  end_date: z.string().optional().default(""),
+  next_due: z.string().min(1, "Nächste Fälligkeit erforderlich"),
+  items: z.array(recurringTemplateItemSchema).min(1, "Mindestens eine Position erforderlich"),
+});
+
+export type RecurringTemplateFormData = z.infer<typeof recurringTemplateSchema>;
+
 // ─── Onboarding Completion Schema (single source of truth for guard + wizard) ─
 
 const DEFAULT_COMPANY_NAME = "Mein Unternehmen";
