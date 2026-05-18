@@ -60,12 +60,21 @@ invoiceRoutes.get("/", (c) => {
         children: html`
           <div class="flex items-center justify-between mb-6">
             <h1 class="text-2xl font-semibold">Rechnungen</h1>
-            <a
-              href="/rechnungen/create"
-              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              + Neue Rechnung
-            </a>
+            <div class="flex items-center gap-2">
+              <a
+                href="/export/datev"
+                class="inline-flex items-center gap-1.5 rounded-md border border-border-default bg-bg-surface px-3 py-2 text-sm font-medium text-text-secondary hover:bg-bg-surface-raised hover:text-text-primary transition-colors"
+              >
+                <i data-lucide="download" class="h-4 w-4"></i>
+                DATEV-Export
+              </a>
+              <a
+                href="/rechnungen/create"
+                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                + Neue Rechnung
+              </a>
+            </div>
           </div>
           ${renderInvoiceList(invoices, now)}
         `,
