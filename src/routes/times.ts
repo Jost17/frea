@@ -1,12 +1,18 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
 import {
+  type ActiveTimer,
   createTimeEntry,
   deleteTimeEntry,
+  deleteTimer,
+  getActiveTimerForProject,
   getAllActiveProjectsWithClient,
+  getAllActiveTimers,
   getAllUnbilledTimeEntries,
   getTimeEntry,
   type ProjectWithClient,
+  startTimer,
+  stopTimer,
   updateTimeEntry,
 } from "../db/queries";
 import type { AppEnv } from "../env";
@@ -30,6 +36,8 @@ const TIME_ENTRY_FIELDS = {
 timeRoutes.get("/", (c) => {
   try {
     const entries = getAllUnbilledTimeEntries();
+    const timers = getAllActiveTimers();
+    const allProjects = getAllActiveProjectsWithClient();
     const overdueCount = c.get("overdueCount");
 
     // Group by client in application code
@@ -43,12 +51,73 @@ timeRoutes.get("/", (c) => {
         children: html`
           <div class="flex items-center justify-between mb-6">
             <h1 class="text-2xl font-semibold">Zeiteintraege</h1>
-            <a
-              href="/zeiten/new"
-              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            <div class="flex gap-2">
+              <button
+                type="button"
+                onclick="document.getElementById('timer-start-form').classList.toggle('hidden')"
+                class="rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+              >
+                &#9654; Timer starten
+              </button>
+              <a
+                href="/zeiten/new"
+                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                + Neuer Zeiteintrag
+              </a>
+            </div>
+          </div>
+
+          <!-- Timer-Start-Form (collapsed by default) -->
+          <div id="timer-start-form" class="hidden mb-6">
+            <form
+              method="post"
+              action="/zeiten/timer/start"
+              class="rounded-lg border border-blue-200 bg-blue-50 p-4 flex flex-wrap gap-3 items-end"
             >
-              + Neuer Zeiteintrag
-            </a>
+              <div class="flex-1 min-w-48">
+                <label for="timer-project" class="block text-xs font-medium text-gray-700 mb-1">Projekt</label>
+                <select
+                  id="timer-project"
+                  name="project_id"
+                  required
+                  class="block w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">-- Waehlen --</option>
+                  ${allProjects.map(
+                    (p) =>
+                      html`<option value="${p.id}">${p.client_name} / ${p.name} (${p.code})</option>`,
+                  )}
+                </select>
+              </div>
+              <div class="flex-1 min-w-48">
+                <label for="timer-desc" class="block text-xs font-medium text-gray-700 mb-1">Beschreibung</label>
+                <input
+                  id="timer-desc"
+                  type="text"
+                  name="description"
+                  placeholder="Woran arbeitest du?"
+                  class="block w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white"
+                />
+              </div>
+              <button
+                type="submit"
+                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 whitespace-nowrap"
+              >
+                &#9654; Starten
+              </button>
+            </form>
+          </div>
+
+          <!-- Active Timers (HTMX polling every 5s) -->
+          <div
+            id="timer-section"
+            hx-get="/zeiten/timer/status"
+            hx-trigger="load, every 5s"
+            hx-target="#timer-section"
+            hx-swap="outerHTML"
+          >
+            ${renderTimerSection(timers)}
           </div>
 
           ${
@@ -84,7 +153,7 @@ timeRoutes.get("/", (c) => {
                                     <td class="px-4 py-3 font-medium text-gray-900">${entry.project_name}</td>
                                     <td class="px-4 py-3 text-gray-600">${entry.date}</td>
                                     <td class="px-4 py-3 text-right text-gray-600">${entry.duration.toFixed(1)}h</td>
-                                    <td class="px-4 py-3 text-gray-600 text-xs">${entry.description || "\u2014"}</td>
+                                    <td class="px-4 py-3 text-gray-600 text-xs">${entry.description || "—"}</td>
                                     <td class="px-4 py-3 text-center">
                                       <a href="/zeiten/${entry.id}" class="text-blue-600 hover:underline text-xs">
                                         Bearbeiten
@@ -107,6 +176,76 @@ timeRoutes.get("/", (c) => {
     );
   } catch (err) {
     return logAndRespond(c, err, "Zeiteintraege konnten nicht geladen werden", 500);
+  }
+});
+
+// Timer status fragment — HTMX polling target
+timeRoutes.get("/timer/status", (c) => {
+  try {
+    const timers = getAllActiveTimers();
+    return c.html(renderTimerSection(timers) as unknown as string);
+  } catch (err) {
+    return logAndRespond(c, err, "Timer-Status konnte nicht geladen werden", 500);
+  }
+});
+
+// Start timer
+timeRoutes.post("/timer/start", async (c) => {
+  try {
+    const body = await c.req.formData();
+    const projectId = parseInt(body.get("project_id") as string, 10);
+    const description = (body.get("description") as string | null) ?? "";
+
+    if (Number.isNaN(projectId) || projectId <= 0) {
+      throw new AppError("Ungültiges Projekt", 422);
+    }
+
+    const existing = getActiveTimerForProject(projectId);
+    if (existing) throw new AppError("Für dieses Projekt läuft bereits ein Timer", 409);
+
+    startTimer(projectId, description.trim());
+    return c.redirect("/zeiten");
+  } catch (err) {
+    return handleMutationError(c, err, "Timer konnte nicht gestartet werden");
+  }
+});
+
+// Stop timer — creates time entry
+timeRoutes.post("/timer/:id/stop", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Timer-ID", 400);
+
+    const body = await c.req.formData();
+    const description = ((body.get("description") as string | null) ?? "").trim();
+
+    const result = stopTimer(id);
+    if (!result) throw new AppError("Timer nicht gefunden", 404);
+
+    createTimeEntry({
+      project_id: result.projectId,
+      date: result.date,
+      duration: result.durationHours,
+      description,
+      billable: 1,
+    });
+
+    return c.redirect("/zeiten");
+  } catch (err) {
+    return handleMutationError(c, err, "Timer konnte nicht gestoppt werden");
+  }
+});
+
+// Discard timer without creating entry
+timeRoutes.post("/timer/:id/discard", (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Timer-ID", 400);
+
+    deleteTimer(id);
+    return c.redirect("/zeiten");
+  } catch (err) {
+    return logAndRespond(c, err, "Timer konnte nicht verworfen werden", 500);
   }
 });
 
@@ -204,7 +343,58 @@ timeRoutes.post("/:id/delete", (c) => {
   }
 });
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatElapsed(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function renderTimerSection(timers: ActiveTimer[]) {
+  if (timers.length === 0) return html`<div id="timer-section"></div>`;
+
+  return html`
+    <div id="timer-section" class="mb-6">
+      <h2 class="text-base font-semibold text-gray-700 mb-2">Laufende Timer</h2>
+      <div class="space-y-2">
+        ${timers.map((timer) => {
+          return html`
+            <div class="flex items-center gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <span class="text-amber-600 text-lg font-mono">&#9679;</span>
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm text-gray-900">${timer.client_name} / ${timer.project_name}</p>
+                ${timer.description ? html`<p class="text-xs text-gray-500 truncate">${timer.description}</p>` : ""}
+              </div>
+              <span class="font-mono text-sm font-semibold text-amber-700 tabular-nums">
+                ${formatElapsed(timer.elapsed_seconds)}
+              </span>
+              <form method="post" action="/zeiten/timer/${timer.id}/stop" class="flex gap-1 items-center">
+                <input type="hidden" name="description" value="${timer.description}" />
+                <button
+                  type="submit"
+                  class="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700"
+                >
+                  &#9646;&#9646; Stoppen
+                </button>
+              </form>
+              <form method="post" action="/zeiten/timer/${timer.id}/discard">
+                <button
+                  type="submit"
+                  onclick="return confirm('Timer verwerfen ohne Zeiteintrag?')"
+                  class="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  Verwerfen
+                </button>
+              </form>
+            </div>
+          `;
+        })}
+      </div>
+    </div>
+  `;
+}
 
 function renderTimeForm(entry: TimeEntry | null, allProjects: ProjectWithClient[]) {
   const isNew = !entry;

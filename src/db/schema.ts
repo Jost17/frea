@@ -198,6 +198,16 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date)");
   db.run("CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)");
 
+  // Live-Timer (FREA-264) — transient sessions, not GoBD-relevant (no audit log)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS active_timers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL UNIQUE REFERENCES projects(id),
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      description TEXT NOT NULL DEFAULT ''
+    )
+  `);
+
   // Migration: add onboarding_complete column if not present (safe for existing DBs)
   try {
     const settingsCols = db.query<{ name: string }, []>("PRAGMA table_info(settings)").all();
