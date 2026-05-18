@@ -1,0 +1,20 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+  <!-- FREA Badge Logo: Monogram with Emerald Background -->
+
+  <!-- Background circle (light mode: Emerald 600) -->
+  <circle cx="32" cy="32" r="30" fill="#2ea383" class="light-mode"/>
+  <!-- Background circle (dark mode: Emerald 500) -->
+  <circle cx="32" cy="32" r="30" fill="#45c996" class="dark-mode" style="display: none;"/>
+
+  <!-- Letter "F" (white, centered) -->
+  <g id="monogram">
+    <!-- F in white, bold -->
+    <text x="32" y="42" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+          font-size="36" font-weight="700" fill="white" text-anchor="middle">F</text>
+  </g>
+
+  <!-- Optional: subtle inner ring for depth (light mode) -->
+  <circle cx="32" cy="32" r="30" fill="none" stroke="white" stroke-width="1" opacity="0.2" class="light-mode"/>
+  <!-- Optional: subtle inner ring for depth (dark mode) -->
+  <circle cx="32" cy="32" r="30" fill="none" stroke="white" stroke-width="1" opacity="0.15" class="dark-mode" style="display: none;"/>
+</svg>

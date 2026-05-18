@@ -1,0 +1,40 @@
+<svg viewBox="0 0 240 60" xmlns="http://www.w3.org/2000/svg" width="240" height="60">
+  <!-- FREA Wordmark with Emerald Icon Accent -->
+
+  <!-- Icon Accent: Emerald Square with Checkmark -->
+  <g id="icon-accent">
+    <!-- Emerald square background (light mode) -->
+    <rect x="8" y="12" width="28" height="28" rx="4" fill="#2ea383" opacity="1" class="light-mode"/>
+    <rect x="8" y="12" width="28" height="28" rx="4" fill="#45c996" opacity="1" class="dark-mode" style="display: none;"/>
+
+    <!-- Checkmark (white, light mode) -->
+    <path d="M16 24L20 28L28 16" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="light-mode"/>
+    <!-- Checkmark (white, dark mode) -->
+    <path d="M16 24L20 28L28 16" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="dark-mode" style="display: none;"/>
+  </g>
+
+  <!-- Wordmark: "FREA" in clean sans-serif -->
+  <g id="wordmark">
+    <!-- F -->
+    <text x="48" y="44" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="600" fill="#1f1f1f" class="light-mode">F</text>
+    <text x="48" y="44" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="600" fill="#eee" class="dark-mode" style="display: none;">F</text>
+
+    <!-- R -->
+    <text x="75" y="44" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="600" fill="#1f1f1f" class="light-mode">R</text>
+    <text x="75" y="44" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="600" fill="#eee" class="dark-mode" style="display: none;">R</text>
+
+    <!-- E -->
+    <text x="100" y="44" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="600" fill="#1f1f1f" class="light-mode">E</text>
+    <text x="100" y="44" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="600" fill="#eee" class="dark-mode" style="display: none;">E</text>
+
+    <!-- A -->
+    <text x="125" y="44" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="600" fill="#1f1f1f" class="light-mode">A</text>
+    <text x="125" y="44" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="600" fill="#eee" class="dark-mode" style="display: none;">A</text>
+  </g>
+
+  <!-- Tagline (optional, small) -->
+  <g id="tagline">
+    <text x="48" y="54" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="400" fill="#999" class="light-mode" letter-spacing="1">FREELANCER INVOICING</text>
+    <text x="48" y="54" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="400" fill="#888" class="dark-mode" style="display: none;" letter-spacing="1">FREELANCER INVOICING</text>
+  </g>
+</svg>
