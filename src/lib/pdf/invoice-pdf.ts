@@ -3,6 +3,8 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Browser } from "puppeteer";
 import puppeteer from "puppeteer";
+import type { Client, Invoice, InvoiceItem, Settings } from "../../validation/schemas";
+import { generateZUGFeRDXML } from "../zugferd-generator";
 import { buildInvoiceHtml, type InvoicePdfData } from "./invoice-html";
 import { embedZUGFeRDInPDF } from "./zugferd-embed";
 
@@ -99,4 +101,64 @@ export async function getInvoicePdfPath(invoiceId: number): Promise<string | nul
   const invoice = getInvoice(invoiceId);
   if (!invoice || !invoice.pdf_path) return null;
   return invoice.pdf_path;
+}
+
+export async function generatePdfForInvoice(
+  invoice: Invoice,
+  items: InvoiceItem[],
+  client: Client,
+  settings: Settings,
+): Promise<PdfResult> {
+  let zugferdXml: string | undefined;
+  if (!settings.kleinunternehmer && items.length > 0) {
+    zugferdXml = generateZUGFeRDXML({
+      invoiceNumber: invoice.invoice_number,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      periodMonth: invoice.period_month,
+      periodYear: invoice.period_year,
+      periodStart: invoice.service_period_from || invoice.invoice_date,
+      periodEnd: invoice.service_period_to || invoice.invoice_date,
+      seller: {
+        name: settings.company_name,
+        address: settings.address || "",
+        postalCode: settings.postal_code || "",
+        city: settings.city || "",
+        country: "Deutschland",
+        email: settings.email,
+        taxNumber: settings.tax_number,
+        vatId: settings.ust_id || undefined,
+      },
+      buyer: {
+        name: client.name,
+        address: client.address || null,
+        postalCode: client.postal_code || null,
+        city: client.city || null,
+        country: "Deutschland",
+        email: client.email || undefined,
+        reference: invoice.po_number || invoice.invoice_number,
+      },
+      payment: {
+        iban: settings.iban,
+        bic: settings.bic,
+      },
+      vat: { categoryCode: "S" },
+      lineItems: items.map((item) => ({
+        description: item.description,
+        quantity: item.days,
+        unitPrice: item.daily_rate,
+        netAmount: item.net_amount,
+      })),
+      totals: {
+        netAmount: invoice.net_amount,
+        vatRate: settings.vat_rate,
+        vatAmount: invoice.vat_amount,
+        grossAmount: invoice.gross_amount,
+      },
+    });
+  }
+  return generateInvoicePdf(
+    { invoice, items, client, settings },
+    zugferdXml ? { embedZugferd: true, zugferdXml } : undefined,
+  );
 }
