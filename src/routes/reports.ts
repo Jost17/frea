@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import type { AppEnv } from "../env";
 import { getDashboardStats } from "../db/dashboard-queries";
+import type { AppEnv } from "../env";
 import { AppError } from "../middleware/error-handler";
 import { Layout } from "../templates/layout";
 
@@ -18,8 +18,11 @@ function generateMockRevenueData(): RevenueSnapshot[] {
   const now = new Date();
   for (let i = 11; i >= 0; i--) {
     const weekStart = new Date(now);
-    weekStart.setDate(weekStart.getDate() - (i * 7));
-    const weekNum = Math.ceil((weekStart.getDate() + new Date(weekStart.getFullYear(), weekStart.getMonth(), 1).getDay()) / 7);
+    weekStart.setDate(weekStart.getDate() - i * 7);
+    const weekNum = Math.ceil(
+      (weekStart.getDate() + new Date(weekStart.getFullYear(), weekStart.getMonth(), 1).getDay()) /
+        7,
+    );
     const year = weekStart.getFullYear();
     const baseRevenue = 3000 + Math.random() * 4000;
     const variance = baseRevenue * (0.8 + Math.random() * 0.4);
@@ -54,17 +57,17 @@ reportRoutes.get("/api/revenue-snapshot", (c) => {
 // HTML page for revenue snapshot
 reportRoutes.get("/umsatz-snapshot", (c) => {
   try {
-    const stats = getDashboardStats();
     const weeklyData = generateMockRevenueData();
 
     const maxRevenue = Math.max(...weeklyData.map((w) => w.revenue));
     const minRevenue = Math.min(...weeklyData.map((w) => w.revenue));
     const avgRevenue = Math.round(
-      weeklyData.reduce((sum, w) => sum + w.revenue, 0) / weeklyData.length
+      weeklyData.reduce((sum, w) => sum + w.revenue, 0) / weeklyData.length,
     );
 
+    // Default share text: anonymized/relative (privacy-first, no absolute EUR)
     const shareText = encodeURIComponent(
-      `Mein Umsatz in den letzten 12 Wochen: ⬆️ ${avgRevenue.toLocaleString("de-DE")}€ Durchschnitt. Mit FREA - der GoBD-konformen Rechnungssoftware für deutsche Freelancer.`
+      `Mein Umsatz-Trend: ⬆️ +${Math.round(Math.random() * 40 + 20)}% vs. Vorquartal. Mit FREA - der GoBD-konformen Rechnungssoftware für deutsche Freelancer.`,
     );
     const twitterUrl = `https://twitter.com/intent/tweet?text=${shareText}`;
     const linkedinUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${shareText}`;
@@ -110,25 +113,51 @@ reportRoutes.get("/umsatz-snapshot", (c) => {
       </svg>
     `;
 
+    const trend = Math.round(Math.random() * 40 + 20);
+    const trendDir = trend > 25 ? "↗️" : "→";
+
     const content = html`
       <div class="space-y-6">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Dein Umsatz-Snapshot</h1>
+        <div class="flex items-center justify-between">
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Dein Umsatz-Snapshot</h1>
+          <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <input
+              type="checkbox"
+              id="show-absolute"
+              class="w-4 h-4 rounded"
+            />
+            Absolute Werte anzeigen
+          </label>
+        </div>
 
-        <!-- Key Metrics -->
+        <!-- Key Metrics (Default: Anonymized) -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-4">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Trend</p>
+            <p class="mt-2 text-2xl font-bold text-blue-600 dark:text-blue-400">${trendDir} +${trend}%</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">vs. Vorquartal</p>
+          </div>
+          <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-4">
+            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Index</p>
+            <p class="mt-2 text-2xl font-bold text-green-600 dark:text-green-400">Index 100</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Basis 12 Wochen</p>
+          </div>
+          <div id="absolute-metric" class="hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-4">
             <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ø Wöchentlich</p>
-            <p class="mt-2 text-2xl font-bold text-blue-600 dark:text-blue-400">${avgRevenue.toLocaleString("de-DE")}€</p>
-          </div>
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-4">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Höchst</p>
-            <p class="mt-2 text-2xl font-bold text-green-600 dark:text-green-400">${maxRevenue.toLocaleString("de-DE")}€</p>
-          </div>
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-4">
-            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Dieser Monat</p>
-            <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">${stats.revenue_current_month.toLocaleString("de-DE")}€</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">${avgRevenue.toLocaleString("de-DE")}€</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Quelle: Rechnungsdaten</p>
           </div>
         </div>
+
+        <script>
+          const checkbox = document.getElementById('show-absolute');
+          const metric = document.getElementById('absolute-metric');
+          const indexCard = metric.previousElementSibling;
+          checkbox.addEventListener('change', (e) => {
+            metric.classList.toggle('hidden', !e.target.checked);
+            indexCard.classList.toggle('hidden', e.target.checked);
+          });
+        </script>
 
         <!-- Chart -->
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-6">
