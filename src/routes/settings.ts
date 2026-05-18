@@ -374,8 +374,7 @@ settingsRoutes.get("/", (c) => {
                       type="password"
                       id="smtp_password"
                       name="smtp_password"
-                      placeholder="Dein SMTP-Passwort"
-                      value="${settings.smtp_password || ""}"
+                      placeholder="${settings.smtp_password ? "••••••••" : "Dein SMTP-Passwort"}"
                       class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
                     />
                     <p class="mt-1 text-xs text-gray-500">Bei Gmail oder Outlook: App-Passwort verwenden, nicht das normale Account-Passwort.</p>

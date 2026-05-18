@@ -10,6 +10,16 @@ import { db } from "../db/schema";
 // Set smtp_password on the default-seeded settings row
 db.run(`UPDATE settings SET smtp_password = 'secret123' WHERE id = 1`);
 
+describe("GET /einstellungen (HTML form)", () => {
+  test("smtp_password ist nicht als value-Attribut im HTML sichtbar", async () => {
+    const res = await app.request("/einstellungen");
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).not.toMatch(/name="smtp_password"[^>]*value="[^"]+"/);
+    expect(html).not.toContain("secret123");
+  });
+});
+
 describe("GET /api/settings/company", () => {
   test("smtp_password ist nicht im Response enthalten", async () => {
     const res = await app.request("/api/settings/company");
