@@ -15,6 +15,7 @@ import { invoiceRoutes } from "./routes/invoices";
 import { mcpRoutes } from "./routes/mcp";
 import { projectRoutes } from "./routes/projects";
 import { settingsRoutes } from "./routes/settings";
+import { taxRoutes } from "./routes/tax";
 import { timeRoutes } from "./routes/times";
 
 try {
@@ -51,6 +52,8 @@ app.use("/zeiten/*", navContextMiddleware);
 app.use("/rechnungen/*", navContextMiddleware);
 app.use("/einstellungen", navContextMiddleware);
 app.use("/einstellungen/*", navContextMiddleware);
+app.use("/steuern", navContextMiddleware);
+app.use("/steuern/*", navContextMiddleware);
 
 app.onError(globalErrorHandler);
 app.notFound(globalNotFoundHandler);
@@ -70,5 +73,6 @@ app.route("/projekte", projectRoutes);
 app.route("/zeiten", timeRoutes);
 app.route("/rechnungen", invoiceRoutes);
 app.route("/einstellungen", settingsRoutes);
+app.route("/steuern", taxRoutes);
 app.route("/api", apiRoutes);
 app.route("/mcp", mcpRoutes);
