@@ -269,7 +269,7 @@ invoiceRoutes.post("/:id/status", async (c) => {
       return logAndRespond(c, parsed.error, "Ungültiger Status", 422);
     }
 
-    updateInvoiceStatus(id, parsed.data.status);
+    await updateInvoiceStatus(id, parsed.data.status);
 
     return c.redirect(`/rechnungen/${id}`);
   } catch (err) {
@@ -459,7 +459,7 @@ invoiceRoutes.post("/:id/send", async (c) => {
     });
 
     // Update invoice status to 'sent'
-    updateInvoiceStatus(id, "sent");
+    await updateInvoiceStatus(id, "sent");
 
     return c.json({ success: true, message: "Rechnung versendet" });
   } catch (err) {

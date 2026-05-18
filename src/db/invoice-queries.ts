@@ -266,7 +266,11 @@ const VALID_TRANSITIONS: Record<Invoice["status"], readonly Invoice["status"][]>
   cancelled: [],
 };
 
-export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "cancelled"): void {
+// GoBD: async wegen Archivierung (File-I/O) bei Finalisierung draft→sent
+export async function updateInvoiceStatus(
+  id: number,
+  newStatus: "sent" | "paid" | "cancelled",
+): Promise<void> {
   const row = db
     .query<Pick<Invoice, "status">, [number]>("SELECT status FROM invoices WHERE id = ?")
     .get(id);
@@ -280,7 +284,7 @@ export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "ca
     throw new AppError(`Statuswechsel von '${row.status}' zu '${newStatus}' nicht erlaubt`, 422);
   }
 
-  const updateWithAudit = db.transaction(() => {
+  db.transaction(() => {
     if (newStatus === "paid") {
       db.query("UPDATE invoices SET status = ?, paid_date = date('now') WHERE id = ?").run(
         newStatus,
@@ -290,9 +294,25 @@ export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "ca
       db.query("UPDATE invoices SET status = ? WHERE id = ?").run(newStatus, id);
     }
     appendAuditLog("invoice", id, "status_change", { from: row.status, to: newStatus });
-  });
+  })();
 
-  updateWithAudit();
+  if (newStatus === "sent") {
+    const { archiveInvoice } = await import("./archive-queries");
+    const invoice = getInvoice(id);
+    const items = invoice ? getInvoiceItems(id) : [];
+    if (invoice) {
+      try {
+        await archiveInvoice(invoice, items);
+        appendAuditLog("invoice", id, "archive", { archived_at: new Date().toISOString() });
+      } catch (err) {
+        console.error(`[gobd] Archivierung fehlgeschlagen für Rechnung ${id}:`, err);
+        throw new AppError(
+          "Rechnung als 'gesendet' markiert, aber GoBD-Archivierung fehlgeschlagen. Bitte Logs prüfen.",
+          500,
+        );
+      }
+    }
+  }
 }
 
 export function saveInvoicePdfPath(invoiceId: number, pdfPath: string): void {

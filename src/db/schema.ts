@@ -145,9 +145,25 @@ export function initializeSchema() {
       timestamp TEXT NOT NULL DEFAULT (datetime('now')),
       entity_type TEXT NOT NULL,
       entity_id INTEGER NOT NULL,
-      action TEXT NOT NULL CHECK (action IN ('create', 'update', 'delete', 'status_change')),
+      action TEXT NOT NULL CHECK (action IN ('create', 'update', 'delete', 'status_change', 'archive')),
       changes TEXT,
-      source TEXT NOT NULL DEFAULT 'web' CHECK (source IN ('web', 'api'))
+      source TEXT NOT NULL DEFAULT 'web' CHECK (source IN ('web', 'api')),
+      content_hash TEXT
+    )
+  `);
+
+  // GoBD: Invoice-Archiv (append-only, trigger-geschuetzt)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS invoice_archive (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL UNIQUE REFERENCES invoices(id),
+      invoice_number TEXT NOT NULL,
+      archived_at TEXT NOT NULL DEFAULT (datetime('now')),
+      retain_until TEXT NOT NULL,
+      invoice_snapshot TEXT NOT NULL,
+      pdf_hash TEXT,
+      pdf_archive_path TEXT,
+      chain_hash TEXT NOT NULL
     )
   `);
 
@@ -160,6 +176,7 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_invoices_status_due ON invoices(status, due_date)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_invoice_archive_invoice ON invoice_archive(invoice_id)");
 
   // GoBD: Audit Log ist append-only (keine Aenderungen/Loeschungen erlaubt)
   db.run(`
@@ -177,6 +194,67 @@ export function initializeSchema() {
       SELECT RAISE(ABORT, 'GoBD: audit_log records cannot be deleted');
     END
   `);
+
+  // GoBD: invoice_archive ist append-only
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS invoice_archive_no_update
+    BEFORE UPDATE ON invoice_archive
+    BEGIN
+      SELECT RAISE(ABORT, 'GoBD: invoice_archive records cannot be modified');
+    END
+  `);
+
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS invoice_archive_no_delete
+    BEFORE DELETE ON invoice_archive
+    BEGIN
+      SELECT RAISE(ABORT, 'GoBD: invoice_archive records cannot be deleted');
+    END
+  `);
+
+  // GoBD: Finalisierte Rechnungen (sent/paid) sind unveraenderlich
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS invoices_no_update_finalized
+    BEFORE UPDATE OF invoice_number, client_id, project_id, invoice_date, due_date,
+                      period_month, period_year, net_amount, vat_amount, gross_amount
+    ON invoices
+    WHEN (SELECT status FROM invoices WHERE id = NEW.id) IN ('sent', 'paid')
+    BEGIN
+      SELECT RAISE(ABORT, 'GoBD: finalisierte Rechnungen (sent/paid) duerfen nicht geaendert werden');
+    END
+  `);
+
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS invoice_items_no_update_finalized
+    BEFORE UPDATE ON invoice_items
+    WHEN (SELECT status FROM invoices WHERE id = NEW.invoice_id) IN ('sent', 'paid')
+    BEGIN
+      SELECT RAISE(ABORT, 'GoBD: Positionen finalisierter Rechnungen duerfen nicht geaendert werden');
+    END
+  `);
+
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS invoice_items_no_delete_finalized
+    BEFORE DELETE ON invoice_items
+    WHEN (SELECT status FROM invoices WHERE id = OLD.invoice_id) IN ('sent', 'paid')
+    BEGIN
+      SELECT RAISE(ABORT, 'GoBD: Positionen finalisierter Rechnungen duerfen nicht geloescht werden');
+    END
+  `);
+
+  // Migration: add content_hash to audit_log if not present (GoBD hash chain)
+  try {
+    const auditCols = db.query<{ name: string }, []>("PRAGMA table_info(audit_log)").all();
+    if (!auditCols.some((c) => c.name === "content_hash")) {
+      db.run("ALTER TABLE audit_log ADD COLUMN content_hash TEXT");
+      console.log("[migration] Added content_hash column to audit_log");
+    }
+  } catch (err) {
+    console.error("[migration] Failed to add content_hash to audit_log:", err);
+    throw new Error("Database migration failed: could not add content_hash to audit_log", {
+      cause: err,
+    });
+  }
 
   // Migration: add onboarding_complete column if not present (safe for existing DBs)
   try {
