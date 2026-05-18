@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Browser } from "puppeteer";
 import puppeteer from "puppeteer";
+import { generateEpcQrDataUrl } from "./epc-qr";
 import { buildInvoiceHtml, type InvoicePdfData } from "./invoice-html";
 import { embedZUGFeRDInPDF } from "./zugferd-embed";
 
@@ -63,7 +64,15 @@ export async function generateInvoicePdf(
 ): Promise<PdfResult> {
   ensurePdfDir();
 
-  const html = buildInvoiceHtml(data);
+  const epcQrDataUrl = await generateEpcQrDataUrl({
+    recipientName: data.settings.bank_name ?? data.settings.company_name,
+    iban: data.settings.iban ?? "",
+    bic: data.settings.bic ?? undefined,
+    amount: data.invoice.gross_amount,
+    reference: data.invoice.invoice_number,
+  });
+
+  const html = buildInvoiceHtml({ ...data, epcQrDataUrl });
   const safeInvoiceNumber = data.invoice.invoice_number.replace(/[^a-zA-Z0-9-]/g, "_");
   const fileName = `${safeInvoiceNumber}.pdf`;
   const filePath = join(PDF_OUTPUT_DIR, fileName);
@@ -97,6 +106,6 @@ export async function generateInvoicePdf(
 export async function getInvoicePdfPath(invoiceId: number): Promise<string | null> {
   const { getInvoice } = await import("../../db/invoice-queries");
   const invoice = getInvoice(invoiceId);
-  if (!invoice || !invoice.pdf_path) return null;
+  if (!invoice?.pdf_path) return null;
   return invoice.pdf_path;
 }
