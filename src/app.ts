@@ -8,6 +8,8 @@ import { globalErrorHandler, globalNotFoundHandler } from "./middleware/error-ha
 import { navContextMiddleware } from "./middleware/nav-context";
 import { onboardingGuard } from "./middleware/onboarding-guard";
 import { securityHeaders } from "./middleware/security-headers";
+import { recurringRoutes } from "./recurring/routes";
+import { checkAndGenerateDue } from "./recurring/scheduler";
 import { apiRoutes } from "./routes/api";
 import { clientRoutes } from "./routes/clients";
 import { dashboardRoutes } from "./routes/dashboard";
@@ -22,6 +24,13 @@ try {
 } catch (err) {
   console.error("[startup] Schema initialization failed:", err);
   process.exit(1);
+}
+
+// Generate overdue recurring drafts on every server start (no cron needed)
+try {
+  checkAndGenerateDue();
+} catch (err) {
+  console.error("[startup] Recurring draft generation failed:", err);
 }
 
 export const app = new Hono<AppEnv>();
@@ -49,6 +58,7 @@ app.use("/kunden/*", navContextMiddleware);
 app.use("/projekte/*", navContextMiddleware);
 app.use("/zeiten/*", navContextMiddleware);
 app.use("/rechnungen/*", navContextMiddleware);
+app.use("/vorlagen/*", navContextMiddleware);
 app.use("/einstellungen", navContextMiddleware);
 app.use("/einstellungen/*", navContextMiddleware);
 
@@ -69,6 +79,7 @@ app.route("/kunden", clientRoutes);
 app.route("/projekte", projectRoutes);
 app.route("/zeiten", timeRoutes);
 app.route("/rechnungen", invoiceRoutes);
+app.route("/vorlagen", recurringRoutes);
 app.route("/einstellungen", settingsRoutes);
 app.route("/api", apiRoutes);
 app.route("/mcp", mcpRoutes);
