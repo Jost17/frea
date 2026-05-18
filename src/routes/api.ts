@@ -138,7 +138,8 @@ apiRoutes.get("/settings/company", (c) => {
   if (!settings) {
     throw new AppError("Einstellungen nicht initialisiert", 500);
   }
-  return c.json(settings);
+  const { smtp_password: _omitted, ...safeSettings } = settings;
+  return c.json(safeSettings);
 });
 
 // PUT /api/settings/company
