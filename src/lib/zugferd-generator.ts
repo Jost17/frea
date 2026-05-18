@@ -3,6 +3,7 @@
  * EN16931 (Comfort) profile für deutsche B2B-Rechnungen
  * Anforderung: https://www.ferd-net.de/standards/zunorm/index.html
  */
+import type { Client, Invoice, InvoiceItem, Settings } from "../validation/schemas";
 
 export type VATCategory = "S" | "E" | "AE";
 
@@ -317,4 +318,61 @@ function countryToISO(country: string): string {
     Niederlande: "NL",
   };
   return map[country] || country;
+}
+
+// Maps domain types (Invoice, Client, Settings) to ZUGFeRDInvoiceData and
+// generates the XML. Returns undefined when ZUGFeRD does not apply
+// (Kleinunternehmer or no line items).
+export function buildZugferdXml(
+  invoice: Invoice,
+  items: InvoiceItem[],
+  client: Client,
+  settings: Settings,
+): string | undefined {
+  if (settings.kleinunternehmer || items.length === 0) return undefined;
+  return generateZUGFeRDXML({
+    invoiceNumber: invoice.invoice_number,
+    invoiceDate: invoice.invoice_date,
+    dueDate: invoice.due_date,
+    periodMonth: invoice.period_month,
+    periodYear: invoice.period_year,
+    periodStart: invoice.service_period_from || invoice.invoice_date,
+    periodEnd: invoice.service_period_to || invoice.invoice_date,
+    seller: {
+      name: settings.company_name,
+      address: settings.address || "",
+      postalCode: settings.postal_code || "",
+      city: settings.city || "",
+      country: "Deutschland",
+      email: settings.email,
+      taxNumber: settings.tax_number,
+      vatId: settings.ust_id || undefined,
+    },
+    buyer: {
+      name: client.name,
+      address: client.address || null,
+      postalCode: client.postal_code || null,
+      city: client.city || null,
+      country: "Deutschland",
+      email: client.email || undefined,
+      reference: invoice.po_number || invoice.invoice_number,
+    },
+    payment: {
+      iban: settings.iban,
+      bic: settings.bic,
+    },
+    vat: { categoryCode: "S" },
+    lineItems: items.map((item) => ({
+      description: item.description,
+      quantity: item.days,
+      unitPrice: item.daily_rate,
+      netAmount: item.net_amount,
+    })),
+    totals: {
+      netAmount: invoice.net_amount,
+      vatRate: settings.vat_rate,
+      vatAmount: invoice.vat_amount,
+      grossAmount: invoice.gross_amount,
+    },
+  });
 }
