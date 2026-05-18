@@ -26,6 +26,9 @@ const TIME_ENTRY_FIELDS = {
   billable: "bool",
 } as const;
 
+const INPUT_CLASS =
+  "mt-1 block w-full rounded-md border border-border-medium bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+
 // List all unbilled time entries — single JOIN query (P2-7)
 timeRoutes.get("/", (c) => {
   try {
@@ -42,10 +45,10 @@ timeRoutes.get("/", (c) => {
         overdueCount,
         children: html`
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-semibold">Zeiteintraege</h1>
+            <h1 class="text-2xl font-semibold text-text-primary">Zeiteinträge</h1>
             <a
               href="/zeiten/new"
-              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
             >
               + Neuer Zeiteintrag
             </a>
@@ -60,33 +63,33 @@ timeRoutes.get("/", (c) => {
                   actionLabel: "Zeit erfassen",
                 })
               : html`
-                <p class="mb-4 text-sm text-gray-500">Hier siehst du alle noch nicht abgerechneten Zeiten.</p>
+                <p class="mb-4 text-sm text-text-muted">Hier siehst du alle noch nicht abgerechneten Zeiten.</p>
                 <div class="space-y-8">
                   ${[...byClient.entries()].map(([clientName, clientEntries]) => {
                     return html`
                       <div>
-                        <h2 class="text-lg font-semibold mb-3">${clientName}</h2>
-                        <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
+                        <h2 class="text-lg font-semibold text-text-primary mb-3">${clientName}</h2>
+                        <div class="rounded-lg border border-border-subtle overflow-hidden bg-bg-surface shadow-card">
                           <table class="w-full text-sm">
-                            <thead class="border-b bg-gray-50">
+                            <thead class="border-b border-border-subtle bg-bg-surface-raised">
                               <tr>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Projekt</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Datum</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Stunden</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Beschreibung</th>
-                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Aktion</th>
+                                <th class="px-4 py-3 text-left font-semibold text-text-secondary">Projekt</th>
+                                <th class="px-4 py-3 text-left font-semibold text-text-secondary">Datum</th>
+                                <th class="px-4 py-3 text-right font-semibold text-text-secondary">Stunden</th>
+                                <th class="px-4 py-3 text-left font-semibold text-text-secondary">Beschreibung</th>
+                                <th class="px-4 py-3 text-center font-semibold text-text-secondary">Aktion</th>
                               </tr>
                             </thead>
                             <tbody>
                               ${clientEntries.map((entry) => {
                                 return html`
-                                  <tr class="border-t hover:bg-gray-50">
-                                    <td class="px-4 py-3 font-medium text-gray-900">${entry.project_name}</td>
-                                    <td class="px-4 py-3 text-gray-600">${entry.date}</td>
-                                    <td class="px-4 py-3 text-right text-gray-600">${entry.duration.toFixed(1)}h</td>
-                                    <td class="px-4 py-3 text-gray-600 text-xs">${entry.description || "\u2014"}</td>
+                                  <tr class="border-t border-border-subtle hover:bg-bg-surface-raised transition-colors">
+                                    <td class="px-4 py-3 font-medium text-text-primary">${entry.project_name}</td>
+                                    <td class="px-4 py-3 text-text-secondary tabular-nums">${entry.date}</td>
+                                    <td class="px-4 py-3 text-right text-text-secondary tabular-nums">${entry.duration.toFixed(1)}h</td>
+                                    <td class="px-4 py-3 text-text-muted text-xs">${entry.description || "—"}</td>
                                     <td class="px-4 py-3 text-center">
-                                      <a href="/zeiten/${entry.id}" class="text-blue-600 hover:underline text-xs">
+                                      <a href="/zeiten/${entry.id}" class="text-primary hover:underline text-xs font-medium">
                                         Bearbeiten
                                       </a>
                                     </td>
@@ -136,7 +139,7 @@ timeRoutes.get("/:id", (c) => {
     if (Number.isNaN(id)) throw new AppError("Ungueltige Eintrag-ID", 400);
 
     const entry = getTimeEntry(id);
-    if (!entry) throw new AppError("Eintrag nicht gefunden", 404);
+    if (\!entry) throw new AppError("Eintrag nicht gefunden", 404);
 
     const allProjects = getAllActiveProjectsWithClient();
     const overdueCount = c.get("overdueCount");
@@ -161,10 +164,10 @@ timeRoutes.post("/", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, TIME_ENTRY_FIELDS);
     const result = timeEntrySchema.safeParse(data);
-    if (!result.success)
+    if (\!result.success)
       throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     const id = createTimeEntry(result.data);
-    if (!id) throw new AppError("Zeiteintrag konnte nicht erstellt werden", 500);
+    if (\!id) throw new AppError("Zeiteintrag konnte nicht erstellt werden", 500);
 
     return c.redirect(`/zeiten/${id}`);
   } catch (err) {
@@ -181,7 +184,7 @@ timeRoutes.post("/:id", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, TIME_ENTRY_FIELDS);
     const result = timeEntrySchema.safeParse(data);
-    if (!result.success)
+    if (\!result.success)
       throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     updateTimeEntry(id, result.data);
 
@@ -207,25 +210,25 @@ timeRoutes.post("/:id/delete", (c) => {
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 function renderTimeForm(entry: TimeEntry | null, allProjects: ProjectWithClient[]) {
-  const isNew = !entry;
+  const isNew = \!entry;
   const action = isNew ? "/zeiten" : `/zeiten/${entry.id}`;
 
   return html`
     <div class="max-w-2xl">
       <div class="mb-6">
-        <h1 class="text-2xl font-semibold">${isNew ? "Neuer Zeiteintrag" : "Zeiteintrag bearbeiten"}</h1>
+        <h1 class="text-2xl font-semibold text-text-primary">${isNew ? "Neuer Zeiteintrag" : "Zeiteintrag bearbeiten"}</h1>
       </div>
 
-      <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">
+      <form method="post" action="${action}" class="space-y-6 rounded-lg border border-border-subtle bg-bg-surface shadow-card p-6">
         <div>
-          <label for="project_id" class="block text-sm font-medium text-gray-700">Projekt *</label>
+          <label for="project_id" class="block text-sm font-medium text-text-primary">Projekt *</label>
           <select
             id="project_id"
             name="project_id"
             required
-            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            class="${INPUT_CLASS}"
           >
-            <option value="">-- Waehlen --</option>
+            <option value="">-- Wählen --</option>
             ${allProjects.map((p) => {
               return html`<option value="${p.id}" ${entry?.project_id === p.id ? "selected" : ""}>${p.client_name} / ${p.name} (${p.code})</option>`;
             })}
@@ -234,18 +237,18 @@ function renderTimeForm(entry: TimeEntry | null, allProjects: ProjectWithClient[
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="date" class="block text-sm font-medium text-gray-700">Datum *</label>
+            <label for="date" class="block text-sm font-medium text-text-primary">Datum *</label>
             <input
               type="date"
               id="date"
               name="date"
               required
               value="${entry?.date || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              class="${INPUT_CLASS}"
             />
           </div>
           <div>
-            <label for="duration" class="block text-sm font-medium text-gray-700">Dauer *</label>
+            <label for="duration" class="block text-sm font-medium text-text-primary">Dauer *</label>
             <input
               type="number"
               id="duration"
@@ -255,25 +258,25 @@ function renderTimeForm(entry: TimeEntry | null, allProjects: ProjectWithClient[
               max="24"
               step="0.25"
               value="${entry?.duration || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              class="${INPUT_CLASS}"
               aria-describedby="duration-hint"
             />
-            <p id="duration-hint" class="mt-1 text-xs text-gray-500">Dauer in Stunden (z.B. 8 für einen ganzen Tag, 4.5 für einen halben).</p>
+            <p id="duration-hint" class="mt-1 text-xs text-text-muted">Dauer in Stunden (z.B. 8 für einen ganzen Tag, 4.5 für einen halben).</p>
           </div>
         </div>
 
         <div>
-          <label for="description" class="block text-sm font-medium text-gray-700">Beschreibung</label>
+          <label for="description" class="block text-sm font-medium text-text-primary">Beschreibung</label>
           <textarea
             id="description"
             name="description"
             rows="3"
-            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            class="${INPUT_CLASS}"
             aria-describedby="description-hint"
           >
 ${entry?.description || ""}</textarea
           >
-          <p id="description-hint" class="mt-1 text-xs text-gray-500">Kurze Beschreibung der Tätigkeit. Erscheint auf der Rechnung.</p>
+          <p id="description-hint" class="mt-1 text-xs text-text-muted">Kurze Beschreibung der Tätigkeit. Erscheint auf der Rechnung.</p>
         </div>
 
         <div>
@@ -283,32 +286,32 @@ ${entry?.description || ""}</textarea
               id="billable"
               name="billable"
               ${entry?.billable === 1 ? "checked" : ""}
-              class="h-4 w-4 rounded border-gray-300"
+              class="h-4 w-4 rounded border-border-medium accent-primary"
               aria-describedby="billable-hint"
             />
-            <label for="billable" class="ml-2 text-sm font-medium text-gray-700">Abrechenbar</label>
+            <label for="billable" class="ml-2 text-sm font-medium text-text-primary">Abrechenbar</label>
           </div>
-          <p id="billable-hint" class="mt-1 text-xs text-gray-500">Deaktivieren für interne Aufgaben, die nicht in Rechnung gestellt werden.</p>
+          <p id="billable-hint" class="mt-1 text-xs text-text-muted">Deaktivieren für interne Aufgaben, die nicht in Rechnung gestellt werden.</p>
         </div>
 
-        <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
-          <a href="/zeiten" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
+        <div class="flex justify-end gap-4 border-t border-border-subtle pt-6">
+          <a href="/zeiten" class="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors">Abbrechen</a>
           ${
-            !isNew
+            \!isNew
               ? html`
                 <form method="post" action="/zeiten/${entry.id}/delete" class="inline">
                   <button
                     type="submit"
-                    onclick="return confirm('Wirklich loeschen?')"
-                    class="px-4 py-2 text-sm text-red-600 hover:text-red-700"
+                    onclick="return confirm('Wirklich löschen?')"
+                    class="px-4 py-2 text-sm text-accent-danger hover:underline"
                   >
-                    Loeschen
+                    Löschen
                   </button>
                 </form>
               `
               : ""
           }
-          <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+          <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
             Speichern
           </button>
         </div>

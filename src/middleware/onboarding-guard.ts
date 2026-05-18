@@ -15,7 +15,10 @@ export const onboardingGuard = createMiddleware<AppEnv>(async (c, next) => {
   // API routes (health, stats) must remain accessible during setup.
   // NOTE: Any future API endpoint that mutates data should check onboarding individually.
   const isExcludedPath =
-    path.startsWith("/static") || path.startsWith("/api") || path.startsWith("/mcp");
+    path.startsWith("/static") ||
+    path.startsWith("/api") ||
+    path.startsWith("/mcp") ||
+    path.startsWith("/seo");
 
   if (isSettingsPath || isExcludedPath) return next();
 

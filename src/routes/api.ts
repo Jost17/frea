@@ -9,6 +9,7 @@ import { AppError, logAndRespond } from "../middleware/error-handler";
 import {
   invoiceCreateSchema,
   invoiceStatusUpdateSchema,
+  seoPageCreateSchema,
   settingsSchema,
   VALID_INVOICE_FILTER_VALUES,
 } from "../validation/schemas";
@@ -185,4 +186,47 @@ apiRoutes.patch("/invoices/:id/status", async (c) => {
   }
 
   return c.json({ success: true });
+});
+
+// POST /api/seo-pages — create a SEO landing page (FREA-93)
+apiRoutes.post("/seo-pages", async (c) => {
+  const body = await c.req.json().catch(() => {
+    throw new AppError("Ungültiger JSON-Body", 400);
+  });
+
+  const parsed = seoPageCreateSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new AppError(parsed.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+  }
+  const data = parsed.data;
+
+  try {
+    const result = db
+      .query<{ id: number }, [string, string, string, string, string, string, string, string]>(
+        `INSERT INTO seo_pages (keyword, slug, title, meta_description, content_html, type, city, priority)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         RETURNING id`,
+      )
+      .get(
+        data.keyword,
+        data.slug,
+        data.title,
+        data.meta_description,
+        data.content_html,
+        data.type,
+        data.city,
+        data.priority,
+      );
+
+    if (!result) throw new AppError("SEO-Page konnte nicht gespeichert werden", 500);
+
+    return c.json({ success: true, data: { id: result.id } });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("UNIQUE constraint failed: seo_pages.slug")) {
+      throw new AppError(`Slug '${data.slug}' ist bereits vergeben`, 409);
+    }
+    return logAndRespond(c, err, "SEO-Page konnte nicht erstellt werden", 500);
+  }
 });

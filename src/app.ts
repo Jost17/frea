@@ -14,6 +14,7 @@ import { dashboardRoutes } from "./routes/dashboard";
 import { invoiceRoutes } from "./routes/invoices";
 import { mcpRoutes } from "./routes/mcp";
 import { projectRoutes } from "./routes/projects";
+import { seoRoutes } from "./routes/seo";
 import { settingsRoutes } from "./routes/settings";
 import { timeRoutes } from "./routes/times";
 
@@ -72,3 +73,4 @@ app.route("/rechnungen", invoiceRoutes);
 app.route("/einstellungen", settingsRoutes);
 app.route("/api", apiRoutes);
 app.route("/mcp", mcpRoutes);
+app.route("/seo", seoRoutes);
