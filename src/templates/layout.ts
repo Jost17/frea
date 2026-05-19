@@ -11,7 +11,9 @@ export interface LayoutProps {
     | "zeiten"
     | "rechnungen"
     | "einstellungen"
-    | "ausgaben";
+    | "ausgaben"
+    | "steuern"
+    | "bank-import";
   overdueCount: number;
 }
 
