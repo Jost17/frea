@@ -18,6 +18,7 @@ import { onboardingRoutes } from "./routes/onboarding";
 import { projectRoutes } from "./routes/projects";
 import { settingsRoutes } from "./routes/settings";
 import { timeRoutes } from "./routes/times";
+import { validatorRoutes } from "./routes/validator";
 
 try {
   initializeSchema();
@@ -35,9 +36,10 @@ const isTest = process.env.NODE_ENV === "test";
 
 if (!isTest) {
   app.use("*", logger());
-  // Skip CSRF for MCP endpoint — AI clients don't have CSRF tokens
+  // Skip CSRF for MCP (AI clients) and /validator (public ToFu tool, file uploads)
   app.use("*", async (c, next) => {
-    if (c.req.path.startsWith("/mcp")) return next();
+    const path = c.req.path;
+    if (path.startsWith("/mcp") || path.startsWith("/validator")) return next();
     return csrf()(c, next);
   });
 }
@@ -78,3 +80,4 @@ app.route("/api", apiRoutes);
 app.route("/mcp", mcpRoutes);
 app.route("/ausgaben", expenseRoutes);
 app.route("/onboarding", onboardingRoutes);
+app.route("/validator", validatorRoutes);
