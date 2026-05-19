@@ -68,8 +68,9 @@ settingsRoutes.post("/", async (c) => {
 
     // Map smtp_credential field back to smtp_password for schema validation
     const settingsData = { ...data };
-    (settingsData as any).smtp_password =
-      Bun.env.SMTP_PASSWORD ? "" : (settingsData as any).smtp_credential || "";
+    (settingsData as any).smtp_password = Bun.env.SMTP_PASSWORD
+      ? ""
+      : (settingsData as any).smtp_credential || "";
     delete (settingsData as any).smtp_credential;
 
     const result = settingsSchema.safeParse({ ...settingsData, country: "Deutschland" });

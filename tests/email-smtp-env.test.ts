@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { EmailService } from "../src/services/email";
 
 describe("EmailService SMTP_PASSWORD migration", () => {
