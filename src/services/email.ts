@@ -16,7 +16,8 @@ export class EmailService {
 
   private validateSmtpConfig(): void {
     const { smtp_host, smtp_port, smtp_user, smtp_from } = this.settings;
-    if (!smtp_host || !smtp_port || !smtp_user || !smtp_from) {
+    const smtpPassword = Bun.env.SMTP_PASSWORD || this.settings.smtp_password;
+    if (!smtp_host || !smtp_port || !smtp_user || !smtp_from || !smtpPassword) {
       throw new Error(
         "SMTP-Konfiguration unvollständig. Bitte alle SMTP-Felder in Einstellungen ausfüllen.",
       );
@@ -55,13 +56,20 @@ export class EmailService {
   }
 
   private async sendViaNodemailer(nodemailer: any, params: EmailParams): Promise<void> {
+    const smtpPassword = Bun.env.SMTP_PASSWORD || this.settings.smtp_password;
+    if (!smtpPassword) {
+      throw new Error(
+        "SMTP-Passwort nicht konfiguriert. Bitte in Einstellungen oder als Umgebungsvariable setzen.",
+      );
+    }
+
     const transporter = nodemailer.createTransport({
       host: this.settings.smtp_host,
       port: this.settings.smtp_port,
       secure: this.settings.smtp_port === 465,
       auth: {
         user: this.settings.smtp_user,
-        pass: this.settings.smtp_password,
+        pass: smtpPassword,
       },
     });
 
