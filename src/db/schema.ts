@@ -151,6 +151,18 @@ export function initializeSchema() {
     )
   `);
 
+  // ZUGFeRD-Validator-Ergebnisse (ToFu-Tool — kein PDF, nur Bericht, 7 Tage TTL)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS validator_results (
+      id TEXT PRIMARY KEY,
+      profile TEXT NOT NULL DEFAULT 'UNKNOWN',
+      score INTEGER NOT NULL DEFAULT 0,
+      is_valid INTEGER NOT NULL DEFAULT 0,
+      issues_json TEXT NOT NULL DEFAULT '[]',
+      file_name TEXT NOT NULL DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
   // Performance-Indizes
   db.run("CREATE INDEX IF NOT EXISTS idx_projects_client ON projects(client_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_time_entries_project ON time_entries(project_id)");

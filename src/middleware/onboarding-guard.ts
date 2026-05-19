@@ -13,9 +13,13 @@ export const onboardingGuard = createMiddleware<AppEnv>(async (c, next) => {
   const isSettingsPath = path.startsWith("/einstellungen");
   // /static and /api are excluded: static assets need no guard,
   // API routes (health, stats) must remain accessible during setup.
+  // /validator is the public ToFu tool — no login required.
   // NOTE: Any future API endpoint that mutates data should check onboarding individually.
   const isExcludedPath =
-    path.startsWith("/static") || path.startsWith("/api") || path.startsWith("/mcp");
+    path.startsWith("/static") ||
+    path.startsWith("/api") ||
+    path.startsWith("/mcp") ||
+    path.startsWith("/validator");
 
   if (isSettingsPath || isExcludedPath) return next();
 
