@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
 import {
-  type ActiveTimer,
   createTimeEntry,
   deleteTimeEntry,
   deleteTimer,
@@ -9,30 +8,50 @@ import {
   getAllActiveProjectsWithClient,
   getAllActiveTimers,
   getAllUnbilledTimeEntries,
+  getTimeEntriesForWeek,
   getTimeEntry,
-  type ProjectWithClient,
   startTimer,
   stopTimer,
+  type TimeEntryWithContext,
   updateTimeEntry,
+  upsertTimeEntryByProjectDate,
 } from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { EmptyState } from "../templates/components/empty-state";
 import { Layout } from "../templates/layout";
+import {
+  renderTimeForm,
+  renderTimerSection,
+  renderTimerStartForm,
+  renderUnbilledList,
+} from "../templates/times-list";
+import { renderCellContent, renderCellForm, renderWeekGrid } from "../templates/times-week";
+import { parseDuration } from "../utils/duration-parser";
 import { parseFormFields } from "../utils/form-parser";
-import { type TimeEntry, timeEntrySchema } from "../validation/schemas";
+import { getIsoWeekBounds, shiftWeek, todayIso } from "../utils/iso-week";
+import { timeEntrySchema } from "../validation/schemas";
 
 export const timeRoutes = new Hono<AppEnv>();
 
 const TIME_ENTRY_FIELDS = {
   project_id: "int",
   date: "string",
-  duration: "float",
+  duration: "string", // raw text — parsed manually before Zod
   description: "string",
   billable: "bool",
 } as const;
 
-// List all unbilled time entries — single JOIN query (P2-7)
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function parseDurationField(raw: string): number {
+  const parsed = parseDuration(raw);
+  if (parsed === null) throw new AppError("Ungültige Dauerangabe", 422);
+  return parsed;
+}
+
+// ─── List all unbilled time entries ───────────────────────────────────────────
+
 timeRoutes.get("/", (c) => {
   try {
     const entries = getAllUnbilledTimeEntries();
@@ -40,8 +59,18 @@ timeRoutes.get("/", (c) => {
     const allProjects = getAllActiveProjectsWithClient();
     const overdueCount = c.get("overdueCount");
 
-    // Group by client in application code
-    const byClient = Map.groupBy(entries, (e) => e.client_name);
+    // Two-level grouping: client → project
+    const byClient = new Map<string, Map<string, TimeEntryWithContext[]>>();
+    for (const e of entries) {
+      if (!byClient.has(e.client_name)) {
+        byClient.set(e.client_name, new Map());
+      }
+      const byProject = byClient.get(e.client_name)!;
+      if (!byProject.has(e.project_name)) {
+        byProject.set(e.project_name, []);
+      }
+      byProject.get(e.project_name)!.push(e);
+    }
 
     return c.html(
       Layout({
@@ -50,8 +79,14 @@ timeRoutes.get("/", (c) => {
         overdueCount,
         children: html`
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-semibold">Zeiteintraege</h1>
+            <h1 class="text-2xl font-semibold">Zeiteinträge</h1>
             <div class="flex gap-2">
+              <a
+                href="/zeiten/woche"
+                class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Wochenansicht
+              </a>
               <button
                 type="button"
                 onclick="document.getElementById('timer-start-form').classList.toggle('hidden')"
@@ -68,46 +103,7 @@ timeRoutes.get("/", (c) => {
             </div>
           </div>
 
-          <!-- Timer-Start-Form (collapsed by default) -->
-          <div id="timer-start-form" class="hidden mb-6">
-            <form
-              method="post"
-              action="/zeiten/timer/start"
-              class="rounded-lg border border-blue-200 bg-blue-50 p-4 flex flex-wrap gap-3 items-end"
-            >
-              <div class="flex-1 min-w-48">
-                <label for="timer-project" class="block text-xs font-medium text-gray-700 mb-1">Projekt</label>
-                <select
-                  id="timer-project"
-                  name="project_id"
-                  required
-                  class="block w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white"
-                >
-                  <option value="">-- Waehlen --</option>
-                  ${allProjects.map(
-                    (p) =>
-                      html`<option value="${p.id}">${p.client_name} / ${p.name} (${p.code})</option>`,
-                  )}
-                </select>
-              </div>
-              <div class="flex-1 min-w-48">
-                <label for="timer-desc" class="block text-xs font-medium text-gray-700 mb-1">Beschreibung</label>
-                <input
-                  id="timer-desc"
-                  type="text"
-                  name="description"
-                  placeholder="Woran arbeitest du?"
-                  class="block w-full rounded border border-gray-300 px-3 py-2 text-sm bg-white"
-                />
-              </div>
-              <button
-                type="submit"
-                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 whitespace-nowrap"
-              >
-                &#9654; Starten
-              </button>
-            </form>
-          </div>
+          ${renderTimerStartForm(allProjects)}
 
           <!-- Active Timers (HTMX polling every 5s) -->
           <div
@@ -128,58 +124,18 @@ timeRoutes.get("/", (c) => {
                   actionHref: "/zeiten/new",
                   actionLabel: "Zeit erfassen",
                 })
-              : html`
-                <p class="mb-4 text-sm text-gray-500">Hier siehst du alle noch nicht abgerechneten Zeiten.</p>
-                <div class="space-y-8">
-                  ${[...byClient.entries()].map(([clientName, clientEntries]) => {
-                    return html`
-                      <div>
-                        <h2 class="text-lg font-semibold mb-3">${clientName}</h2>
-                        <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
-                          <table class="w-full text-sm">
-                            <thead class="border-b bg-gray-50">
-                              <tr>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Projekt</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Datum</th>
-                                <th class="px-4 py-3 text-right font-semibold text-gray-700">Stunden</th>
-                                <th class="px-4 py-3 text-left font-semibold text-gray-700">Beschreibung</th>
-                                <th class="px-4 py-3 text-center font-semibold text-gray-700">Aktion</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              ${clientEntries.map((entry) => {
-                                return html`
-                                  <tr class="border-t hover:bg-gray-50">
-                                    <td class="px-4 py-3 font-medium text-gray-900">${entry.project_name}</td>
-                                    <td class="px-4 py-3 text-gray-600">${entry.date}</td>
-                                    <td class="px-4 py-3 text-right text-gray-600">${entry.duration.toFixed(1)}h</td>
-                                    <td class="px-4 py-3 text-gray-600 text-xs">${entry.description || "—"}</td>
-                                    <td class="px-4 py-3 text-center">
-                                      <a href="/zeiten/${entry.id}" class="text-blue-600 hover:underline text-xs">
-                                        Bearbeiten
-                                      </a>
-                                    </td>
-                                  </tr>
-                                `;
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    `;
-                  })}
-                </div>
-              `
+              : renderUnbilledList(byClient)
           }
         `,
       }),
     );
   } catch (err) {
-    return logAndRespond(c, err, "Zeiteintraege konnten nicht geladen werden", 500);
+    return logAndRespond(c, err, "Zeiteinträge konnten nicht geladen werden", 500);
   }
 });
 
-// Timer status fragment — HTMX polling target
+// ─── Timer routes ─────────────────────────────────────────────────────────────
+
 timeRoutes.get("/timer/status", (c) => {
   try {
     const timers = getAllActiveTimers();
@@ -189,7 +145,6 @@ timeRoutes.get("/timer/status", (c) => {
   }
 });
 
-// Start timer
 timeRoutes.post("/timer/start", async (c) => {
   try {
     const body = await c.req.formData();
@@ -210,7 +165,6 @@ timeRoutes.post("/timer/start", async (c) => {
   }
 });
 
-// Stop timer — creates time entry
 timeRoutes.post("/timer/:id/stop", async (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
@@ -236,7 +190,6 @@ timeRoutes.post("/timer/:id/stop", async (c) => {
   }
 });
 
-// Discard timer without creating entry
 timeRoutes.post("/timer/:id/discard", (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
@@ -249,18 +202,121 @@ timeRoutes.post("/timer/:id/discard", (c) => {
   }
 });
 
-// New entry form
+// ─── Week Grid routes ─────────────────────────────────────────────────────────
+
+timeRoutes.get("/woche", (c) => {
+  const d = c.req.query("d");
+  if (!d) {
+    const today = todayIso();
+    const { weekStart } = getIsoWeekBounds(today);
+    return c.redirect(`/zeiten/woche?d=${weekStart}`);
+  }
+
+  try {
+    const bounds = getIsoWeekBounds(d);
+    const entries = getTimeEntriesForWeek(bounds.weekStart, bounds.weekEnd);
+    const overdueCount = c.get("overdueCount");
+    const todayMonday = getIsoWeekBounds(todayIso()).weekStart;
+
+    return c.html(
+      Layout({
+        title: `Wochenansicht ${bounds.label}`,
+        activeNav: "zeiten",
+        overdueCount,
+        children: html`
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-semibold">Wochenansicht</h1>
+            <a href="/zeiten" class="text-sm text-blue-600 hover:underline">← Alle Zeiten</a>
+          </div>
+          ${renderWeekGrid({
+            weekStart: bounds.weekStart,
+            weekEnd: bounds.weekEnd,
+            label: bounds.label,
+            entries,
+            prevMonday: shiftWeek(d, -1),
+            nextMonday: shiftWeek(d, 1),
+            todayMonday,
+            currentDate: bounds.weekStart,
+          })}
+        `,
+      }),
+    );
+  } catch (err) {
+    return logAndRespond(c, err, "Wochenansicht konnte nicht geladen werden", 500);
+  }
+});
+
+timeRoutes.get("/woche/cell", (c) => {
+  try {
+    const projectId = parseInt(c.req.query("project_id") ?? "", 10);
+    const date = c.req.query("date") ?? "";
+
+    if (Number.isNaN(projectId) || !date) throw new AppError("Ungültige Parameter", 400);
+
+    const entries = getTimeEntriesForWeek(date, date);
+    const existing = entries.find((e) => e.project_id === projectId) ?? null;
+
+    return c.html(renderCellForm(projectId, date, existing) as unknown as string);
+  } catch (err) {
+    return logAndRespond(c, err, "Zellformular konnte nicht geladen werden", 500);
+  }
+});
+
+timeRoutes.get("/woche/cell/cancel", (c) => {
+  try {
+    const projectId = parseInt(c.req.query("project_id") ?? "", 10);
+    const date = c.req.query("date") ?? "";
+
+    if (Number.isNaN(projectId) || !date) throw new AppError("Ungültige Parameter", 400);
+
+    const entries = getTimeEntriesForWeek(date, date);
+    const existing = entries.find((e) => e.project_id === projectId) ?? null;
+
+    return c.html(renderCellContent(existing) as unknown as string);
+  } catch (err) {
+    return logAndRespond(c, err, "Abbruch fehlgeschlagen", 500);
+  }
+});
+
+timeRoutes.post("/woche/cell", async (c) => {
+  try {
+    const body = await c.req.formData();
+    const projectId = parseInt((body.get("project_id") as string) ?? "", 10);
+    const date = (body.get("date") as string) ?? "";
+    const durationText = (body.get("duration_text") as string) ?? "";
+    const entryIdRaw = body.get("entry_id") as string | null;
+    const entryId = entryIdRaw ? parseInt(entryIdRaw, 10) : undefined;
+
+    if (Number.isNaN(projectId) || !date) throw new AppError("Ungültige Parameter", 400);
+
+    const duration = parseDurationField(durationText);
+    upsertTimeEntryByProjectDate(projectId, date, duration, entryId);
+
+    const entries = getTimeEntriesForWeek(date, date);
+    const updated = entries.find((e) => e.project_id === projectId) ?? null;
+
+    const response = c.html(renderCellContent(updated) as unknown as string);
+    response.headers.set("HX-Trigger", "weekRefresh");
+    return response;
+  } catch (err) {
+    return handleMutationError(c, err, "Zeiteintrag konnte nicht gespeichert werden");
+  }
+});
+
+// ─── Entry CRUD ───────────────────────────────────────────────────────────────
+
 timeRoutes.get("/new", (c) => {
   try {
     const allProjects = getAllActiveProjectsWithClient();
     const overdueCount = c.get("overdueCount");
+    const dateParam = c.req.query("date") ?? "";
 
     return c.html(
       Layout({
         title: "Neuer Zeiteintrag",
         activeNav: "zeiten",
         overdueCount,
-        children: renderTimeForm(null, allProjects),
+        children: renderTimeForm(null, allProjects, dateParam),
       }),
     );
   } catch (err) {
@@ -268,11 +324,10 @@ timeRoutes.get("/new", (c) => {
   }
 });
 
-// View/edit entry
 timeRoutes.get("/:id", (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
-    if (Number.isNaN(id)) throw new AppError("Ungueltige Eintrag-ID", 400);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Eintrag-ID", 400);
 
     const entry = getTimeEntry(id);
     if (!entry) throw new AppError("Eintrag nicht gefunden", 404);
@@ -285,7 +340,7 @@ timeRoutes.get("/:id", (c) => {
         title: "Zeiteintrag bearbeiten",
         activeNav: "zeiten",
         overdueCount,
-        children: renderTimeForm(entry, allProjects),
+        children: renderTimeForm(entry, allProjects, ""),
       }),
     );
   } catch (err) {
@@ -294,12 +349,12 @@ timeRoutes.get("/:id", (c) => {
   }
 });
 
-// Create entry
 timeRoutes.post("/", async (c) => {
   try {
     const body = await c.req.formData();
-    const data = parseFormFields(body, TIME_ENTRY_FIELDS);
-    const result = timeEntrySchema.safeParse(data);
+    const raw = parseFormFields(body, TIME_ENTRY_FIELDS);
+    const duration = parseDurationField(raw.duration as string);
+    const result = timeEntrySchema.safeParse({ ...raw, duration });
     if (!result.success)
       throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     const id = createTimeEntry(result.data);
@@ -311,15 +366,15 @@ timeRoutes.post("/", async (c) => {
   }
 });
 
-// Update entry
 timeRoutes.post("/:id", async (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
-    if (Number.isNaN(id)) throw new AppError("Ungueltige Eintrag-ID", 400);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Eintrag-ID", 400);
 
     const body = await c.req.formData();
-    const data = parseFormFields(body, TIME_ENTRY_FIELDS);
-    const result = timeEntrySchema.safeParse(data);
+    const raw = parseFormFields(body, TIME_ENTRY_FIELDS);
+    const duration = parseDurationField(raw.duration as string);
+    const result = timeEntrySchema.safeParse({ ...raw, duration });
     if (!result.success)
       throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     updateTimeEntry(id, result.data);
@@ -330,179 +385,14 @@ timeRoutes.post("/:id", async (c) => {
   }
 });
 
-// Delete entry
 timeRoutes.post("/:id/delete", (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
-    if (Number.isNaN(id)) throw new AppError("Ungueltige Eintrag-ID", 400);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Eintrag-ID", 400);
 
     deleteTimeEntry(id);
     return c.redirect("/zeiten");
   } catch (err) {
-    return logAndRespond(c, err, "Eintrag konnte nicht geloescht werden", 500);
+    return logAndRespond(c, err, "Eintrag konnte nicht gelöscht werden", 500);
   }
 });
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatElapsed(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
-function renderTimerSection(timers: ActiveTimer[]) {
-  if (timers.length === 0) return html`<div id="timer-section"></div>`;
-
-  return html`
-    <div id="timer-section" class="mb-6">
-      <h2 class="text-base font-semibold text-gray-700 mb-2">Laufende Timer</h2>
-      <div class="space-y-2">
-        ${timers.map((timer) => {
-          return html`
-            <div class="flex items-center gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-              <span class="text-amber-600 text-lg font-mono">&#9679;</span>
-              <div class="flex-1 min-w-0">
-                <p class="font-medium text-sm text-gray-900">${timer.client_name} / ${timer.project_name}</p>
-                ${timer.description ? html`<p class="text-xs text-gray-500 truncate">${timer.description}</p>` : ""}
-              </div>
-              <span class="font-mono text-sm font-semibold text-amber-700 tabular-nums">
-                ${formatElapsed(timer.elapsed_seconds)}
-              </span>
-              <form method="post" action="/zeiten/timer/${timer.id}/stop" class="flex gap-1 items-center">
-                <input type="hidden" name="description" value="${timer.description}" />
-                <button
-                  type="submit"
-                  class="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700"
-                >
-                  &#9646;&#9646; Stoppen
-                </button>
-              </form>
-              <form method="post" action="/zeiten/timer/${timer.id}/discard">
-                <button
-                  type="submit"
-                  onclick="return confirm('Timer verwerfen ohne Zeiteintrag?')"
-                  class="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
-                >
-                  Verwerfen
-                </button>
-              </form>
-            </div>
-          `;
-        })}
-      </div>
-    </div>
-  `;
-}
-
-function renderTimeForm(entry: TimeEntry | null, allProjects: ProjectWithClient[]) {
-  const isNew = !entry;
-  const action = isNew ? "/zeiten" : `/zeiten/${entry.id}`;
-
-  return html`
-    <div class="max-w-2xl">
-      <div class="mb-6">
-        <h1 class="text-2xl font-semibold">${isNew ? "Neuer Zeiteintrag" : "Zeiteintrag bearbeiten"}</h1>
-      </div>
-
-      <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">
-        <div>
-          <label for="project_id" class="block text-sm font-medium text-gray-700">Projekt *</label>
-          <select
-            id="project_id"
-            name="project_id"
-            required
-            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="">-- Waehlen --</option>
-            ${allProjects.map((p) => {
-              return html`<option value="${p.id}" ${entry?.project_id === p.id ? "selected" : ""}>${p.client_name} / ${p.name} (${p.code})</option>`;
-            })}
-          </select>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="date" class="block text-sm font-medium text-gray-700">Datum *</label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              required
-              value="${entry?.date || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label for="duration" class="block text-sm font-medium text-gray-700">Dauer *</label>
-            <input
-              type="number"
-              id="duration"
-              name="duration"
-              required
-              min="0.25"
-              max="24"
-              step="0.25"
-              value="${entry?.duration || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              aria-describedby="duration-hint"
-            />
-            <p id="duration-hint" class="mt-1 text-xs text-gray-500">Dauer in Stunden (z.B. 8 für einen ganzen Tag, 4.5 für einen halben).</p>
-          </div>
-        </div>
-
-        <div>
-          <label for="description" class="block text-sm font-medium text-gray-700">Beschreibung</label>
-          <textarea
-            id="description"
-            name="description"
-            rows="3"
-            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            aria-describedby="description-hint"
-          >
-${entry?.description || ""}</textarea
-          >
-          <p id="description-hint" class="mt-1 text-xs text-gray-500">Kurze Beschreibung der Tätigkeit. Erscheint auf der Rechnung.</p>
-        </div>
-
-        <div>
-          <div class="flex items-center">
-            <input
-              type="checkbox"
-              id="billable"
-              name="billable"
-              ${entry?.billable === 1 ? "checked" : ""}
-              class="h-4 w-4 rounded border-gray-300"
-              aria-describedby="billable-hint"
-            />
-            <label for="billable" class="ml-2 text-sm font-medium text-gray-700">Abrechenbar</label>
-          </div>
-          <p id="billable-hint" class="mt-1 text-xs text-gray-500">Deaktivieren für interne Aufgaben, die nicht in Rechnung gestellt werden.</p>
-        </div>
-
-        <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
-          <a href="/zeiten" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
-          ${
-            !isNew
-              ? html`
-                <form method="post" action="/zeiten/${entry.id}/delete" class="inline">
-                  <button
-                    type="submit"
-                    onclick="return confirm('Wirklich loeschen?')"
-                    class="px-4 py-2 text-sm text-red-600 hover:text-red-700"
-                  >
-                    Loeschen
-                  </button>
-                </form>
-              `
-              : ""
-          }
-          <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-            Speichern
-          </button>
-        </div>
-      </form>
-    </div>
-  `;
-}
