@@ -484,26 +484,29 @@ invoiceRoutes.post("/:id/peppol-senden", async (c) => {
     if (!client || !settings) throw new AppError("Daten fehlen", 500);
     if (!client.vat_id) throw new AppError("Kunde hat keine Peppol-ID (USt-IdNr.)", 400);
 
-    // Build Peppol sender identifier: 9930:{ust_id}
-    const senderIdentifier = `9930:${settings.ust_id || "DE"}`;
+    // C1 — Build Peppol sender identifier from USt-ID (format: 9930:DE<USt-ID>)
+    if (!settings.ust_id) {
+      throw new AppError("USt-ID nicht konfiguriert. Bitte in den Einstellungen setzen.", 422);
+    }
+    const senderIdentifier = `9930:DE${settings.ust_id}`;
 
     // Generate UBL XML (stub — Phase 2 will add full EN16931 compliance)
     const ublXml = generateUblXml(invoice);
 
     // Submit to Peppol via Recommand
-    const client_instance = getPeppolClient(senderIdentifier);
-    const result = await client_instance.sendInvoice(ublXml, client.vat_id, invoice.invoice_number);
+    const peppolClient = getPeppolClient(senderIdentifier);
+    const result = await peppolClient.sendInvoice(ublXml, client.vat_id, invoice.invoice_number);
 
-    // Store submission record (requires FREA-287 B1: peppol_documents table)
+    // Store submission record
     const { db } = await import("../db/schema");
-    const peppol_id = crypto.randomUUID();
+    const peppolId = crypto.randomUUID();
     db.run(
       `INSERT INTO peppol_documents
        (invoice_id, peppol_id, receiver_id, status, ubl_xml, submission_timestamp, recommand_response)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        peppol_id,
+        peppolId,
         client.vat_id,
         result.status,
         ublXml,
@@ -512,19 +515,23 @@ invoiceRoutes.post("/:id/peppol-senden", async (c) => {
       ],
     );
 
-    return c.json({
-      success: true,
-      data: {
-        peppol_id,
-        status: result.status,
-        timestamp: result.timestamp,
-        message: "Rechnung erfolgreich an Peppol-Netzwerk übermittelt",
-      },
-    });
+    // C2 — HTMX-Partial response (status badge)
+    return c.html(
+      html`<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+        <span>✓</span>
+        <span>Peppol versendet (${result.status})</span>
+      </div>`,
+      200,
+    );
   } catch (err) {
-    if (err instanceof AppError) throw err;
+    if (err instanceof AppError) {
+      return c.html(
+        html`<div class="text-red-600 text-sm">${err.message}</div>`,
+        err.statusCode || 500,
+      );
+    }
     console.error("[invoices/peppol-senden] Unexpected error:", err);
-    throw new AppError("Peppol-Versand fehlgeschlagen", 500);
+    return c.html(html`<div class="text-red-600 text-sm">Peppol-Versand fehlgeschlagen</div>`, 500);
   }
 });
 

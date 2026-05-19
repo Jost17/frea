@@ -151,4 +151,34 @@ describe("PeppolClient", () => {
       }
     });
   });
+
+  describe("normalizeStatus()", () => {
+    beforeEach(() => {
+      client = new PeppolClient("test-key", "https://api.test.com");
+    });
+
+    it('maps "pending" to pending', () => {
+      expect(client.normalizeStatus("pending")).toBe("pending");
+    });
+
+    it('maps "submitted" to submitted', () => {
+      expect(client.normalizeStatus("submitted")).toBe("submitted");
+    });
+
+    it('maps "delivered" to delivered', () => {
+      expect(client.normalizeStatus("delivered")).toBe("delivered");
+    });
+
+    it('maps "acknowledged" to acknowledged', () => {
+      expect(client.normalizeStatus("acknowledged")).toBe("acknowledged");
+    });
+
+    it('maps "failed" to failed', () => {
+      expect(client.normalizeStatus("failed")).toBe("failed");
+    });
+
+    it("maps unknown status to pending", () => {
+      expect(client.normalizeStatus("unknown-value")).toBe("pending");
+    });
+  });
 });

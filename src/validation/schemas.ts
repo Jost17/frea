@@ -264,3 +264,13 @@ export const onboardingCompletionSchema = z
   .refine((data) => !!(data.tax_number?.trim() || data.ust_id?.trim()), {
     message: "Steuernummer oder Ust-IdNr. erforderlich",
   });
+
+// ─── Peppol Send Schema ────────────────────────────────────────────────────────
+
+export const peppolSendSchema = z.object({
+  invoice_id: z.number().int().positive("Rechnungs-ID erforderlich"),
+  receiver_participant_id: z
+    .string()
+    .min(1, "Peppol-ID des Empfängers erforderlich")
+    .regex(/^[0-9]+:.+$/, "Ungültige Peppol-ID (ICD:Nummernwert erforderlich)"),
+});

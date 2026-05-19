@@ -131,19 +131,19 @@ peppolRoutes.get("/status/:peppol_id", async (c) => {
   }
 });
 
-// Stub: Generate minimal UBL 2.1 XML from invoice data
-// Real implementation will use full XML builder with EN16931 compliance
+// Stub: Generate minimal valid UBL 2.1 XML from invoice data
+// Phase 2 will add full EN16931 compliance with all required fields
 function generateUblStub(invoice: any): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
-<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2">
   <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+  <cbc:CustomizationID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:CustomizationID>
+  <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
   <cbc:ID>${invoice.invoice_number}</cbc:ID>
   <cbc:IssueDate>${new Date().toISOString().split("T")[0]}</cbc:IssueDate>
   <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
-  <cac:BillingReference>
-    <cac:InvoiceDocumentReference>
-      <cbc:ID>${invoice.invoice_number}</cbc:ID>
-    </cac:InvoiceDocumentReference>
-  </cac:BillingReference>
+  <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
 </Invoice>`;
 }

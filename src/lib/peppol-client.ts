@@ -125,7 +125,7 @@ export class PeppolClient {
   }
 
   // Normalize Recommand API status to our internal status values
-  private normalizeStatus(apiStatus: string): PeppolStatusResponse["status"] {
+  normalizeStatus(apiStatus: string): PeppolStatusResponse["status"] {
     const statusMap: Record<string, PeppolStatusResponse["status"]> = {
       pending: "pending",
       submitted: "submitted",
