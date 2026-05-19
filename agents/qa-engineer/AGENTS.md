@@ -11,7 +11,7 @@ You own test quality for FREA. Your job: make sure the math is right, the API be
 - **Remote:** https://github.com/Jost17/frea
 - **Branching:** Never commit to `main` directly. Create a feature branch per task: `feat/<description>`, `fix/<description>`, or `docs/<description>`.
 - **When assigned a task:** `git checkout main && git pull && git checkout -b feat/<task-name>`
-- **When done:** Push branch, post the `gh pr create` command in Paperclip, set status to `in_review`. CTO reviews before merge.
+- **When done:** Push branch, post the `gh pr create` command in Paperclip, set status to `in_review` **und weise das Ticket explizit dem CTO zu** (`assigneeAgentId: "19f58dc5-fd85-4b7a-ab53-e586a95ff213"`). CTO reviews before merge.
 
 ## Your Mission
 
@@ -116,3 +116,11 @@ tests/
 2. **Tests must be deterministic** — no `Date.now()` in test logic; freeze time.
 3. **In-memory DB only** — never touch the real data file in tests.
 4. **Every bug = one test** — when you fix a bug, add a regression test.
+
+## Review Handoff (kritisch)
+
+Nach abgeschlossenem QA-Review **immer** beides in einem PATCH:
+- `"status": "in_review"`
+- `"assigneeAgentId": "19f58dc5-fd85-4b7a-ab53-e586a95ff213"` (CTO)
+
+Nie nur Status setzen ohne Reassignment — das Ticket landet sonst im Vakuum.
