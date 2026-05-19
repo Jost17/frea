@@ -422,14 +422,25 @@ export function getActiveTimerForProject(projectId: number): ActiveTimer | undef
 }
 
 export function startTimer(projectId: number, description: string): number | undefined {
-  const result = db
-    .query(
-      `INSERT INTO active_timers (project_id, description)
-       VALUES (?, ?)
-       RETURNING id`,
-    )
-    .get(projectId, description) as { id: number } | undefined;
-  return result?.id;
+  try {
+    const result = db
+      .query(
+        `INSERT INTO active_timers (project_id, description)
+         VALUES (?, ?)
+         RETURNING id`,
+      )
+      .get(projectId, description) as { id: number } | undefined;
+    return result?.id;
+  } catch (e) {
+    // UNIQUE constraint violation: timer already running for this project
+    if (
+      e instanceof Error &&
+      e.message.includes("UNIQUE constraint failed: active_timers.project_id")
+    ) {
+      return undefined;
+    }
+    throw e;
+  }
 }
 
 export function stopTimer(
