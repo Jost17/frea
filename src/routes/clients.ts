@@ -28,57 +28,72 @@ const CLIENT_FIELDS = {
   buyer_reference: "string",
   notes: "string",
 } as const;
-const INPUT_CLASS =
-  "mt-1 block w-full rounded-md border border-border-medium bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
+// List all clients
 clientRoutes.get("/", (c) => {
   try {
     const clients = getAllActiveClients();
     const overdueCount = c.get("overdueCount");
+
     return c.html(
       Layout({
         title: "Kunden",
         activeNav: "kunden",
         overdueCount,
         children: html`
-      <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold text-text-primary">Kunden</h1>
-        <a href="/kunden/new" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">+ Neuer Kunde</a>
-      </div>
-      ${
-        clients.length === 0
-          ? EmptyState({
-              message:
-                "Noch keine Kunden angelegt. Erstelle deinen ersten Kunden, um Projekte und Rechnungen zuordnen zu können.",
-              actionHref: "/kunden/new",
-              actionLabel: "Neuen Kunden anlegen",
-            })
-          : html`<div class="rounded-lg border border-border-subtle overflow-hidden bg-bg-surface shadow-card">
-          <table class="w-full text-sm">
-            <thead class="border-b border-border-subtle bg-bg-surface-raised">
-              <tr>
-                <th class="px-4 py-3 text-left font-semibold text-text-secondary">Name</th>
-                <th class="px-4 py-3 text-left font-semibold text-text-secondary">Stadt</th>
-                <th class="px-4 py-3 text-left font-semibold text-text-secondary">E-Mail</th>
-                <th class="px-4 py-3 text-center font-semibold text-text-secondary">Aktionen</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${clients.map(
-                (
-                  client,
-                ) => html`<tr class="border-t border-border-subtle hover:bg-bg-surface-raised transition-colors">
-                <td class="px-4 py-3 font-medium text-text-primary">${client.name}</td>
-                <td class="px-4 py-3 text-text-secondary">${client.city || "—"}</td>
-                <td class="px-4 py-3 text-text-secondary">${client.email || "—"}</td>
-                <td class="px-4 py-3 text-center"><a href="/kunden/${client.id}" class="text-primary hover:underline text-xs font-medium">Bearbeiten</a></td>
-              </tr>`,
-              )}
-            </tbody>
-          </table>
-        </div>`
-      }
-    `,
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-semibold">Kunden</h1>
+            <a
+              href="/kunden/new"
+              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              + Neuer Kunde
+            </a>
+          </div>
+
+          ${
+            clients.length === 0
+              ? EmptyState({
+                  message:
+                    "Noch keine Kunden angelegt. Erstelle deinen ersten Kunden, um Projekte und Rechnungen zuordnen zu können.",
+                  actionHref: "/kunden/new",
+                  actionLabel: "Neuen Kunden anlegen",
+                })
+              : html`
+                <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
+                  <table class="w-full text-sm">
+                    <thead class="border-b bg-gray-50">
+                      <tr>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Name</th>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Stadt</th>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-700">E-Mail</th>
+                        <th class="px-4 py-3 text-center font-semibold text-gray-700">Aktionen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${clients.map((client) => {
+                        return html`
+                          <tr class="border-t hover:bg-gray-50">
+                            <td class="px-4 py-3 font-medium text-gray-900">${client.name}</td>
+                            <td class="px-4 py-3 text-gray-600">${client.city || "\u2014"}</td>
+                            <td class="px-4 py-3 text-gray-600">${client.email || "\u2014"}</td>
+                            <td class="px-4 py-3 text-center">
+                              <a
+                                href="/kunden/${client.id}"
+                                class="text-blue-600 hover:underline text-xs"
+                              >
+                                Bearbeiten
+                              </a>
+                            </td>
+                          </tr>
+                        `;
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              `
+          }
+        `,
       }),
     );
   } catch (err) {
@@ -86,6 +101,7 @@ clientRoutes.get("/", (c) => {
   }
 });
 
+// New client form
 clientRoutes.get("/new", (c) => {
   const overdueCount = c.get("overdueCount");
   return c.html(
@@ -98,12 +114,15 @@ clientRoutes.get("/new", (c) => {
   );
 });
 
+// View/edit client
 clientRoutes.get("/:id", (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
     if (Number.isNaN(id)) throw new AppError("Ungueltige Kunden-ID", 400);
+
     const client = getClient(id);
     if (!client) throw new AppError("Kunde nicht gefunden", 404);
+
     const overdueCount = c.get("overdueCount");
     return c.html(
       Layout({
@@ -119,6 +138,7 @@ clientRoutes.get("/:id", (c) => {
   }
 });
 
+// Create client
 clientRoutes.post("/", async (c) => {
   try {
     const body = await c.req.formData();
@@ -128,32 +148,38 @@ clientRoutes.post("/", async (c) => {
       throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     const id = createClient(result.data);
     if (!id) throw new AppError("Kunde konnte nicht erstellt werden", 500);
+
     return c.redirect(`/kunden/${id}`);
   } catch (err) {
     return handleMutationError(c, err, "Kunde konnte nicht erstellt werden");
   }
 });
 
+// Update client
 clientRoutes.post("/:id", async (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
     if (Number.isNaN(id)) throw new AppError("Ungueltige Kunden-ID", 400);
+
     const body = await c.req.formData();
     const data = parseFormFields(body, CLIENT_FIELDS);
     const result = clientSchema.safeParse({ ...data, country: "Deutschland" });
     if (!result.success)
       throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     updateClient(id, result.data);
+
     return c.redirect(`/kunden/${id}`);
   } catch (err) {
     return handleMutationError(c, err, "Kunde konnte nicht aktualisiert werden");
   }
 });
 
+// Delete client
 clientRoutes.post("/:id/delete", (c) => {
   try {
     const id = parseInt(c.req.param("id"), 10);
     if (Number.isNaN(id)) throw new AppError("Ungueltige Kunden-ID", 400);
+
     deleteClient(id);
     return c.redirect("/kunden");
   } catch (err) {
@@ -161,56 +187,162 @@ clientRoutes.post("/:id/delete", (c) => {
   }
 });
 
+// ─── Helper ───────────────────────────────────────────────────────────────────
+
 function renderClientForm(client: Client | null) {
   const isNew = !client;
   const action = isNew ? "/kunden" : `/kunden/${client.id}`;
+
   return html`
     <div class="max-w-2xl">
       <div class="mb-6 flex items-center justify-between">
-        <h1 class="text-2xl font-semibold text-text-primary">${isNew ? "Neuer Kunde" : `Kunde: ${client.name}`}</h1>
-        ${!isNew ? html`<form method="post" action="/kunden/${client.id}/delete" class="inline"><button type="submit" onclick="return confirm('Wirklich löschen?')" class="text-accent-danger hover:underline text-xs">Löschen</button></form>` : ""}
+        <h1 class="text-2xl font-semibold">${isNew ? "Neuer Kunde" : `Kunde: ${client.name}`}</h1>
+        ${
+          !isNew
+            ? html`<form method="post" action="/kunden/${client.id}/delete" class="inline">
+              <button
+                type="submit"
+                onclick="return confirm('Wirklich loeschen?')"
+                class="text-red-600 hover:underline text-xs"
+              >
+                Loeschen
+              </button>
+            </form>`
+            : ""
+        }
       </div>
-      <form method="post" action="${action}" class="space-y-6 rounded-lg border border-border-subtle bg-bg-surface shadow-card p-6">
+
+      <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">
         <div>
-          <label for="name" class="block text-sm font-medium text-text-primary">Name *</label>
-          <input type="text" id="name" name="name" required value="${client?.name || ""}" class="${INPUT_CLASS}" aria-describedby="name-hint" />
-          <p id="name-hint" class="mt-1 text-xs text-text-muted">Firmenname oder Name der Person.</p>
+          <label for="name" class="block text-sm font-medium text-gray-700">Name *</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            required
+            value="${client?.name || ""}"
+            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            aria-describedby="name-hint"
+          />
+          <p id="name-hint" class="mt-1 text-xs text-gray-500">Firmenname oder Name der Person.</p>
         </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div><label for="postal_code" class="block text-sm font-medium text-text-primary">PLZ</label><input type="text" id="postal_code" name="postal_code" value="${client?.postal_code || ""}" class="${INPUT_CLASS}" /></div>
-          <div><label for="city" class="block text-sm font-medium text-text-primary">Stadt</label><input type="text" id="city" name="city" value="${client?.city || ""}" class="${INPUT_CLASS}" /></div>
-        </div>
-        <div><label for="address" class="block text-sm font-medium text-text-primary">Adresse</label><input type="text" id="address" name="address" value="${client?.address || ""}" class="${INPUT_CLASS}" /></div>
-        <div class="grid grid-cols-2 gap-4">
-          <div><label for="email" class="block text-sm font-medium text-text-primary">E-Mail</label><input type="email" id="email" name="email" value="${client?.email || ""}" class="${INPUT_CLASS}" /></div>
-          <div><label for="phone" class="block text-sm font-medium text-text-primary">Telefon</label><input type="tel" id="phone" name="phone" value="${client?.phone || ""}" class="${INPUT_CLASS}" /></div>
-        </div>
-        <div>
-          <label for="contact_person" class="block text-sm font-medium text-text-primary">Kontaktperson</label>
-          <input type="text" id="contact_person" name="contact_person" value="${client?.contact_person || ""}" class="${INPUT_CLASS}" aria-describedby="contact-person-hint" />
-          <p id="contact-person-hint" class="mt-1 text-xs text-text-muted">Optional. Erscheint auf der Rechnung als Kontaktperson.</p>
-        </div>
+
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="vat_id" class="block text-sm font-medium text-text-primary">USt-IdNr. (Kunde)</label>
-            <input type="text" id="vat_id" name="vat_id" value="${client?.vat_id || ""}" class="${INPUT_CLASS}" aria-describedby="vat-id-hint" />
-            <p id="vat-id-hint" class="mt-1 text-xs text-text-muted">Für innergemeinschaftliche Leistungen (Reverse Charge).</p>
+            <label for="postal_code" class="block text-sm font-medium text-gray-700">PLZ</label>
+            <input
+              type="text"
+              id="postal_code"
+              name="postal_code"
+              value="${client?.postal_code || ""}"
+              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            />
           </div>
           <div>
-            <label for="buyer_reference" class="block text-sm font-medium text-text-primary">Käuferreferenz</label>
-            <input type="text" id="buyer_reference" name="buyer_reference" value="${client?.buyer_reference || ""}" class="${INPUT_CLASS}" aria-describedby="buyer-ref-hint" />
-            <p id="buyer-ref-hint" class="mt-1 text-xs text-text-muted">Leitweg-ID oder Bestellnummer — nur nötig, wenn dein Kunde das verlangt.</p>
+            <label for="city" class="block text-sm font-medium text-gray-700">Stadt</label>
+            <input
+              type="text"
+              id="city"
+              name="city"
+              value="${client?.city || ""}"
+              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            />
           </div>
         </div>
+
         <div>
-          <label for="notes" class="block text-sm font-medium text-text-primary">Notizen</label>
-          <textarea id="notes" name="notes" rows="3" class="${INPUT_CLASS}" aria-describedby="notes-hint">
-${client?.notes || ""}</textarea>
-          <p id="notes-hint" class="mt-1 text-xs text-text-muted">Interne Notizen — werden nicht auf Rechnungen gedruckt.</p>
+          <label for="address" class="block text-sm font-medium text-gray-700">Adresse</label>
+          <input
+            type="text"
+            id="address"
+            name="address"
+            value="${client?.address || ""}"
+            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          />
         </div>
-        <div class="flex justify-end gap-4 border-t border-border-subtle pt-6">
-          <a href="/kunden" class="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors">Abbrechen</a>
-          <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">Speichern</button>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700">E-Mail</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value="${client?.email || ""}"
+              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label for="phone" class="block text-sm font-medium text-gray-700">Telefon</label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value="${client?.phone || ""}"
+              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="contact_person" class="block text-sm font-medium text-gray-700">Kontaktperson</label>
+          <input
+            type="text"
+            id="contact_person"
+            name="contact_person"
+            value="${client?.contact_person || ""}"
+            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            aria-describedby="contact-person-hint"
+          />
+          <p id="contact-person-hint" class="mt-1 text-xs text-gray-500">Optional. Erscheint auf der Rechnung als Kontaktperson.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="vat_id" class="block text-sm font-medium text-gray-700">USt-IdNr. (Kunde)</label>
+            <input
+              type="text"
+              id="vat_id"
+              name="vat_id"
+              value="${client?.vat_id || ""}"
+              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              aria-describedby="vat-id-hint"
+            />
+            <p id="vat-id-hint" class="mt-1 text-xs text-gray-500">Für innergemeinschaftliche Leistungen (Reverse Charge).</p>
+          </div>
+          <div>
+            <label for="buyer_reference" class="block text-sm font-medium text-gray-700">Käuferreferenz</label>
+            <input
+              type="text"
+              id="buyer_reference"
+              name="buyer_reference"
+              value="${client?.buyer_reference || ""}"
+              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              aria-describedby="buyer-ref-hint"
+            />
+            <p id="buyer-ref-hint" class="mt-1 text-xs text-gray-500">Leitweg-ID oder Bestellnummer — nur nötig, wenn dein Kunde das verlangt.</p>
+          </div>
+        </div>
+
+        <div>
+          <label for="notes" class="block text-sm font-medium text-gray-700">Notizen</label>
+          <textarea
+            id="notes"
+            name="notes"
+            rows="3"
+            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            aria-describedby="notes-hint"
+          >
+${client?.notes || ""}</textarea
+          >
+          <p id="notes-hint" class="mt-1 text-xs text-gray-500">Interne Notizen — werden nicht auf Rechnungen gedruckt.</p>
+        </div>
+
+        <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
+          <a href="/kunden" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
+          <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            Speichern
+          </button>
         </div>
       </form>
     </div>

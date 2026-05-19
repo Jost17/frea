@@ -30,17 +30,26 @@ dashboardRoutes.get("/", (c) => {
 
   const overdueCount = c.get("overdueCount") ?? 0;
   const hasOverdue = stats.overdue_invoices_count > 0;
-  const overdueCardClass = hasOverdue
-    ? "border-accent-danger/30 bg-status-overdue-bg"
-    : "border-border-subtle bg-bg-surface";
-  const overdueLabelClass = hasOverdue ? "text-accent-danger" : "text-text-muted";
 
   const firstTimeHint = noClients
-    ? html`<div class="rounded-lg border border-accent-info/30 bg-accent-info/5 p-4" role="note" aria-label="Erste Schritte">
-        <p class="text-sm font-medium text-text-primary">Alles eingerichtet.</p>
-        <p class="mt-1 text-sm text-text-secondary">Leg jetzt deinen ersten Kunden an — danach kannst du Projekte erstellen und Zeiten erfassen.</p>
-        <a href="/kunden/new" class="mt-2 inline-block text-sm font-medium text-primary hover:underline">Ersten Kunden anlegen →</a>
-      </div>`
+    ? html`
+        <div
+          class="rounded-lg border border-accent-info bg-status-info-bg p-4"
+          role="note"
+          aria-label="Erste Schritte"
+        >
+          <p class="text-sm font-medium text-status-info-text">Alles eingerichtet.</p>
+          <p class="mt-1 text-sm text-status-info-text">
+            Leg jetzt deinen ersten Kunden an — danach kannst du Projekte erstellen und Zeiten erfassen.
+          </p>
+          <a
+            href="/kunden/new"
+            class="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+          >
+            Ersten Kunden anlegen →
+          </a>
+        </div>
+      `
     : "";
 
   const content = html`
@@ -48,38 +57,66 @@ dashboardRoutes.get("/", (c) => {
       <h1 class="text-xl font-semibold text-text-primary">Dashboard</h1>
       ${firstTimeHint}
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div class="rounded-lg border border-border-subtle bg-bg-surface shadow-card p-5">
+
+        <!-- Offene Rechnungen -->
+        <div class="card p-4">
           <p class="text-xs font-medium text-text-muted uppercase tracking-wide">Offene Rechnungen</p>
           <p class="mt-2 text-2xl font-semibold text-text-primary">${stats.open_invoices_count}</p>
           <p class="mt-1 text-sm text-text-secondary">${formatEuro(stats.open_invoices_sum)}</p>
         </div>
-        <div class="rounded-lg border border-border-subtle bg-bg-surface shadow-card p-5">
+
+        <!-- Umsatz diesen Monat -->
+        <div class="card p-4">
           <p class="text-xs font-medium text-text-muted uppercase tracking-wide">Umsatz diesen Monat</p>
           <p class="mt-2 text-2xl font-semibold text-text-primary">${formatEuro(stats.revenue_current_month)}</p>
         </div>
-        <div class="rounded-lg border shadow-card p-5 ${overdueCardClass}">
-          <p class="text-xs font-medium uppercase tracking-wide ${overdueLabelClass}">Überfällig</p>
-          <p class="mt-2 text-2xl font-semibold ${overdueLabelClass}">${stats.overdue_invoices_count}</p>
-          <p class="mt-1 text-sm ${overdueLabelClass}">${hasOverdue ? "Rechnungen überfällig" : "Keine überfälligen Rechnungen"}</p>
+
+        <!-- Überfällige Rechnungen -->
+        <div class="${hasOverdue ? "rounded-lg border border-accent-danger bg-status-overdue-bg shadow-card p-4" : "card p-4"}">
+          <p class="text-xs font-medium ${hasOverdue ? "text-status-overdue-text" : "text-text-muted"} uppercase tracking-wide">Überfällig</p>
+          <p class="mt-2 text-2xl font-semibold ${hasOverdue ? "text-status-overdue-text" : "text-text-muted"}">${stats.overdue_invoices_count}</p>
+          <p class="mt-1 text-sm ${hasOverdue ? "text-status-overdue-text" : "text-text-muted"}">
+            ${hasOverdue ? "Rechnungen überfällig" : "Keine überfälligen Rechnungen"}
+          </p>
         </div>
-        <div class="rounded-lg border border-border-subtle bg-bg-surface shadow-card p-5">
+
+        <!-- Aktive Kunden -->
+        <div class="card p-4">
           <p class="text-xs font-medium text-text-muted uppercase tracking-wide">Aktive Kunden</p>
           <p class="mt-2 text-2xl font-semibold text-text-primary">${stats.active_clients_count}</p>
         </div>
-        <div class="rounded-lg border border-border-subtle bg-bg-surface shadow-card p-5">
+
+        <!-- Aktive Projekte -->
+        <div class="card p-4">
           <p class="text-xs font-medium text-text-muted uppercase tracking-wide">Aktive Projekte</p>
           <p class="mt-2 text-2xl font-semibold text-text-primary">${stats.active_projects_count}</p>
         </div>
+
       </div>
     </div>
   `;
 
   const onboardingDone = c.req.query("onboarding_done") === "1";
   const children = onboardingDone
-    ? html`<div class="mb-6 rounded-lg border border-accent-success/30 bg-status-paid-bg p-4" role="status">
-        <p class="text-sm font-medium text-status-paid-text">Einrichtung abgeschlossen! Firmendaten wurden gespeichert.</p>
-      </div>${content}`
+    ? html`
+        <div
+          class="mb-6 rounded-lg border border-accent-success bg-status-paid-bg p-4"
+          role="status"
+        >
+          <p class="text-sm font-medium text-status-paid-text">
+            Einrichtung abgeschlossen! Firmendaten wurden gespeichert.
+          </p>
+        </div>
+        ${content}
+      `
     : content;
 
-  return c.html(Layout({ title: "Dashboard", activeNav: "dashboard", overdueCount, children }));
+  return c.html(
+    Layout({
+      title: "Dashboard",
+      activeNav: "dashboard",
+      overdueCount,
+      children,
+    }),
+  );
 });
