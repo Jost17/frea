@@ -10,9 +10,10 @@ export interface LayoutProps {
     | "projekte"
     | "zeiten"
     | "rechnungen"
-    | "einstellungen"
     | "ausgaben"
+    | "altersvorsorge"
     | "steuern"
+    | "einstellungen"
     | "bank-import";
   overdueCount: number;
 }
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
     showBadge: true,
   },
   { href: "/ausgaben", label: "Ausgaben", icon: "receipt", key: "ausgaben" },
+  { href: "/altersvorsorge", label: "Altersvorsorge", icon: "piggy-bank", key: "altersvorsorge" },
   { href: "/einstellungen", label: "Einstellungen", icon: "settings", key: "einstellungen" },
 ];
 

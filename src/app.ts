@@ -8,6 +8,7 @@ import { globalErrorHandler, globalNotFoundHandler } from "./middleware/error-ha
 import { navContextMiddleware } from "./middleware/nav-context";
 import { onboardingGuard } from "./middleware/onboarding-guard";
 import { securityHeaders } from "./middleware/security-headers";
+import { altersvorsorgeRoutes } from "./routes/altersvorsorge";
 import { apiRoutes } from "./routes/api";
 import { bankImportRoutes } from "./routes/bank-import";
 import { clientRoutes } from "./routes/clients";
@@ -58,6 +59,8 @@ app.use("/einstellungen", navContextMiddleware);
 app.use("/einstellungen/*", navContextMiddleware);
 app.use("/ausgaben", navContextMiddleware);
 app.use("/ausgaben/*", navContextMiddleware);
+app.use("/altersvorsorge", navContextMiddleware);
+app.use("/altersvorsorge/*", navContextMiddleware);
 
 app.onError(globalErrorHandler);
 app.notFound(globalNotFoundHandler);
@@ -81,4 +84,5 @@ app.route("/api", apiRoutes);
 app.route("/bank-import", bankImportRoutes);
 app.route("/mcp", mcpRoutes);
 app.route("/ausgaben", expenseRoutes);
+app.route("/altersvorsorge", altersvorsorgeRoutes);
 app.route("/onboarding", onboardingRoutes);
