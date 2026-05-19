@@ -17,8 +17,10 @@ import {
   getSettings,
   getTimeEntriesForProject,
 } from "../db/queries";
+import { db } from "../db/schema";
 import type { AppEnv } from "../env";
 import { generateInvoicePdf } from "../lib/pdf/invoice-pdf";
+import { getPeppolClient } from "../lib/peppol-client";
 import { generateZUGFeRDXML, type ZUGFeRDInvoiceData } from "../lib/zugferd-generator";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { EmailService } from "../services/email";
@@ -28,7 +30,11 @@ import { renderInvoiceDetailPage } from "../templates/invoice-detail";
 import { renderInvoiceList } from "../templates/invoice-list";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
-import { invoiceCreateSchema, invoiceStatusUpdateSchema } from "../validation/schemas";
+import {
+  invoiceCreateSchema,
+  invoiceStatusUpdateSchema,
+  peppolSendSchema,
+} from "../validation/schemas";
 
 export const invoiceRoutes = new Hono<AppEnv>();
 
@@ -467,3 +473,78 @@ invoiceRoutes.post("/:id/send", async (c) => {
     return logAndRespond(c, err, "Rechnung konnte nicht versendet werden", 500);
   }
 });
+
+// POST /:id/peppol-senden — Submit invoice to Peppol network (HTMX-compatible)
+invoiceRoutes.post("/:id/peppol-senden", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
+
+    const body = await c.req.parseBody();
+    const parsed = peppolSendSchema.safeParse({
+      invoice_id: id,
+      receiver_participant_id:
+        typeof body === "object" && body !== null
+          ? (body as Record<string, unknown>).receiver_participant_id
+          : undefined,
+    });
+    if (!parsed.success) {
+      return logAndRespond(c, parsed.error, "Ungültige Peppol-Empfänger-ID", 422);
+    }
+
+    const invoice = getInvoice(id);
+    if (!invoice) throw new AppError("Rechnung nicht gefunden", 404);
+
+    const settings = getSettings();
+    if (!settings) throw new AppError("Einstellungen nicht gefunden", 500);
+    if (!settings.ust_id) throw new AppError("USt-ID nicht konfiguriert", 422);
+
+    const senderIdentifier = `9930:DE${settings.ust_id}`;
+    const ublXml = buildUblStub(invoice);
+
+    const peppolClient = getPeppolClient();
+    const result = await peppolClient.sendInvoice(
+      ublXml,
+      parsed.data.receiver_participant_id,
+      invoice.invoice_number,
+      senderIdentifier,
+    );
+
+    const peppol_id = crypto.randomUUID();
+    db.run(
+      `INSERT INTO peppol_documents
+       (invoice_id, peppol_id, receiver_id, status, ubl_xml, submission_timestamp, recommand_response)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        peppol_id,
+        parsed.data.receiver_participant_id,
+        result.status,
+        ublXml,
+        result.timestamp,
+        JSON.stringify(result),
+      ],
+    );
+
+    return c.json({ success: true, data: { peppol_id, status: result.status } });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error("[invoices/:id/peppol-senden] Unexpected error:", err);
+    return logAndRespond(c, err, "Peppol-Versand fehlgeschlagen", 500);
+  }
+});
+
+// Stub UBL 2.1 XML — Phase 2 builds the full EN16931-compliant generator
+function buildUblStub(invoice: { invoice_number: string }): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2">
+  <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
+  <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
+  <cbc:ID>${invoice.invoice_number}</cbc:ID>
+  <cbc:IssueDate>${new Date().toISOString().split("T")[0]}</cbc:IssueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+</Invoice>`;
+}

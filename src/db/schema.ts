@@ -121,6 +121,26 @@ export function initializeSchema() {
     )
   `);
 
+  // Peppol-Dokumente (für Elektronische Rechnungsübermittlung)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS peppol_documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+      peppol_id TEXT NOT NULL UNIQUE,
+      receiver_id TEXT NOT NULL,
+      sender_id TEXT,
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending','submitted','delivered','acknowledged','failed')),
+      ubl_xml TEXT,
+      submission_timestamp TEXT,
+      delivery_timestamp TEXT,
+      error_message TEXT,
+      remand_response TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   // Rechnungspositionen (MwSt pro Position — nie auf Gesamtsumme berechnen)
   db.run(`
     CREATE TABLE IF NOT EXISTS invoice_items (
@@ -158,6 +178,8 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_time_entries_invoice ON time_entries(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoices_status_due ON invoices(status, due_date)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_peppol_docs_invoice ON peppol_documents(invoice_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_peppol_docs_status ON peppol_documents(status)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id)");
 
