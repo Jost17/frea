@@ -26,7 +26,7 @@ export function buildInvoiceHtml(data: InvoicePdfData): string {
   const config = parseInvoiceLayoutConfig(settings);
   const isKleinunternehmer = Boolean(settings.kleinunternehmer);
   const isReverseCharge = Boolean(invoice.reverse_charge);
-  const effectiveVatRate = (isKleinunternehmer || isReverseCharge) ? 0 : settings.vat_rate;
+  const effectiveVatRate = isKleinunternehmer || isReverseCharge ? 0 : settings.vat_rate;
 
   const senderLine = escapeHtml(
     `${settings.company_name} · ${settings.address || ""} · ${settings.postal_code || ""} ${settings.city || ""}`,

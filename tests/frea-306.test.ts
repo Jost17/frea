@@ -1,7 +1,12 @@
-import { describe, it, expect, beforeEach } from "bun:test";
-import { createInvoice, getRemainingBalance, addPayment, getPayments } from "../src/db/invoice-queries";
-import { initializeSchema, db } from "../src/db/schema";
+import { beforeEach, describe, expect, it } from "bun:test";
+import {
+  addPayment,
+  createInvoice,
+  getPayments,
+  getRemainingBalance,
+} from "../src/db/invoice-queries";
 import { getSettings } from "../src/db/queries";
+import { db, initializeSchema } from "../src/db/schema";
 
 describe("FREA-306: Reverse Charge & Partial Payments", () => {
   beforeEach(() => {
@@ -17,9 +22,7 @@ describe("FREA-306: Reverse Charge & Partial Payments", () => {
 
   function createTestClient(name: string) {
     return db
-      .query(
-        "INSERT INTO clients (name, vat_id) VALUES (?, ?) RETURNING id",
-      )
+      .query("INSERT INTO clients (name, vat_id) VALUES (?, ?) RETURNING id")
       .get(name, "DE123456789") as { id: number };
   }
 
