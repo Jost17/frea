@@ -26,10 +26,11 @@ function resolvePeriod(raw: { year?: number; month?: number; quarter?: number })
 taxRoutes.get("/", (c) => {
   try {
     const overdueCount = c.get("overdueCount");
-    const years = getAvailableYears();
-
     const currentYear = new Date().getFullYear();
-    if (!years.includes(currentYear)) years.unshift(currentYear);
+    const availableYears = getAvailableYears();
+    const years = availableYears.includes(currentYear)
+      ? availableYears
+      : [currentYear, ...availableYears];
 
     const parsed = periodSchema.safeParse({
       year: c.req.query("year"),
