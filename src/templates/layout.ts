@@ -4,7 +4,15 @@ import type { HtmlEscapedString } from "hono/utils/html";
 export interface LayoutProps {
   title: string;
   children: HtmlEscapedString | Promise<HtmlEscapedString>;
-  activeNav?: "dashboard" | "kunden" | "projekte" | "zeiten" | "rechnungen" | "einstellungen";
+  activeNav?:
+    | "dashboard"
+    | "kunden"
+    | "projekte"
+    | "zeiten"
+    | "rechnungen"
+    | "einstellungen"
+    | "steuern"
+    | "bank-import";
   overdueCount: number;
 }
 
