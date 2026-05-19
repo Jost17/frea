@@ -27,3 +27,4 @@ Thumbs.db
 dist/
 build/
 public/static/styles.css
+.claude/worktrees/
