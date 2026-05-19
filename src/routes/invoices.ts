@@ -23,7 +23,10 @@ import { generateZUGFeRDXML, type ZUGFeRDInvoiceData } from "../lib/zugferd-gene
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { EmailService } from "../services/email";
 import { renderInvoiceClientSelection } from "../templates/invoice-create-client";
+import { CustomerSection } from "../templates/invoice-create-customer-section";
+import { SectionLayout } from "../templates/invoice-create-layout";
 import { renderInvoiceProjectSelection } from "../templates/invoice-create-project";
+import { TermsSection } from "../templates/invoice-create-terms-section";
 import { renderInvoiceDetailPage } from "../templates/invoice-detail";
 import { renderInvoiceList } from "../templates/invoice-list";
 import { interactiveStatusBadge } from "../templates/invoice-shared";
@@ -85,10 +88,95 @@ invoiceRoutes.get("/", (c) => {
   }
 });
 
-// Step 1: Select client
+// HTMX partial: load time-entry section when client is selected in sections layout
+invoiceRoutes.get("/create/entries", (c) => {
+  try {
+    const clientIdParam = c.req.query("client_id");
+    if (!clientIdParam) {
+      return c.html(
+        html`<p class="text-sm text-text-secondary italic">Bitte zuerst einen Kunden wählen.</p>`,
+      );
+    }
+
+    const clientId = parseInt(clientIdParam, 10);
+    if (Number.isNaN(clientId)) {
+      throw new AppError("Ungültige Kunden-ID", 400);
+    }
+
+    const client = getClient(clientId);
+    if (!client) {
+      throw new AppError("Kunde nicht gefunden", 404);
+    }
+
+    const settings = getSettings();
+    if (!settings) {
+      throw new AppError("Firmeneinstellungen nicht initialisiert", 500);
+    }
+
+    const isKleinunternehmer = Boolean(settings.kleinunternehmer);
+    const today = new Date().toISOString().split("T")[0];
+    const projectPreviews = computeProjectPreviews(clientId, settings.vat_rate, isKleinunternehmer);
+
+    return c.html(
+      renderInvoiceProjectSelection({
+        client,
+        projectPreviews,
+        today,
+        paymentDays: settings.payment_days || 28,
+        vatRate: settings.vat_rate,
+        isKleinunternehmer,
+      }),
+    );
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    return logAndRespond(c, err, "Projekte konnten nicht geladen werden", 500);
+  }
+});
+
+// Step 1: Select client (or sections layout when ?layout=sections)
 invoiceRoutes.get("/create", (c) => {
   try {
     const overdueCount = c.get("overdueCount");
+    const layout = c.req.query("layout");
+
+    // Sections layout: progressive section-card flow (FREA-319)
+    if (layout === "sections") {
+      const clients = getAllActiveClients();
+      const settings = getSettings();
+      if (!settings) {
+        throw new AppError("Firmeneinstellungen nicht initialisiert", 500);
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
+
+      return c.html(
+        Layout({
+          title: "Neue Rechnung",
+          activeNav: "rechnungen",
+          overdueCount,
+          children: SectionLayout({
+            children: html`
+              <input type="hidden" name="layout" value="sections" />
+              ${CustomerSection({ clients })}
+              <div
+                id="entries-section"
+                class="rounded-xl border border-border-subtle bg-bg-surface shadow-sm px-6 py-5 text-sm text-text-secondary italic"
+              >
+                Bitte zuerst einen Kunden auswählen.
+              </div>
+              ${TermsSection({
+                today,
+                paymentDays: settings.payment_days || 28,
+                currentMonth: now.getMonth() + 1,
+                currentYear: now.getFullYear(),
+              })}
+            `,
+          }),
+        }),
+      );
+    }
+
     const clientIdParam = c.req.query("client_id");
 
     // Step 2: If client_id provided, show project + time entry selection
