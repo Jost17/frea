@@ -30,9 +30,9 @@ sitemapRoutes.get("/", (c) => {
     })
     .join("\n");
 
-  c.header("Content-Type", "application/xml");
-  return c.text(`<?xml version="1.0" encoding="UTF-8"?>
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls}
-</urlset>`);
+</urlset>`;
+  return c.body(xml, 200, { "Content-Type": "application/xml; charset=UTF-8" });
 });
