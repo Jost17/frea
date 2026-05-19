@@ -11,6 +11,7 @@ export interface LayoutProps {
     | "zeiten"
     | "rechnungen"
     | "einstellungen"
+    | "ausgaben"
     | "steuern"
     | "bank-import";
   overdueCount: number;
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
     key: "rechnungen",
     showBadge: true,
   },
+  { href: "/ausgaben", label: "Ausgaben", icon: "receipt", key: "ausgaben" },
   { href: "/einstellungen", label: "Einstellungen", icon: "settings", key: "einstellungen" },
 ];
 
