@@ -1,5 +1,5 @@
-import { createMiddleware } from "hono/factory";
 import { getCookie } from "hono/cookie";
+import { createMiddleware } from "hono/factory";
 import { getSession, getUserCount } from "../db/auth-queries";
 import type { AppEnv } from "../env";
 

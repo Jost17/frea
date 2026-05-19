@@ -9,6 +9,7 @@ import { globalErrorHandler, globalNotFoundHandler } from "./middleware/error-ha
 import { navContextMiddleware } from "./middleware/nav-context";
 import { onboardingGuard } from "./middleware/onboarding-guard";
 import { securityHeaders } from "./middleware/security-headers";
+import { accountRoutes } from "./routes/account";
 import { apiRoutes } from "./routes/api";
 import { authRoutes } from "./routes/auth";
 import { clientRoutes } from "./routes/clients";
@@ -78,6 +79,7 @@ app.route("/projekte", projectRoutes);
 app.route("/zeiten", timeRoutes);
 app.route("/rechnungen", invoiceRoutes);
 app.route("/einstellungen", settingsRoutes);
+app.route("/einstellungen", accountRoutes);
 app.route("/api", apiRoutes);
 app.route("/mcp", mcpRoutes);
 app.route("/ausgaben", expenseRoutes);

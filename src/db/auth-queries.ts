@@ -73,7 +73,8 @@ export type AuthLogAction =
   | "login_failed"
   | "logout"
   | "password_changed"
-  | "email_changed";
+  | "email_changed"
+  | "account_deletion";
 
 export function insertAuthLog(
   action: AuthLogAction,

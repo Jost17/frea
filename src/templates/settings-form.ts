@@ -17,6 +17,10 @@ export function renderSettingsForm(settings: Settings, showOnboarding: boolean) 
             `
           : ""
       }
+      <div class="mb-6 flex items-center gap-4 border-b border-gray-200">
+        <a href="/einstellungen" class="pb-3 text-sm font-medium border-b-2 border-blue-600 text-blue-600">Firma</a>
+        <a href="/einstellungen/konto" class="pb-3 text-sm font-medium text-gray-500 hover:text-gray-900 border-b-2 border-transparent">Konto</a>
+      </div>
       <h1 class="mb-2 text-2xl font-semibold">Firmeneinstellungen</h1>
       <p class="mb-6 text-sm text-gray-500">
         Deine Firmendaten und Rechnungseinstellungen. Änderungen wirken sich auf neue Rechnungen
