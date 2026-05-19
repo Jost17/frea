@@ -510,7 +510,7 @@ invoiceRoutes.post("/:id/peppol-senden", async (c) => {
       senderIdentifier,
     );
 
-    const peppol_id = `PEPPOL-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const peppol_id = crypto.randomUUID();
     db.run(
       `INSERT INTO peppol_documents
        (invoice_id, peppol_id, receiver_id, status, ubl_xml, submission_timestamp, recommand_response)
