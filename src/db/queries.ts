@@ -317,6 +317,7 @@ export interface TimeEntryWithContext {
   id: number;
   project_id: number;
   project_name: string;
+  daily_rate: number;
   client_id: number;
   client_name: string;
   date: string;
@@ -329,7 +330,7 @@ export function getAllUnbilledTimeEntries() {
   return db
     .query<TimeEntryWithContext, []>(
       `SELECT
-        t.id, t.project_id, p.name as project_name,
+        t.id, t.project_id, p.name as project_name, p.daily_rate,
         c.id as client_id, c.name as client_name,
         t.date, t.duration, t.description, t.billable
        FROM time_entries t
@@ -339,6 +340,53 @@ export function getAllUnbilledTimeEntries() {
        ORDER BY c.name, p.name, t.date DESC`,
     )
     .all();
+}
+
+// ─── Week Entries (FREA-10) ───────────────────────────────────────────────────
+
+export interface WeekEntry {
+  id: number;
+  project_id: number;
+  project_name: string;
+  client_name: string;
+  date: string; // YYYY-MM-DD
+  duration: number;
+  description: string | null;
+}
+
+/**
+ * Returns all time entries in the ISO week containing isoDate.
+ * isoDate: any YYYY-MM-DD in the target week.
+ */
+export function getTimeEntriesForWeek(weekStart: string, weekEnd: string): WeekEntry[] {
+  return db
+    .query<WeekEntry, [string, string]>(
+      `SELECT t.id, t.project_id, p.name as project_name,
+              c.name as client_name, t.date, t.duration, t.description
+       FROM time_entries t
+       JOIN projects p ON t.project_id = p.id
+       JOIN clients c ON p.client_id = c.id
+       WHERE t.date >= ? AND t.date <= ?
+       ORDER BY c.name, p.name, t.date`,
+    )
+    .all(weekStart, weekEnd);
+}
+
+/**
+ * Upsert a time entry by project_id + date.
+ * Returns the id of the created or updated entry.
+ */
+export function upsertTimeEntryByProjectDate(
+  projectId: number,
+  date: string,
+  duration: number,
+  entryId?: number,
+): number | undefined {
+  if (entryId) {
+    updateTimeEntry(entryId, { duration });
+    return entryId;
+  }
+  return createTimeEntry({ project_id: projectId, date, duration, description: "", billable: 1 });
 }
 
 export function createTimeEntry(
