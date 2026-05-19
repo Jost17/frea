@@ -155,7 +155,7 @@ export function initializeSchema() {
   db.run(`
     CREATE TABLE IF NOT EXISTS peppol_documents (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      invoice_id INTEGER NOT NULL UNIQUE REFERENCES invoices(id),
+      invoice_id INTEGER NOT NULL REFERENCES invoices(id),
       peppol_id TEXT NOT NULL UNIQUE,
       receiver_id TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'submitted', 'delivered', 'acknowledged', 'failed')),
