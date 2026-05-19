@@ -25,7 +25,8 @@ export function buildInvoiceHtml(data: InvoicePdfData): string {
   const { invoice, items, client, settings } = data;
   const config = parseInvoiceLayoutConfig(settings);
   const isKleinunternehmer = Boolean(settings.kleinunternehmer);
-  const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
+  const isReverseCharge = Boolean(invoice.reverse_charge);
+  const effectiveVatRate = (isKleinunternehmer || isReverseCharge) ? 0 : settings.vat_rate;
 
   const senderLine = escapeHtml(
     `${settings.company_name} · ${settings.address || ""} · ${settings.postal_code || ""} ${settings.city || ""}`,
@@ -63,6 +64,10 @@ export function buildInvoiceHtml(data: InvoicePdfData): string {
 
   const kleinunternehmerNote = isKleinunternehmer
     ? `<p style="font-size: 11px; color: #059669; font-style: italic; margin: 0;">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</p>`
+    : "";
+
+  const reverseChargeNote = isReverseCharge
+    ? `<p style="font-size: 11px; color: #1e40af; font-style: italic; margin: 0;">Umsatzsteuerfreiheit nach §13b UStG — Steuerschuldner ist der Leistungsempfänger</p>`
     : "";
 
   return `<!DOCTYPE html>
@@ -283,6 +288,7 @@ export function buildInvoiceHtml(data: InvoicePdfData): string {
           : ""
       }
       ${kleinunternehmerNote}
+      ${reverseChargeNote}
       <div class="summary-row grand-total">
         <span>Gesamtbetrag</span>
         <span>${formatCurrency(invoice.gross_amount)}</span>

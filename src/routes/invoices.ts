@@ -2,11 +2,14 @@ import { readFile } from "node:fs/promises";
 import { Hono } from "hono";
 import { html } from "hono/html";
 import {
+  addPayment,
   computeProjectPreviews,
   createInvoice,
   getAllInvoices,
   getInvoice,
   getInvoiceItems,
+  getPayments,
+  getRemainingBalance,
   saveInvoicePdfPath,
   updateInvoiceStatus,
 } from "../db/invoice-queries";
@@ -43,6 +46,7 @@ const INVOICE_CREATE_FIELDS = {
   po_number: "string",
   service_period_from: "string",
   service_period_to: "string",
+  reverse_charge: "int",
 } as const;
 
 // List all invoices
@@ -225,6 +229,8 @@ invoiceRoutes.get("/:id", (c) => {
     const items = getInvoiceItems(id);
     const client = getClient(invoice.client_id);
     const settings = getSettings();
+    const payments = getPayments(id);
+    const remainingBalance = getRemainingBalance(id);
 
     if (!client || !settings) throw new AppError("Daten fehlen", 500);
 
@@ -243,6 +249,8 @@ invoiceRoutes.get("/:id", (c) => {
           client,
           settings,
           isOverdue,
+          payments,
+          remainingBalance,
         }),
       }),
     );
@@ -362,5 +370,33 @@ invoiceRoutes.post("/:id/send", async (c) => {
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "Rechnung konnte nicht versendet werden", 500);
+  }
+});
+
+// POST: Record payment (FREA-306)
+invoiceRoutes.post("/:id/payment", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
+
+    const formData = await c.req.formData();
+    const amount = formData.get("amount");
+    const paymentDate = formData.get("payment_date");
+    const note = formData.get("note");
+
+    if (!amount || !paymentDate) {
+      throw new AppError("Betrag und Zahlungsdatum erforderlich", 400);
+    }
+
+    const amountNum = parseFloat(String(amount));
+    if (Number.isNaN(amountNum) || amountNum <= 0) {
+      throw new AppError("Betrag muss positiv sein", 400);
+    }
+
+    addPayment(id, amountNum, String(paymentDate), String(note) || undefined);
+
+    return c.redirect(`/rechnungen/${id}`);
+  } catch (err) {
+    return handleMutationError(c, err, "Zahlung konnte nicht erfasst werden");
   }
 });

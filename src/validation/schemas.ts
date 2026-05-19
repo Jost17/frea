@@ -158,6 +158,7 @@ export const invoiceCreateSchema = z.object({
   po_number: z.string().optional().default(""),
   service_period_from: z.string().optional().default(""),
   service_period_to: z.string().optional().default(""),
+  reverse_charge: z.number().optional().default(0),
 });
 
 export type InvoiceCreate = z.infer<typeof invoiceCreateSchema>;
@@ -183,6 +184,7 @@ export interface Invoice {
   service_period_to: string | null;
   paid_date: string | null;
   reminder_level: number;
+  reverse_charge: number;
   created_at: string;
 }
 
@@ -287,3 +289,20 @@ export const onboardingCompletionSchema = z
   .refine((data) => !!(data.tax_number?.trim() || data.ust_id?.trim()), {
     message: "Steuernummer oder Ust-IdNr. erforderlich",
   });
+
+// Payments (FREA-306)
+export const paymentSchema = z.object({
+  invoice_id: z.number().int().positive("Rechnung erforderlich"),
+  amount: z.coerce.number().positive("Betrag muss positiv sein"),
+  payment_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Datum im Format JJJJ-MM-TT erforderlich"),
+  note: z.string().optional().default(""),
+});
+
+export interface Payment {
+  id: number;
+  invoice_id: number;
+  amount: number;
+  payment_date: string;
+  note: string | null;
+  created_at: string;
+}

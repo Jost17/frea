@@ -330,6 +330,10 @@ export function buildZugferdXml(
   settings: Settings,
 ): string | undefined {
   if (settings.kleinunternehmer || items.length === 0) return undefined;
+
+  const isReverseCharge = Boolean(invoice.reverse_charge);
+  const vatCategoryCode = isReverseCharge ? "AE" : "S";
+
   return generateZUGFeRDXML({
     invoiceNumber: invoice.invoice_number,
     invoiceDate: invoice.invoice_date,
@@ -356,12 +360,13 @@ export function buildZugferdXml(
       country: "Deutschland",
       email: client.email || undefined,
       reference: invoice.po_number || invoice.invoice_number,
+      vatId: client.vat_id || undefined,
     },
     payment: {
       iban: settings.iban,
       bic: settings.bic,
     },
-    vat: { categoryCode: "S" },
+    vat: { categoryCode: vatCategoryCode },
     lineItems: items.map((item) => ({
       description: item.description,
       quantity: item.days,
@@ -370,8 +375,8 @@ export function buildZugferdXml(
     })),
     totals: {
       netAmount: invoice.net_amount,
-      vatRate: settings.vat_rate,
-      vatAmount: invoice.vat_amount,
+      vatRate: isReverseCharge ? 0 : settings.vat_rate,
+      vatAmount: isReverseCharge ? 0 : invoice.vat_amount,
       grossAmount: invoice.gross_amount,
     },
   });

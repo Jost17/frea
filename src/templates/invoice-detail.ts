@@ -1,5 +1,5 @@
 import { html } from "hono/html";
-import type { Client, Invoice, InvoiceItem, Settings } from "../validation/schemas";
+import type { Client, Invoice, InvoiceItem, Payment, Settings } from "../validation/schemas";
 import { Button } from "./components/button";
 import { Table, TableRow, Td } from "./components/table";
 import {
@@ -23,12 +23,23 @@ export function renderInvoiceDetailPage(args: {
   client: Client;
   settings: Settings;
   isOverdue: boolean;
+  payments?: Payment[];
+  remainingBalance?: number;
 }) {
-  const { invoice, items, client, settings, isOverdue } = args;
+  const {
+    invoice,
+    items,
+    client,
+    settings,
+    isOverdue,
+    payments = [],
+    remainingBalance = invoice.gross_amount,
+  } = args;
   const config = parseInvoiceLayoutConfig(settings);
 
   const isKleinunternehmer = Boolean(settings.kleinunternehmer);
-  const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
+  const isReverseCharge = Boolean(invoice.reverse_charge);
+  const effectiveVatRate = isKleinunternehmer || isReverseCharge ? 0 : settings.vat_rate;
   const accent = config.accent_color;
 
   const vatHeader =
@@ -86,6 +97,7 @@ export function renderInvoiceDetailPage(args: {
         <div class="flex items-center gap-4">
           <h1 class="text-2xl font-semibold">Rechnung ${invoice.invoice_number}</h1>
           ${statusBadge(invoice.status)}
+          ${isReverseCharge ? html`<span class="text-sm bg-blue-100 text-blue-800 font-medium px-2 py-1 rounded">§13b UStG</span>` : ""}
           ${isOverdue ? html`<span class="text-sm text-accent-danger font-medium">Überfällig ⚠</span>` : ""}
         </div>
         <div class="flex gap-2">
@@ -179,12 +191,84 @@ export function renderInvoiceDetailPage(args: {
                 ? html`<p class="text-sm text-accent-success italic">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</p>`
                 : ""
             }
+            ${
+              isReverseCharge
+                ? html`<p class="text-sm text-blue-600 italic">Steuerschuldnerschaft des Leistungsempfängers gemäß §13b UStG</p>`
+                : ""
+            }
+            ${
+              invoice.status !== "draft"
+                ? html`
+                  <div class="flex justify-between text-sm pt-4">
+                    <span class="text-text-secondary">Offener Betrag:</span>
+                    <span class="font-medium text-text-primary">${formatCurrency(remainingBalance)}</span>
+                  </div>
+                `
+                : ""
+            }
             <div class="flex justify-between border-t border-border-subtle pt-2 text-lg">
               <span class="font-semibold text-text-primary">Gesamtbetrag:</span>
               <span class="font-bold text-text-primary">${formatCurrency(invoice.gross_amount)}</span>
             </div>
           </div>
         </div>
+
+        ${
+          invoice.status !== "draft"
+            ? html`
+              <div class="mt-8 border-t border-border-subtle pt-6">
+                <h2 class="text-lg font-semibold mb-4">Zahlungen erfassen</h2>
+                <form method="post" action="/rechnungen/${invoice.id}/payment" class="space-y-4 rounded-lg border border-border-subtle bg-bg-surface-raised p-4 max-w-md">
+                  <div>
+                    <label for="amount" class="block text-sm font-medium text-text-primary mb-1">Betrag *</label>
+                    <input type="number" id="amount" name="amount" step="0.01" min="0" max="${remainingBalance}" required class="w-full rounded border border-border-subtle px-3 py-2 text-sm" placeholder="0,00 €" />
+                  </div>
+                  <div>
+                    <label for="payment_date" class="block text-sm font-medium text-text-primary mb-1">Zahlungsdatum *</label>
+                    <input type="date" id="payment_date" name="payment_date" required class="w-full rounded border border-border-subtle px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label for="note" class="block text-sm font-medium text-text-primary mb-1">Notiz (optional)</label>
+                    <input type="text" id="note" name="note" class="w-full rounded border border-border-subtle px-3 py-2 text-sm" placeholder="z.B. Referenznummer" />
+                  </div>
+                  <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Zahlung erfassen</button>
+                </form>
+              </div>
+
+              ${
+                payments.length > 0
+                  ? html`
+                    <div class="mt-8 border-t border-border-subtle pt-6">
+                      <h2 class="text-lg font-semibold mb-4">Zahlungshistorie</h2>
+                      <div class="rounded-lg border border-border-subtle overflow-hidden">
+                        <table class="w-full text-sm">
+                          <thead class="bg-bg-surface-raised border-b">
+                            <tr>
+                              <th class="px-4 py-2 text-left font-medium text-text-secondary">Datum</th>
+                              <th class="px-4 py-2 text-right font-medium text-text-secondary">Betrag</th>
+                              <th class="px-4 py-2 text-left font-medium text-text-secondary">Notiz</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${payments.map(
+                              (p) => html`
+                              <tr class="border-t border-border-subtle hover:bg-bg-surface-raised">
+                                <td class="px-4 py-2 text-text-secondary">${formatDate(p.payment_date)}</td>
+                                <td class="px-4 py-2 text-right font-medium text-text-primary">${formatCurrency(p.amount)}</td>
+                                <td class="px-4 py-2 text-text-secondary">${p.note || "—"}</td>
+                              </tr>
+                            `,
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  `
+                  : ""
+              }
+            `
+            : ""
+        }
 
         <div class="border-t border-border-subtle pt-6 text-xs text-text-muted space-y-1">
           <div class="grid grid-cols-2 gap-4">
