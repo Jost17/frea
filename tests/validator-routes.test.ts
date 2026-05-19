@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll } from "bun:test";
-import { initializeSchema } from "../src/db/schema";
+import { beforeAll, describe, expect, it } from "bun:test";
 import { app } from "../src/app";
+import { initializeSchema } from "../src/db/schema";
 
 // ─────────────────────────────────────────────────────────────────────
 // QA Integration Tests: ZUGFeRD-Validator Routes
@@ -57,7 +57,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     expect(res.status).toBe(303); // See Other Redirect
@@ -101,7 +101,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     const location = uploadRes.headers.get("Location")!;
@@ -109,7 +109,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
 
     // Jetzt GET zum Ergebnis
     const getRes = await app.request(
-      new Request(`http://localhost/validator/${id}`, { method: "GET" })
+      new Request(`http://localhost/validator/${id}`, { method: "GET" }),
     );
 
     expect(getRes.status).toBe(200);
@@ -128,7 +128,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     expect(res.status).toBe(400);
@@ -146,7 +146,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     expect(res.status).toBe(415);
@@ -166,7 +166,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     expect(res.status).toBe(413);
@@ -178,7 +178,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
   // ─── AC-7: GET mit ungültige ID → 400 Bad Request ───
   it("AC-7: GET /validator mit ungültige UUID-Format → 400 Bad Request", async () => {
     const res = await app.request(
-      new Request("http://localhost/validator/invalid-id", { method: "GET" })
+      new Request("http://localhost/validator/invalid-id", { method: "GET" }),
     );
 
     expect(res.status).toBe(400);
@@ -188,7 +188,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
   it("AC-8: GET /validator mit nicht-existierende UUID → 404 Not Found", async () => {
     const fakeId = "12345678-1234-5678-1234-567812345678";
     const res = await app.request(
-      new Request(`http://localhost/validator/${fakeId}`, { method: "GET" })
+      new Request(`http://localhost/validator/${fakeId}`, { method: "GET" }),
     );
 
     expect(res.status).toBe(404);
@@ -233,7 +233,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     const location = uploadRes.headers.get("Location")!;
@@ -241,7 +241,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
 
     // Badge abrufen
     const badgeRes = await app.request(
-      new Request(`http://localhost/validator/${id}/badge.svg`, { method: "GET" })
+      new Request(`http://localhost/validator/${id}/badge.svg`, { method: "GET" }),
     );
 
     expect(badgeRes.status).toBe(200);
@@ -269,14 +269,14 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     const location = uploadRes.headers.get("Location")!;
     const id = location.split("/").pop();
 
     const badgeRes = await app.request(
-      new Request(`http://localhost/validator/${id}/badge.svg`, { method: "GET" })
+      new Request(`http://localhost/validator/${id}/badge.svg`, { method: "GET" }),
     );
 
     const cacheControl = badgeRes.headers.get("Cache-Control");
@@ -288,16 +288,16 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
   it("AC-11: POST mit PDF das ZUGFeRD enthält", async () => {
     const pdfWithZugferd = Buffer.from(
       "%PDF-1.4\n%some binary\n" +
-      '<?xml version="1.0"?>' +
-      "<rsm:CrossIndustryInvoice>" +
-      "<rsm:ExchangedDocumentContext>" +
-      '<ram:ID>urn:cen.eu:en16931:2017</ram:ID>' +
-      "</rsm:ExchangedDocumentContext>" +
-      "<rsm:ExchangedDocument>" +
-      "<ram:ID>PDF-TEST</ram:ID>" +
-      "<ram:TypeCode>380</ram:TypeCode>" +
-      "</rsm:ExchangedDocument>" +
-      "</rsm:CrossIndustryInvoice>"
+        '<?xml version="1.0"?>' +
+        "<rsm:CrossIndustryInvoice>" +
+        "<rsm:ExchangedDocumentContext>" +
+        "<ram:ID>urn:cen.eu:en16931:2017</ram:ID>" +
+        "</rsm:ExchangedDocumentContext>" +
+        "<rsm:ExchangedDocument>" +
+        "<ram:ID>PDF-TEST</ram:ID>" +
+        "<ram:TypeCode>380</ram:TypeCode>" +
+        "</rsm:ExchangedDocument>" +
+        "</rsm:CrossIndustryInvoice>",
     );
 
     const formData = new FormData();
@@ -308,7 +308,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     expect(res.status).toBe(303);
@@ -333,7 +333,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     expect(res.status).toBe(303);
@@ -342,7 +342,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
     const id = location.split("/").pop()!;
 
     const getRes = await app.request(
-      new Request(`http://localhost/validator/${id}`, { method: "GET" })
+      new Request(`http://localhost/validator/${id}`, { method: "GET" }),
     );
 
     expect(getRes.status).toBe(200);
@@ -359,7 +359,7 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     expect(res.status).toBe(303);
@@ -370,13 +370,13 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
     const id = location.split("/").pop()!;
 
     const getRes = await app.request(
-      new Request(`http://localhost/validator/${id}`, { method: "GET" })
+      new Request(`http://localhost/validator/${id}`, { method: "GET" }),
     );
 
     const html = await getRes.text();
-    // Prüfe: Datenschutz-Hinweis ist sichtbar
+    // Prüfe: Datenschutz-Hinweis ist sichtbar (Datei nicht gespeichert, Report 7 Tage)
     expect(html).toContain("Datenschutz");
-    expect(html).toContain("nicht dauerhaft gespeichert");
+    expect(html).toContain("nicht gespeichert");
     expect(html).toContain("7 Tage");
   });
 
@@ -397,14 +397,14 @@ describe("ZUGFeRD-Validator Routes — API Integration", () => {
       new Request("http://localhost/validator", {
         method: "POST",
         body: formData,
-      })
+      }),
     );
 
     const location = uploadRes.headers.get("Location")!;
     const id = location.split("/").pop()!;
 
     const getRes = await app.request(
-      new Request(`http://localhost/validator/${id}`, { method: "GET" })
+      new Request(`http://localhost/validator/${id}`, { method: "GET" }),
     );
 
     const html = await getRes.text();

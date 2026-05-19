@@ -43,6 +43,19 @@ const PROFILE_MAP: Record<string, ZUGFeRDProfile> = {
   "urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_2.2": "XRECHNUNG",
 };
 
+export const RULE_DESCRIPTIONS: Record<string, string> = {
+  "BR-01": "Pflichtstruktur der E-Rechnung",
+  "BR-02": "Rechnungsnummer Pflichtfeld",
+  "BR-03": "Rechnungsdatum Pflichtfeld",
+  "BR-04": "Dokumententyp Pflichtfeld",
+  "BR-05": "Währungscode Pflichtfeld",
+  "BR-07": "Verkäufer und Käufer Pflichtfeld",
+  "BR-16": "Mindestens eine Rechnungsposition erforderlich",
+  "BR-47": "MwSt-Aufschlüsselung Pflichtfeld",
+  "BR-53": "Zahlungsbeträge Pflichtfeld",
+  "BR-CO-09": "Steuerliche Identifikation empfohlen",
+};
+
 export const PROFILE_LABELS: Record<ZUGFeRDProfile, string> = {
   MINIMUM: "MINIMUM",
   BASIC_WL: "BASIC WL",

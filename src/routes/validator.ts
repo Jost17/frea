@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { db } from "../db/schema";
 import { validateZugferdPdf, validateZugferdXml } from "../lib/zugferd-validator";
 import { AppError } from "../middleware/error-handler";
+import { validatorRateLimit } from "../middleware/validator-rate-limit";
 import {
   renderValidatorBadgeSvg,
   renderValidatorPage,
@@ -17,8 +18,8 @@ validatorRoutes.get("/", (c) => {
   return c.html(renderValidatorPage());
 });
 
-// POST /validator — Datei hochladen + validieren
-validatorRoutes.post("/", async (c) => {
+// POST /validator — Datei hochladen + validieren (Rate-Limit: 10/Min/IP)
+validatorRoutes.post("/", validatorRateLimit, async (c) => {
   let body: FormData;
   try {
     body = await c.req.formData();
