@@ -200,6 +200,29 @@ export interface InvoiceItem {
   gross_amount: number;
 }
 
+// ─── Expense (FREA-262) ───────────────────────────────────────────────────────
+
+export const EXPENSE_CATEGORIES_ZOD = [
+  "Büro",
+  "Software",
+  "Hardware",
+  "Fahrt",
+  "Kommunikation",
+  "Marketing",
+  "Sonstiges",
+] as const;
+
+export const expenseCreateSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Datum im Format JJJJ-MM-TT erforderlich"),
+  amount: z.coerce.number().positive("Betrag muss positiv sein"),
+  vat_rate: z.coerce.number().min(0).max(1),
+  category: z.enum(EXPENSE_CATEGORIES_ZOD, "Ungültige Kategorie"),
+  description: z.string().min(1, "Beschreibung erforderlich"),
+  vendor: z.string().default(""),
+});
+
+export type ExpenseCreateInput = z.infer<typeof expenseCreateSchema>;
+
 // Invoice Status Update
 export const invoiceStatusUpdateSchema = z.object({
   status: z.enum(["sent", "paid", "cancelled"]),

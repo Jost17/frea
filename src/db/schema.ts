@@ -178,6 +178,26 @@ export function initializeSchema() {
     END
   `);
 
+  // Ausgaben (Expense Tracking — FREA-262)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      amount REAL NOT NULL CHECK (amount > 0),
+      vat_rate REAL NOT NULL DEFAULT 0.19,
+      vat_amount REAL NOT NULL,
+      gross_amount REAL NOT NULL,
+      category TEXT NOT NULL CHECK (category IN ('Büro','Software','Hardware','Fahrt','Kommunikation','Marketing','Sonstiges')),
+      description TEXT NOT NULL,
+      vendor TEXT NOT NULL DEFAULT '',
+      receipt_path TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run("CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)");
+
   // Migration: add onboarding_complete column if not present (safe for existing DBs)
   try {
     const settingsCols = db.query<{ name: string }, []>("PRAGMA table_info(settings)").all();
