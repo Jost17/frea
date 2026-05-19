@@ -52,69 +52,55 @@ export function computeExpenseVat(
   return { vat_amount, gross_amount };
 }
 
-// ─── Prepared Statements ──────────────────────────────────────────────────────
-
-const stmtGetAll = db.prepare<Expense, []>(`
-  SELECT id, date, amount, vat_rate, vat_amount, gross_amount,
-         category, description, vendor, receipt_path, created_at
-  FROM expenses
-  ORDER BY date DESC, id DESC
-`);
-
-const stmtGetById = db.prepare<Expense, [number]>(`
-  SELECT id, date, amount, vat_rate, vat_amount, gross_amount,
-         category, description, vendor, receipt_path, created_at
-  FROM expenses
-  WHERE id = ?
-`);
-
-const stmtInsert = db.prepare<
-  { id: number },
-  [string, number, number, number, number, string, string, string, string | null]
->(`
-  INSERT INTO expenses (date, amount, vat_rate, vat_amount, gross_amount, category, description, vendor, receipt_path)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  RETURNING id
-`);
-
-const stmtUpdate = db.prepare<
-  void,
-  [string, number, number, number, number, string, string, string, string | null, number]
->(`
-  UPDATE expenses
-  SET date = ?, amount = ?, vat_rate = ?, vat_amount = ?, gross_amount = ?,
-      category = ?, description = ?, vendor = ?, receipt_path = ?
-  WHERE id = ?
-`);
-
-const stmtDelete = db.prepare<void, [number]>(`
-  DELETE FROM expenses WHERE id = ?
-`);
-
 // ─── Query Functions ──────────────────────────────────────────────────────────
 
 export function getAllExpenses(): Expense[] {
-  return stmtGetAll.all();
+  return db
+    .query<Expense, []>(
+      `SELECT id, date, amount, vat_rate, vat_amount, gross_amount,
+              category, description, vendor, receipt_path, created_at
+       FROM expenses
+       ORDER BY date DESC, id DESC`,
+    )
+    .all();
 }
 
 export function getExpenseById(id: number): Expense | null {
-  return stmtGetById.get(id) ?? null;
+  return (
+    db
+      .query<Expense, [number]>(
+        `SELECT id, date, amount, vat_rate, vat_amount, gross_amount,
+                category, description, vendor, receipt_path, created_at
+         FROM expenses
+         WHERE id = ?`,
+      )
+      .get(id) ?? null
+  );
 }
 
 export function createExpense(data: ExpenseCreate): number {
   const { vat_amount, gross_amount } = computeExpenseVat(data.amount, data.vat_rate);
 
-  const row = stmtInsert.get(
-    data.date,
-    data.amount,
-    data.vat_rate,
-    vat_amount,
-    gross_amount,
-    data.category,
-    data.description,
-    data.vendor,
-    data.receipt_path ?? null,
-  );
+  const row = db
+    .query<
+      { id: number },
+      [string, number, number, number, number, string, string, string, string | null]
+    >(
+      `INSERT INTO expenses (date, amount, vat_rate, vat_amount, gross_amount, category, description, vendor, receipt_path)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       RETURNING id`,
+    )
+    .get(
+      data.date,
+      data.amount,
+      data.vat_rate,
+      vat_amount,
+      gross_amount,
+      data.category,
+      data.description,
+      data.vendor,
+      data.receipt_path ?? null,
+    );
 
   if (!row) {
     throw new Error("Expense insert did not return id");
@@ -128,7 +114,12 @@ export function createExpense(data: ExpenseCreate): number {
 export function updateExpense(id: number, data: ExpenseCreate): void {
   const { vat_amount, gross_amount } = computeExpenseVat(data.amount, data.vat_rate);
 
-  stmtUpdate.run(
+  db.query(
+    `UPDATE expenses
+     SET date = ?, amount = ?, vat_rate = ?, vat_amount = ?, gross_amount = ?,
+         category = ?, description = ?, vendor = ?, receipt_path = ?
+     WHERE id = ?`,
+  ).run(
     data.date,
     data.amount,
     data.vat_rate,
@@ -145,6 +136,6 @@ export function updateExpense(id: number, data: ExpenseCreate): void {
 }
 
 export function deleteExpense(id: number): void {
-  stmtDelete.run(id);
+  db.query("DELETE FROM expenses WHERE id = ?").run(id);
   appendAuditLog("expense", id, "delete", null);
 }
