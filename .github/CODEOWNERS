@@ -1,0 +1,12 @@
+# CODEOWNERS — FREA PR Review Gate (Board-Direktive FREA-276)
+#
+# Review-Owner fuer alle Pfade: QA Engineer
+# Paperclip Agent: 5a940780-6b6b-4b9b-bca7-f3a9d4fae3f7
+#
+# Agent-Routing: PR -> Status in_review, Assignee = QA Engineer
+# GitHub-seitig: git@github.com/Jost17 ist Owner bis ein Team-GitHub-Account
+# fuer den QA-Agent eingerichtet ist. Sign-off erfolgt via Paperclip-Kommentar.
+#
+# CTO ist Eskalationspfad, nicht Default-Reviewer.
+
+* @Jost17
