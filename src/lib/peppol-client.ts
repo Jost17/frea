@@ -36,15 +36,17 @@ export class PeppolClient {
     ublXml: string,
     receiverParticipantId: string,
     invoiceNumber: string,
+    senderIdentifier?: string,
   ): Promise<PeppolSubmissionResponse> {
     const url = `${this.apiBase}/documents/send`;
 
+    const finalSenderIdentifier = senderIdentifier || "9930:DE";
     const payload = {
       document: Buffer.from(ublXml).toString("base64"),
-      documentType: "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100",
+      documentType: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
       receiver: receiverParticipantId,
-      senderIdentifier: "9930:DE",
-      processIdentifier: "urn:fdc:peppol.eu:2017:bis:ublinvoice:ver2.0",
+      senderIdentifier: finalSenderIdentifier,
+      processIdentifier: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
       metadata: {
         invoiceNumber,
       },
@@ -62,10 +64,7 @@ export class PeppolClient {
 
       if (!response.ok) {
         const error = await response.text();
-        console.error(
-          `[PeppolClient] Recommand send failed (${response.status}):`,
-          error,
-        );
+        console.error(`[PeppolClient] Recommand send failed (${response.status}):`, error);
         throw new AppError(
           `Peppol-Versand fehlgeschlagen: ${response.statusText}`,
           (response.status as any) || 500,
@@ -99,9 +98,7 @@ export class PeppolClient {
       });
 
       if (!response.ok) {
-        console.error(
-          `[PeppolClient] Status check failed (${response.status})`,
-        );
+        console.error(`[PeppolClient] Status check failed (${response.status})`);
         throw new AppError(
           `Status-Abfrage fehlgeschlagen: ${response.statusText}`,
           (response.status as any) || 500,
@@ -119,17 +116,12 @@ export class PeppolClient {
     } catch (err) {
       if (err instanceof AppError) throw err;
       console.error("[PeppolClient] Network or parsing error:", err);
-      throw new AppError(
-        "Status-Abfrage fehlgeschlagen (Netzwerkfehler)",
-        500,
-      );
+      throw new AppError("Status-Abfrage fehlgeschlagen (Netzwerkfehler)", 500);
     }
   }
 
   // Normalize Recommand API status to our internal status values
-  private normalizeStatus(
-    apiStatus: string,
-  ): PeppolStatusResponse["status"] {
+  private normalizeStatus(apiStatus: string): PeppolStatusResponse["status"] {
     const statusMap: Record<string, PeppolStatusResponse["status"]> = {
       pending: "pending",
       submitted: "submitted",

@@ -34,6 +34,17 @@ peppolRoutes.post("/send", async (c) => {
       throw new AppError("Rechnung nicht gefunden", 404);
     }
 
+    // Load sender identifier from settings
+    const settings = db
+      .query(`SELECT ust_id FROM settings WHERE id = 1`)
+      .get() as { ust_id?: string } | undefined;
+
+    if (!settings?.ust_id) {
+      throw new AppError("USt-ID nicht konfiguriert", 422);
+    }
+
+    const senderIdentifier = `9930:DE${settings.ust_id}`;
+
     // Generate UBL XML (stub for now — real implementation in Phase 2)
     // TODO: Call actual UBL generator with invoice data
     const ublXml = generateUblStub(invoice);
@@ -44,6 +55,7 @@ peppolRoutes.post("/send", async (c) => {
       ublXml,
       receiver_participant_id,
       invoice.invoice_number,
+      senderIdentifier,
     );
 
     // Store submission record
@@ -144,7 +156,9 @@ peppolRoutes.get("/status/:peppol_id", async (c) => {
 // Real implementation will use full XML builder with EN16931 compliance
 function generateUblStub(invoice: any): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
-<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2">
   <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
   <cbc:ID>${invoice.invoice_number}</cbc:ID>
   <cbc:IssueDate>${new Date().toISOString().split("T")[0]}</cbc:IssueDate>

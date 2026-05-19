@@ -264,3 +264,10 @@ export const onboardingCompletionSchema = z
   .refine((data) => !!(data.tax_number?.trim() || data.ust_id?.trim()), {
     message: "Steuernummer oder Ust-IdNr. erforderlich",
   });
+
+// ─── Peppol ───────────────────────────────────────────────────────────────────
+
+export const peppolSendSchema = z.object({
+  invoice_id: z.number().int().min(1),
+  receiver_participant_id: z.string().min(1, "Empfänger-Peppol-ID erforderlich"),
+});
