@@ -1,11 +1,12 @@
 import { html } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
 import type { ValidationIssue, ZUGFeRDProfile } from "../lib/zugferd-validator";
-import { PROFILE_LABELS } from "../lib/zugferd-validator";
+import { PROFILE_LABELS, RULE_DESCRIPTIONS } from "../lib/zugferd-validator";
 
 type HtmlResult = HtmlEscapedString | Promise<HtmlEscapedString>;
 
-const HOST = "http://localhost:3114";
+const HOST = Bun.env.FREA_PUBLIC_URL ?? "http://localhost:3114";
+const HOSTING_LOCATION = Bun.env.FREA_HOSTING_LOCATION ?? "EU/Deutschland";
 
 // ─── Standalone-Layout (kein Nav, kein Login nötig) ──────────────────────────
 
@@ -45,8 +46,11 @@ function validatorLayout(title: string, children: HtmlResult): HtmlResult {
 
         <footer class="max-w-3xl mx-auto px-4 py-6 text-center text-xs text-gray-500 border-t border-gray-200 mt-8">
           <p>
-            🔒 <strong>Datenschutz:</strong> Hochgeladene Dateien werden ausschließlich im Arbeitsspeicher verarbeitet und nicht dauerhaft gespeichert.
-            Validierungsergebnisse werden 7 Tage für den Permalink gespeichert, dann automatisch gelöscht.
+            🔒 <strong>Datenschutz:</strong> Die hochgeladene Datei wird nur im Arbeitsspeicher verarbeitet und nicht gespeichert.
+            Das Validierungsergebnis (ohne Dateiinhalt) wird 7 Tage für den Permalink gespeichert, dann automatisch gelöscht.
+          </p>
+          <p class="mt-2">
+            🖥 Hosting: ${HOSTING_LOCATION} — Keine US-Dienste, kein Google Analytics, keine externen CDN-Anfragen.
           </p>
           <p class="mt-2">
             Ein kostenloses Tool von <a href="/" class="text-blue-700 hover:underline">FREA</a> —
@@ -201,7 +205,7 @@ export function renderValidatorResult(props: ResultProps): HtmlResult {
           <p class="text-sm font-medium text-gray-900">${issue.message}</p>
           <p class="text-xs text-gray-400 mt-0.5">
             Feld: <code class="font-mono">${issue.field}</code>
-            ${issue.rule ? html` · Regel: ${issue.rule}` : ""}
+            ${issue.rule ? html` · EN16931: ${RULE_DESCRIPTIONS[issue.rule] ?? issue.rule}` : ""}
             · Code: ${issue.code}
           </p>
         </div>

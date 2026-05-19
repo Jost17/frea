@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { db, initializeSchema } from "../src/db/schema";
 import { validateZugferdPdf, validateZugferdXml } from "../src/lib/zugferd-validator";
 
@@ -62,7 +62,7 @@ describe("ZUGFeRD-Validator — EN16931 Validierung", () => {
   it("AC-2: PDF ohne eingebettetes ZUGFeRD-XML → Verwertbare Mängelliste", () => {
     // Einfaches PDF ohne ZUGFeRD (z.B. ein normales Bild-PDF)
     const plainPdf = Buffer.from(
-      "%PDF-1.4\n1 0 obj\n<</Type/Catalog>>\nendobj\n2 0 obj\n<</Type/Pages>>\nendobj\nxref\n0 3\n0000000000 65535 f\ntrailer\n<</Size 3/Root 1 0 R>>\nstartxref\n0\n%%EOF"
+      "%PDF-1.4\n1 0 obj\n<</Type/Catalog>>\nendobj\n2 0 obj\n<</Type/Pages>>\nendobj\nxref\n0 3\n0000000000 65535 f\ntrailer\n<</Size 3/Root 1 0 R>>\nstartxref\n0\n%%EOF",
     );
 
     const report = validateZugferdPdf(plainPdf as any);
@@ -94,7 +94,7 @@ describe("ZUGFeRD-Validator — EN16931 Validierung", () => {
 
     expect(report.isValid).toBe(false);
     const criticalOrMajor = report.issues.filter(
-      (i) => i.severity === "critical" || i.severity === "major"
+      (i) => i.severity === "critical" || i.severity === "major",
     );
     expect(criticalOrMajor.length).toBeGreaterThan(0);
   });
@@ -164,12 +164,12 @@ describe("ZUGFeRD-Validator — EN16931 Validierung", () => {
   it("AC-6: XML wird aus PDF/A-3 extrahiert (mit ZUGFeRD)", () => {
     const pdfWithZugferd = Buffer.from(
       "%PDF-1.4\n%some binary content\n" +
-      '<?xml version="1.0"?>' +
-      "<rsm:CrossIndustryInvoice>" +
-      "<rsm:ExchangedDocumentContext>" +
-      "<ram:ID>urn:cen.eu:en16931:2017</ram:ID>" +
-      "</rsm:ExchangedDocumentContext>" +
-      "</rsm:CrossIndustryInvoice>"
+        '<?xml version="1.0"?>' +
+        "<rsm:CrossIndustryInvoice>" +
+        "<rsm:ExchangedDocumentContext>" +
+        "<ram:ID>urn:cen.eu:en16931:2017</ram:ID>" +
+        "</rsm:ExchangedDocumentContext>" +
+        "</rsm:CrossIndustryInvoice>",
     );
 
     const report = validateZugferdPdf(pdfWithZugferd as any);
