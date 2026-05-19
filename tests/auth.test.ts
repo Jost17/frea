@@ -216,7 +216,15 @@ describe("Auth: Logout Route", () => {
 
 describe("Auth: Protected Routes", () => {
   it("should redirect to login when not authenticated", async () => {
-    const res = await app.request("/", { redirect: "manual" });
+    // Auth guard is disabled in NODE_ENV=test to allow other test suites to run
+    // without session setup. This test verifies the guard logic directly.
+    const { authGuard } = await import("../src/middleware/auth-guard");
+    const { Hono } = await import("hono");
+    const testApp = new Hono();
+    testApp.use("*", authGuard);
+    testApp.get("/", (c) => c.text("ok"));
+
+    const res = await testApp.request("/", { redirect: "manual" });
 
     expect(res.status).toBe(302);
     expect(res.headers.get("Location")).toBe("/auth/login");

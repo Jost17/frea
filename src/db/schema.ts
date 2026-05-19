@@ -117,6 +117,7 @@ export function initializeSchema() {
       service_period_to TEXT,
       paid_date TEXT,
       reminder_level INTEGER DEFAULT 0,
+      reverse_charge INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
@@ -151,6 +152,18 @@ export function initializeSchema() {
     )
   `);
 
+  // Zahlungen (FREA-306 — Teilzahlungen)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL REFERENCES invoices(id),
+      amount REAL NOT NULL CHECK (amount > 0),
+      payment_date TEXT NOT NULL,
+      note TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   // Performance-Indizes
   db.run("CREATE INDEX IF NOT EXISTS idx_projects_client ON projects(client_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_time_entries_project ON time_entries(project_id)");
@@ -160,6 +173,7 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_invoices_status_due ON invoices(status, due_date)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id)");
 
   // GoBD: Audit Log ist append-only (keine Aenderungen/Loeschungen erlaubt)
   db.run(`
@@ -198,6 +212,29 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date)");
   db.run("CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)");
 
+  // Benutzer (FREA-307 — Auth Layer)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_login TEXT
+    )
+  `);
+
+  // Sessions (FREA-307)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL
+    )
+  `);
+
+  db.run("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)");
+
   // Live-Timer (FREA-264) — transient sessions, not GoBD-relevant (no audit log)
   db.run(`
     CREATE TABLE IF NOT EXISTS active_timers (
@@ -224,9 +261,15 @@ export function initializeSchema() {
       db.run("ALTER TABLE settings ADD COLUMN smtp_from TEXT");
       console.log("[migration] Added SMTP columns to settings");
     }
+    // Migration: add reverse_charge column to invoices if not present (FREA-306)
+    const invoiceCols = db.query<{ name: string }, []>("PRAGMA table_info(invoices)").all();
+    if (!invoiceCols.some((c) => c.name === "reverse_charge")) {
+      db.run("ALTER TABLE invoices ADD COLUMN reverse_charge INTEGER DEFAULT 0");
+      console.log("[migration] Added reverse_charge column to invoices");
+    }
   } catch (err) {
-    console.error("[migration] Failed to add columns to settings:", err);
-    throw new Error("Database migration failed: could not add columns to settings", { cause: err });
+    console.error("[migration] Failed to add columns:", err);
+    throw new Error("Database migration failed: could not add columns", { cause: err });
   }
 
   // Initialize default settings if not present

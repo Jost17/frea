@@ -4,11 +4,13 @@ import { csrf } from "hono/csrf";
 import { logger } from "hono/logger";
 import { initializeSchema } from "./db/schema";
 import type { AppEnv } from "./env";
+import { authGuard } from "./middleware/auth-guard";
 import { globalErrorHandler, globalNotFoundHandler } from "./middleware/error-handler";
 import { navContextMiddleware } from "./middleware/nav-context";
 import { onboardingGuard } from "./middleware/onboarding-guard";
 import { securityHeaders } from "./middleware/security-headers";
 import { apiRoutes } from "./routes/api";
+import { authRoutes } from "./routes/auth";
 import { clientRoutes } from "./routes/clients";
 import { dashboardRoutes } from "./routes/dashboard";
 import { expenseRoutes } from "./routes/expenses";
@@ -42,6 +44,9 @@ if (!isTest) {
 }
 
 app.use("*", securityHeaders);
+if (!isTest) {
+  app.use("*", authGuard);
+}
 app.use("*", onboardingGuard);
 
 // navContextMiddleware scoped to UI routes (executes a DB query)
@@ -76,3 +81,4 @@ app.route("/einstellungen", settingsRoutes);
 app.route("/api", apiRoutes);
 app.route("/mcp", mcpRoutes);
 app.route("/ausgaben", expenseRoutes);
+app.route("/auth", authRoutes);

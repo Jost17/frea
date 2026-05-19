@@ -4,6 +4,7 @@ import type {
   InvoiceCreate,
   InvoiceItem,
   InvoiceListItem,
+  Payment as PaymentType,
   Project,
   Settings,
   TimeEntry,
@@ -102,9 +103,16 @@ export function createInvoice(
       .all(...uniqueProjectIds);
     const projectMap = new Map(projects.map((p) => [p.id, p]));
 
-    // Determine effective VAT rate: 0 for Kleinunternehmer
+    // Determine effective VAT rate: 0 for Kleinunternehmer or Reverse Charge
     const isKleinunternehmer = Boolean(settings.kleinunternehmer);
-    const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
+    const isReverseCharge = Boolean(data.reverse_charge);
+
+    // Validate mutual exclusivity
+    if (isKleinunternehmer && isReverseCharge) {
+      throw new AppError("Reverse Charge und Kleinunternehmer sind sich ausschließend", 400);
+    }
+
+    const effectiveVatRate = isKleinunternehmer || isReverseCharge ? 0 : settings.vat_rate;
 
     // Calculate totals PER LINE ITEM with proper MwSt
     let totalNet = 0;
@@ -145,8 +153,8 @@ export function createInvoice(
         `INSERT INTO invoices
          (invoice_number, client_id, project_id, invoice_date, due_date, period_month, period_year,
           net_amount, vat_amount, gross_amount, status, po_number,
-          service_period_from, service_period_to)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)
+          service_period_from, service_period_to, reverse_charge)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?)
          RETURNING id`,
       )
       .get(
@@ -163,6 +171,7 @@ export function createInvoice(
         data.po_number || null,
         data.service_period_from || null,
         data.service_period_to || null,
+        data.reverse_charge,
       ) as { id: number } | undefined;
 
     if (!invoiceRecord) throw new Error("Rechnung konnte nicht erstellt werden");
@@ -209,6 +218,7 @@ export function createInvoice(
       gross_amount: totalGross,
       vat_rate: effectiveVatRate,
       is_kleinunternehmer: isKleinunternehmer,
+      is_reverse_charge: isReverseCharge,
       time_entry_count: timeEntries.length,
     });
 
@@ -298,4 +308,78 @@ export function updateInvoiceStatus(id: number, newStatus: "sent" | "paid" | "ca
 export function saveInvoicePdfPath(invoiceId: number, pdfPath: string): void {
   db.query("UPDATE invoices SET pdf_path = ? WHERE id = ?").run(pdfPath, invoiceId);
   appendAuditLog("invoice", invoiceId, "update", { pdf_path: pdfPath });
+}
+
+// ─── Payments (FREA-306) ───────────────────────────────────────────────────
+
+export type Payment = PaymentType;
+
+export function getRemainingBalance(invoiceId: number): number {
+  const invoice = getInvoice(invoiceId);
+  if (!invoice) return 0;
+
+  const result = db
+    .query<{ total: number }, [number]>(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE invoice_id = ?",
+    )
+    .get(invoiceId);
+
+  const paidAmount = result?.total || 0;
+  return roundToEuro(invoice.gross_amount - paidAmount);
+}
+
+export function getPayments(invoiceId: number): Payment[] {
+  return db
+    .query<Payment, [number]>(
+      "SELECT * FROM payments WHERE invoice_id = ? ORDER BY payment_date DESC",
+    )
+    .all(invoiceId);
+}
+
+export function addPayment(
+  invoiceId: number,
+  amount: number,
+  paymentDate: string,
+  note?: string,
+): void {
+  db.transaction(() => {
+    const invoice = getInvoice(invoiceId);
+    if (!invoice) throw new AppError("Rechnung nicht gefunden", 404);
+
+    const remainingBalance = getRemainingBalance(invoiceId);
+
+    // Validate payment doesn't exceed balance
+    if (amount > remainingBalance + 0.01) {
+      throw new AppError(
+        `Zahlung von ${amount.toFixed(2)}€ übersteigt offenen Betrag von ${remainingBalance.toFixed(2)}€`,
+        400,
+      );
+    }
+
+    // Insert payment
+    db.query(
+      "INSERT INTO payments (invoice_id, amount, payment_date, note) VALUES (?, ?, ?, ?)",
+    ).run(invoiceId, amount, paymentDate, note || null);
+
+    // Check if invoice should be marked as paid
+    const newRemaining = getRemainingBalance(invoiceId);
+    if (newRemaining <= 0.01) {
+      db.query("UPDATE invoices SET status = 'paid', paid_date = ? WHERE id = ?").run(
+        new Date().toISOString().split("T")[0],
+        invoiceId,
+      );
+      appendAuditLog("invoice", invoiceId, "status_change", {
+        from: "sent",
+        to: "paid",
+        via_payment: true,
+      });
+    }
+
+    // Audit log payment
+    appendAuditLog("payment", invoiceId, "create", {
+      amount,
+      payment_date: paymentDate,
+      remaining_balance: newRemaining,
+    });
+  })();
 }
