@@ -1,0 +1,102 @@
+{
+  "status": "failed",
+  "timestamp": "2026-05-19T05:44:00Z",
+  "atomic_claims_total": 4,
+  "claims_verified": 2,
+  "claims_failed": 1,
+  "claims_unverified": 0,
+  "claims": {
+    "c1_no_implementer_self_close": {
+      "result": "failed",
+      "description": "No engineer implementer reached done without QA-SCORE comment from QA Engineer",
+      "passed": 0,
+      "failed": 20,
+      "note": "Enforcement awaiting Paperclip API guard implementation (see FREA-286 comment)"
+    },
+    "c2_cto_sign_off": {
+      "result": "passed",
+      "description": "Every done engineer-implementation has CTO QA-SCORE: pass after QA comment",
+      "passed": 0,
+      "failed": 0,
+      "note": "Vacuously passed — zero issues reached QA stage"
+    },
+    "c3_chain_order": {
+      "result": "passed",
+      "description": "QA-SCORE (QA Engineer) chronologically precedes QA-SCORE (CTO)",
+      "passed": 0,
+      "failed": 0,
+      "note": "Vacuously passed — no QA-SCORE comments present"
+    },
+    "c4_cto_concentration": {
+      "result": "emitted",
+      "description": "True CTO concentration: % of ALL done issues (any role) where CTO was implementer + per-agent distribution",
+      "percentage": 51,
+      "cto_done_count": 51,
+      "total_all_done_issues": 100,
+      "agent_distribution": {
+        "19f58dc5-fd85-4b7a-ab53-e586a95ff213": {
+          "name": "CTO",
+          "count": 51,
+          "percentage": 51
+        },
+        "a24ed455-69ac-4239-a0db-1b54f71e5547": {
+          "name": "CEO",
+          "count": 21,
+          "percentage": 21
+        },
+        "51f6d705-13e9-4527-8563-8841ae7f8ec0": {
+          "name": "Frontend Engineer",
+          "count": 10,
+          "percentage": 10
+        },
+        "c758d222-391a-4876-8ba2-fbeaea30cba4": {
+          "name": "Invoice Specialist",
+          "count": 7,
+          "percentage": 7
+        },
+        "a7302727-0069-4263-96e1-1c851e072225": {
+          "name": "Backend Architect",
+          "count": 3,
+          "percentage": 3
+        },
+        "5a940780-6b6b-4b9b-bca7-f3a9d4fae3f7": {
+          "name": "QA Engineer",
+          "count": 3,
+          "percentage": 3
+        },
+        "fd535fb7-3e8a-4bfd-bee3-6b98e4983d7b": {
+          "name": "UX Designer",
+          "count": 1,
+          "percentage": 1
+        },
+        "cf71df1d-8302-43a2-a500-e15b56ad2686": {
+          "count": 2,
+          "percentage": 2
+        },
+        "58f0fbcf-9553-4c03-95aa-7fd730ba9524": {
+          "count": 2,
+          "percentage": 2
+        }
+      },
+      "note": "FIXED: Now measures TRUE CTO concentration across all roles, not just engineer-assigned issues. Previous metric reported 0% (broken scope)."
+    }
+  },
+  "summary": {
+    "total_done_engineer_issues": 20,
+    "total_all_done_issues": 100,
+    "review_chain_healthy": false,
+    "cto_concentration_across_all_done_pct": 51,
+    "what_needed_to_pass": [
+      "C1 FAILED: Engineer implementers self-closed without QA approval (0/20 have QA-SCORE comment)"
+    ],
+    "what_needed_to_pass_explanation": "C1 enforcement mechanism must prevent status transition to done without QA-SCORE comment from QA Engineer. Recommended: Paperclip API status-transition guard (see docs/c1-enforcement-analysis.md)."
+  },
+  "changes_made_in_this_run": {
+    "c4_metric_fixed": true,
+    "c4_previous_broken_scope": "CTO concentration measured only within engineer-assigned issues (20 subset)",
+    "c4_new_scope": "CTO concentration measured across ALL done issues (100 total)",
+    "c4_old_result": "0% (vacuous due to broken scope)",
+    "c4_new_result": "51% (accurate)",
+    "c4_per_agent_distribution": "Added for full visibility"
+  }
+}
