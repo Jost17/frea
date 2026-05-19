@@ -42,6 +42,17 @@ export function initializeSchema() {
     )
   `);
 
+  // Benutzer (für DSGVO-Verwaltung, z.B. Kunden-Kontaktpersonen)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      active INTEGER DEFAULT 1 NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   // Kunden
   db.run(`
     CREATE TABLE IF NOT EXISTS clients (
@@ -224,9 +235,15 @@ export function initializeSchema() {
       db.run("ALTER TABLE settings ADD COLUMN smtp_from TEXT");
       console.log("[migration] Added SMTP columns to settings");
     }
+    // Migration: add active column to users if not present (for DSGVO deletion workflows)
+    const usersCols = db.query<{ name: string }, []>("PRAGMA table_info(users)").all();
+    if (usersCols.length > 0 && !usersCols.some((c) => c.name === "active")) {
+      db.run("ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1 NOT NULL");
+      console.log("[migration] Added active column to users");
+    }
   } catch (err) {
-    console.error("[migration] Failed to add columns to settings:", err);
-    throw new Error("Database migration failed: could not add columns to settings", { cause: err });
+    console.error("[migration] Failed to add columns:", err);
+    throw new Error("Database migration failed", { cause: err });
   }
 
   // Initialize default settings if not present
