@@ -355,6 +355,47 @@ export function renderSettingsForm(settings: Settings, showOnboarding: boolean) 
           </div>
         </fieldset>
 
+        <fieldset id="dashboard-ansicht">
+          <legend class="mb-4 text-lg font-semibold text-gray-900">Dashboard-Ansicht</legend>
+          <p class="mb-4 text-sm text-gray-600">
+            Wähle, welche Widgets auf deinem Dashboard angezeigt werden.
+          </p>
+          <div class="space-y-3">
+            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-4 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+              <input
+                type="radio"
+                name="dashboard_persona"
+                value="B"
+                ${!settings.dashboard_persona || settings.dashboard_persona === "B" ? "checked" : ""}
+                class="mt-0.5 h-4 w-4 text-blue-600"
+              />
+              <div>
+                <p class="text-sm font-medium text-gray-900">Finanzen (Standard)</p>
+                <p class="mt-0.5 text-xs text-gray-500">
+                  Wochenstunden, Quartalsumsatz, offene Rechnungen nach Kunden, Liquiditäts-Forecast.
+                  Ideal für den Überblick über Einnahmen und Zahlungsstatus.
+                </p>
+              </div>
+            </label>
+            <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-4 hover:border-blue-300 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+              <input
+                type="radio"
+                name="dashboard_persona"
+                value="A"
+                ${settings.dashboard_persona === "A" ? "checked" : ""}
+                class="mt-0.5 h-4 w-4 text-blue-600"
+              />
+              <div>
+                <p class="text-sm font-medium text-gray-900">Übersicht</p>
+                <p class="mt-0.5 text-xs text-gray-500">
+                  Offene Rechnungen, Monatsumsatz, überfällige Rechnungen, aktive Kunden und Projekte.
+                  Kompakte Kennzahlen für einen schnellen Statuscheck.
+                </p>
+              </div>
+            </label>
+          </div>
+        </fieldset>
+
         <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
           <button
             type="submit"

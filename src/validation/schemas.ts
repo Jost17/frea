@@ -57,6 +57,7 @@ export const settingsSchema = z
     smtp_user: z.string().optional(),
     smtp_password: z.string().optional(),
     smtp_from: z.string().email("SMTP From muss gültige E-Mail sein").optional(),
+    dashboard_persona: z.enum(["A", "B"]).default("B"),
   })
   .superRefine((data, ctx) => {
     if (!data.tax_number?.trim() && !data.ust_id?.trim()) {
