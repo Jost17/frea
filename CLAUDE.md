@@ -81,6 +81,16 @@ Full details: `docs/adr/001-eu-compliance.md`
 24. **Kein `--no-verify`** — Pre-push-Hooks sind Teil des CI-Contracts. `git push --no-verify` ist verboten. Wenn ein Hook fehlschlägt: Ursache fixen, nicht umgehen.
 25. **Cleanup-Step nach Rescue-Operationen** — Nach `frea-reconstruct` oder vergleichbaren Rescue-Skills: `git status` ausführen und alle untracked/orphan Files (`*.incoming`, 0-byte-Files) explizit entweder committen oder löschen. Niemals mit dirty working tree pushen.
 
+## PR-Review-Gate (enforced — Board-Direktive FREA-276)
+
+26. **QA-Engineer-Sign-off vor jedem Merge** — Kein PR wird gemergt ohne explizites QA-Sign-off. Prozess:
+    1. Engineer setzt PR-Status auf `in_review`, **Assignee = QA Engineer** (Paperclip Agent `5a940780-6b6b-4b9b-bca7-f3a9d4fae3f7`).
+    2. QA Engineer reviewt: Korrektheit, Edge-Cases, Regression, Test-Plan-Evidence (`pr-ship-verifier`), CLAUDE.md-Compliance.
+    3. QA approved → Merge. QA fordert Changes → zurück an Engineer (Status `in_progress`).
+    4. **CTO ist Eskalationspfad**, nicht Default-Reviewer. Architektur-Dispute → CTO. Routine-Reviews → QA Engineer.
+    - `.github/CODEOWNERS` dokumentiert QA Engineer als Review-Owner für alle Pfade.
+    - PR-Template enthält QA-Sign-off-Checkbox als letztes Pflicht-Item vor dem Merge.
+
 ## Reference
 
 Reference implementation (read-only): `/Users/jostthedens/Documents/02_Areas/Claude_Spielwiese/freelancer_tool/`
