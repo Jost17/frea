@@ -46,12 +46,18 @@ timeRoutes.get("/", (c) => {
               + Neuer Zeiteintrag
             </a>
           </div>
-          ${byClient.size === 0
-            ? EmptyState({ message: "Keine Zeiteinträge vorhanden.", actionHref: "/zeiten/new", actionLabel: "Zeit erfassen" })
-            : html`
+          ${
+            byClient.size === 0
+              ? EmptyState({
+                  message: "Keine Zeiteinträge vorhanden.",
+                  actionHref: "/zeiten/new",
+                  actionLabel: "Zeit erfassen",
+                })
+              : html`
               <p class="mb-4 text-sm text-text-muted">Hier siehst du alle noch nicht abgerechneten Zeiten.</p>
               <div class="space-y-8">
-                ${[...byClient.entries()].map(([clientName, clientEntries]) => html`
+                ${[...byClient.entries()].map(
+                  ([clientName, clientEntries]) => html`
                   <div>
                     <h2 class="text-lg font-semibold text-text-primary mb-3">${clientName}</h2>
                     <div class="rounded-lg border border-border-subtle overflow-hidden bg-bg-surface shadow-card">
@@ -66,7 +72,8 @@ timeRoutes.get("/", (c) => {
                           </tr>
                         </thead>
                         <tbody>
-                          ${clientEntries.map((entry) => html`
+                          ${clientEntries.map(
+                            (entry) => html`
                             <tr class="border-t border-border-subtle hover:bg-bg-surface-raised transition-colors">
                               <td class="px-4 py-3 font-medium text-text-primary">${entry.project_name}</td>
                               <td class="px-4 py-3 text-text-secondary tabular-nums">${entry.date}</td>
@@ -76,14 +83,17 @@ timeRoutes.get("/", (c) => {
                                 <a href="/zeiten/${entry.id}" class="text-primary hover:underline text-xs font-medium">Bearbeiten</a>
                               </td>
                             </tr>
-                          `)}
+                          `,
+                          )}
                         </tbody>
                       </table>
                     </div>
                   </div>
-                `)}
+                `,
+                )}
               </div>
-            `}
+            `
+          }
         `,
       }),
     );
@@ -96,7 +106,14 @@ timeRoutes.get("/new", (c) => {
   try {
     const allProjects = getAllActiveProjectsWithClient();
     const overdueCount = c.get("overdueCount");
-    return c.html(Layout({ title: "Neuer Zeiteintrag", activeNav: "zeiten", overdueCount, children: renderTimeForm(null, allProjects) }));
+    return c.html(
+      Layout({
+        title: "Neuer Zeiteintrag",
+        activeNav: "zeiten",
+        overdueCount,
+        children: renderTimeForm(null, allProjects),
+      }),
+    );
   } catch (err) {
     return logAndRespond(c, err, "Formular konnte nicht geladen werden", 500);
   }
@@ -110,7 +127,14 @@ timeRoutes.get("/:id", (c) => {
     if (!entry) throw new AppError("Eintrag nicht gefunden", 404);
     const allProjects = getAllActiveProjectsWithClient();
     const overdueCount = c.get("overdueCount");
-    return c.html(Layout({ title: "Zeiteintrag bearbeiten", activeNav: "zeiten", overdueCount, children: renderTimeForm(entry, allProjects) }));
+    return c.html(
+      Layout({
+        title: "Zeiteintrag bearbeiten",
+        activeNav: "zeiten",
+        overdueCount,
+        children: renderTimeForm(entry, allProjects),
+      }),
+    );
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "Eintrag konnte nicht geladen werden", 500);
@@ -122,7 +146,8 @@ timeRoutes.post("/", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, TIME_ENTRY_FIELDS);
     const result = timeEntrySchema.safeParse(data);
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     const id = createTimeEntry(result.data);
     if (!id) throw new AppError("Zeiteintrag konnte nicht erstellt werden", 500);
     return c.redirect(`/zeiten/${id}`);
@@ -138,7 +163,8 @@ timeRoutes.post("/:id", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, TIME_ENTRY_FIELDS);
     const result = timeEntrySchema.safeParse(data);
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     updateTimeEntry(id, result.data);
     return c.redirect(`/zeiten/${id}`);
   } catch (err) {
@@ -199,11 +225,15 @@ ${entry?.description || ""}</textarea>
         </div>
         <div class="flex justify-end gap-4 border-t border-border-subtle pt-6">
           <a href="/zeiten" class="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors">Abbrechen</a>
-          ${!isNew ? html`
+          ${
+            !isNew
+              ? html`
             <form method="post" action="/zeiten/${entry.id}/delete" class="inline">
               <button type="submit" onclick="return confirm('Wirklich löschen?')" class="px-4 py-2 text-sm text-accent-danger hover:underline">Löschen</button>
             </form>
-          ` : ""}
+          `
+              : ""
+          }
           <button type="submit" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">Speichern</button>
         </div>
       </form>

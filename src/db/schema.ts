@@ -151,6 +151,24 @@ export function initializeSchema() {
     )
   `);
 
+  // Peppol Documents — EN16931/BIS 3.0 submission tracking
+  db.run(`
+    CREATE TABLE IF NOT EXISTS peppol_documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL UNIQUE REFERENCES invoices(id),
+      peppol_id TEXT NOT NULL UNIQUE,
+      receiver_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'submitted', 'delivered', 'acknowledged', 'failed')),
+      ubl_xml TEXT NOT NULL,
+      submission_timestamp TEXT NOT NULL,
+      delivery_timestamp TEXT,
+      recommand_response TEXT,
+      error_message TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   // Performance-Indizes
   db.run("CREATE INDEX IF NOT EXISTS idx_projects_client ON projects(client_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_time_entries_project ON time_entries(project_id)");
@@ -160,6 +178,8 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_invoices_status_due ON invoices(status, due_date)");
   db.run("CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id)");
   db.run("CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_peppol_documents_invoice ON peppol_documents(invoice_id)");
+  db.run("CREATE INDEX IF NOT EXISTS idx_peppol_documents_status ON peppol_documents(status)");
 
   // GoBD: Audit Log ist append-only (keine Aenderungen/Loeschungen erlaubt)
   db.run(`

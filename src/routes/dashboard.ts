@@ -9,7 +9,12 @@ import { Layout } from "../templates/layout";
 export const dashboardRoutes = new Hono<AppEnv>();
 
 function formatEuro(amount: number): string {
-  return amount.toLocaleString("de-DE", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return amount.toLocaleString("de-DE", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 dashboardRoutes.get("/", (c) => {
@@ -25,7 +30,9 @@ dashboardRoutes.get("/", (c) => {
 
   const overdueCount = c.get("overdueCount") ?? 0;
   const hasOverdue = stats.overdue_invoices_count > 0;
-  const overdueCardClass = hasOverdue ? "border-accent-danger/30 bg-status-overdue-bg" : "border-border-subtle bg-bg-surface";
+  const overdueCardClass = hasOverdue
+    ? "border-accent-danger/30 bg-status-overdue-bg"
+    : "border-border-subtle bg-bg-surface";
   const overdueLabelClass = hasOverdue ? "text-accent-danger" : "text-text-muted";
 
   const firstTimeHint = noClients

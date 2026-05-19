@@ -19,6 +19,7 @@ import {
 } from "../db/queries";
 import type { AppEnv } from "../env";
 import { generateInvoicePdf } from "../lib/pdf/invoice-pdf";
+import { getPeppolClient } from "../lib/peppol-client";
 import { generateZUGFeRDXML, type ZUGFeRDInvoiceData } from "../lib/zugferd-generator";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { EmailService } from "../services/email";
@@ -467,3 +468,82 @@ invoiceRoutes.post("/:id/send", async (c) => {
     return logAndRespond(c, err, "Rechnung konnte nicht versendet werden", 500);
   }
 });
+
+// POST: Send invoice via Peppol
+invoiceRoutes.post("/:id/peppol-senden", async (c) => {
+  try {
+    const id = parseInt(c.req.param("id"), 10);
+    if (Number.isNaN(id)) throw new AppError("Ungültige Rechnungs-ID", 400);
+
+    const invoice = getInvoice(id);
+    if (!invoice) throw new AppError("Rechnung nicht gefunden", 404);
+
+    const client = getClient(invoice.client_id);
+    const settings = getSettings();
+
+    if (!client || !settings) throw new AppError("Daten fehlen", 500);
+    if (!client.vat_id) throw new AppError("Kunde hat keine Peppol-ID (USt-IdNr.)", 400);
+
+    // Build Peppol sender identifier: 9930:{ust_id}
+    const senderIdentifier = `9930:${settings.ust_id || "DE"}`;
+
+    // Generate UBL XML (stub — Phase 2 will add full EN16931 compliance)
+    const ublXml = generateUblXml(invoice);
+
+    // Submit to Peppol via Recommand
+    const client_instance = getPeppolClient(senderIdentifier);
+    const result = await client_instance.sendInvoice(ublXml, client.vat_id, invoice.invoice_number);
+
+    // Store submission record (requires FREA-287 B1: peppol_documents table)
+    const { db } = await import("../db/schema");
+    const peppol_id = crypto.randomUUID();
+    db.run(
+      `INSERT INTO peppol_documents
+       (invoice_id, peppol_id, receiver_id, status, ubl_xml, submission_timestamp, recommand_response)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        peppol_id,
+        client.vat_id,
+        result.status,
+        ublXml,
+        result.timestamp,
+        JSON.stringify(result),
+      ],
+    );
+
+    return c.json({
+      success: true,
+      data: {
+        peppol_id,
+        status: result.status,
+        timestamp: result.timestamp,
+        message: "Rechnung erfolgreich an Peppol-Netzwerk übermittelt",
+      },
+    });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    console.error("[invoices/peppol-senden] Unexpected error:", err);
+    throw new AppError("Peppol-Versand fehlgeschlagen", 500);
+  }
+});
+
+// Generate UBL 2.1 XML from invoice data (minimal stub for Phase 1)
+// Phase 2 will add full EN16931 compliance with all required XML namespaces
+function generateUblXml(invoice: ReturnType<typeof getInvoice>): string {
+  if (!invoice) throw new AppError("Rechnung ist null", 500);
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017#conformant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
+  <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
+  <cbc:ID>${invoice.invoice_number}</cbc:ID>
+  <cbc:IssueDate>${invoice.invoice_date}</cbc:IssueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cbc:DueDate>${invoice.due_date}</cbc:DueDate>
+  <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+</Invoice>`;
+}

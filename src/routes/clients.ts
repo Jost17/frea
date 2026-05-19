@@ -1,6 +1,12 @@
 import { Hono } from "hono";
 import { html } from "hono/html";
-import { createClient, deleteClient, getAllActiveClients, getClient, updateClient } from "../db/queries";
+import {
+  createClient,
+  deleteClient,
+  getAllActiveClients,
+  getClient,
+  updateClient,
+} from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { EmptyState } from "../templates/components/empty-state";
@@ -10,21 +16,44 @@ import { type Client, clientSchema } from "../validation/schemas";
 
 export const clientRoutes = new Hono<AppEnv>();
 
-const CLIENT_FIELDS = { name: "string", address: "string", postal_code: "string", city: "string", email: "string", phone: "string", contact_person: "string", vat_id: "string", buyer_reference: "string", notes: "string" } as const;
-const INPUT_CLASS = "mt-1 block w-full rounded-md border border-border-medium bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+const CLIENT_FIELDS = {
+  name: "string",
+  address: "string",
+  postal_code: "string",
+  city: "string",
+  email: "string",
+  phone: "string",
+  contact_person: "string",
+  vat_id: "string",
+  buyer_reference: "string",
+  notes: "string",
+} as const;
+const INPUT_CLASS =
+  "mt-1 block w-full rounded-md border border-border-medium bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 clientRoutes.get("/", (c) => {
   try {
     const clients = getAllActiveClients();
     const overdueCount = c.get("overdueCount");
-    return c.html(Layout({ title: "Kunden", activeNav: "kunden", overdueCount, children: html`
+    return c.html(
+      Layout({
+        title: "Kunden",
+        activeNav: "kunden",
+        overdueCount,
+        children: html`
       <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-semibold text-text-primary">Kunden</h1>
         <a href="/kunden/new" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">+ Neuer Kunde</a>
       </div>
-      ${clients.length === 0
-        ? EmptyState({ message: "Noch keine Kunden angelegt. Erstelle deinen ersten Kunden, um Projekte und Rechnungen zuordnen zu können.", actionHref: "/kunden/new", actionLabel: "Neuen Kunden anlegen" })
-        : html`<div class="rounded-lg border border-border-subtle overflow-hidden bg-bg-surface shadow-card">
+      ${
+        clients.length === 0
+          ? EmptyState({
+              message:
+                "Noch keine Kunden angelegt. Erstelle deinen ersten Kunden, um Projekte und Rechnungen zuordnen zu können.",
+              actionHref: "/kunden/new",
+              actionLabel: "Neuen Kunden anlegen",
+            })
+          : html`<div class="rounded-lg border border-border-subtle overflow-hidden bg-bg-surface shadow-card">
           <table class="w-full text-sm">
             <thead class="border-b border-border-subtle bg-bg-surface-raised">
               <tr>
@@ -35,22 +64,38 @@ clientRoutes.get("/", (c) => {
               </tr>
             </thead>
             <tbody>
-              ${clients.map((client) => html`<tr class="border-t border-border-subtle hover:bg-bg-surface-raised transition-colors">
+              ${clients.map(
+                (
+                  client,
+                ) => html`<tr class="border-t border-border-subtle hover:bg-bg-surface-raised transition-colors">
                 <td class="px-4 py-3 font-medium text-text-primary">${client.name}</td>
                 <td class="px-4 py-3 text-text-secondary">${client.city || "—"}</td>
                 <td class="px-4 py-3 text-text-secondary">${client.email || "—"}</td>
                 <td class="px-4 py-3 text-center"><a href="/kunden/${client.id}" class="text-primary hover:underline text-xs font-medium">Bearbeiten</a></td>
-              </tr>`)}
+              </tr>`,
+              )}
             </tbody>
           </table>
-        </div>`}
-    ` }));
-  } catch (err) { return logAndRespond(c, err, "Kunden konnten nicht geladen werden", 500); }
+        </div>`
+      }
+    `,
+      }),
+    );
+  } catch (err) {
+    return logAndRespond(c, err, "Kunden konnten nicht geladen werden", 500);
+  }
 });
 
 clientRoutes.get("/new", (c) => {
   const overdueCount = c.get("overdueCount");
-  return c.html(Layout({ title: "Neuer Kunde", activeNav: "kunden", overdueCount, children: renderClientForm(null) }));
+  return c.html(
+    Layout({
+      title: "Neuer Kunde",
+      activeNav: "kunden",
+      overdueCount,
+      children: renderClientForm(null),
+    }),
+  );
 });
 
 clientRoutes.get("/:id", (c) => {
@@ -60,7 +105,14 @@ clientRoutes.get("/:id", (c) => {
     const client = getClient(id);
     if (!client) throw new AppError("Kunde nicht gefunden", 404);
     const overdueCount = c.get("overdueCount");
-    return c.html(Layout({ title: `Kunde: ${client.name}`, activeNav: "kunden", overdueCount, children: renderClientForm(client) }));
+    return c.html(
+      Layout({
+        title: `Kunde: ${client.name}`,
+        activeNav: "kunden",
+        overdueCount,
+        children: renderClientForm(client),
+      }),
+    );
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "Kunde konnte nicht geladen werden", 500);
@@ -72,11 +124,14 @@ clientRoutes.post("/", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, CLIENT_FIELDS);
     const result = clientSchema.safeParse({ ...data, country: "Deutschland" });
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     const id = createClient(result.data);
     if (!id) throw new AppError("Kunde konnte nicht erstellt werden", 500);
     return c.redirect(`/kunden/${id}`);
-  } catch (err) { return handleMutationError(c, err, "Kunde konnte nicht erstellt werden"); }
+  } catch (err) {
+    return handleMutationError(c, err, "Kunde konnte nicht erstellt werden");
+  }
 });
 
 clientRoutes.post("/:id", async (c) => {
@@ -86,10 +141,13 @@ clientRoutes.post("/:id", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, CLIENT_FIELDS);
     const result = clientSchema.safeParse({ ...data, country: "Deutschland" });
-    if (!result.success) throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
+    if (!result.success)
+      throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     updateClient(id, result.data);
     return c.redirect(`/kunden/${id}`);
-  } catch (err) { return handleMutationError(c, err, "Kunde konnte nicht aktualisiert werden"); }
+  } catch (err) {
+    return handleMutationError(c, err, "Kunde konnte nicht aktualisiert werden");
+  }
 });
 
 clientRoutes.post("/:id/delete", (c) => {
@@ -98,7 +156,9 @@ clientRoutes.post("/:id/delete", (c) => {
     if (Number.isNaN(id)) throw new AppError("Ungueltige Kunden-ID", 400);
     deleteClient(id);
     return c.redirect("/kunden");
-  } catch (err) { return logAndRespond(c, err, "Kunde konnte nicht geloescht werden", 500); }
+  } catch (err) {
+    return logAndRespond(c, err, "Kunde konnte nicht geloescht werden", 500);
+  }
 });
 
 function renderClientForm(client: Client | null) {

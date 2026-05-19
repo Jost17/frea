@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { db } from "../db/schema";
-import { AppError } from "../middleware/error-handler";
 import { getPeppolClient } from "../lib/peppol-client";
+import { AppError } from "../middleware/error-handler";
 import { peppolSendSchema } from "../validation/schemas";
 
 export const peppolRoutes = new Hono();
@@ -14,10 +14,7 @@ peppolRoutes.post("/send", async (c) => {
 
   const parsed = peppolSendSchema.safeParse(body);
   if (!parsed.success) {
-    throw new AppError(
-      parsed.error.issues[0]?.message ?? "Ungültige Eingabe",
-      422,
-    );
+    throw new AppError(parsed.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
   }
 
   const { invoice_id, receiver_participant_id } = parsed.data;
@@ -25,9 +22,7 @@ peppolRoutes.post("/send", async (c) => {
   try {
     // Fetch invoice & related data
     const invoice = db
-      .query(
-        `SELECT id, invoice_number, gross_amount FROM invoices WHERE id = ?`,
-      )
+      .query(`SELECT id, invoice_number, gross_amount FROM invoices WHERE id = ?`)
       .get(invoice_id) as any;
 
     if (!invoice) {
@@ -103,11 +98,7 @@ peppolRoutes.get("/status/:peppol_id", async (c) => {
           `UPDATE peppol_documents
            SET status = ?, delivery_timestamp = ?, updated_at = datetime('now')
            WHERE id = ?`,
-          [
-            remoteStatus.status,
-            remoteStatus.deliveryTimestamp || null,
-            doc.id,
-          ],
+          [remoteStatus.status, remoteStatus.deliveryTimestamp || null, doc.id],
         );
       }
 
