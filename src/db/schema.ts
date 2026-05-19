@@ -224,6 +224,10 @@ export function initializeSchema() {
       db.run("ALTER TABLE settings ADD COLUMN smtp_from TEXT");
       console.log("[migration] Added SMTP columns to settings");
     }
+    if (!settingsCols.some((c) => c.name === "dashboard_persona")) {
+      db.run("ALTER TABLE settings ADD COLUMN dashboard_persona TEXT DEFAULT 'B'");
+      console.log("[migration] Added dashboard_persona column to settings");
+    }
   } catch (err) {
     console.error("[migration] Failed to add columns to settings:", err);
     throw new Error("Database migration failed: could not add columns to settings", { cause: err });

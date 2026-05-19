@@ -36,6 +36,7 @@ const SETTINGS_FIELDS = {
   smtp_user: "string",
   smtp_password: "string",
   smtp_from: "string",
+  dashboard_persona: "string",
 } as const;
 
 settingsRoutes.get("/", (c) => {
