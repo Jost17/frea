@@ -208,6 +208,18 @@ export function initializeSchema() {
     )
   `);
 
+  // Migration: add columns to invoices if not present
+  try {
+    const invoiceCols = db.query<{ name: string }, []>("PRAGMA table_info(invoices)").all();
+    if (!invoiceCols.some((c) => c.name === "reminder_sent_at")) {
+      db.run("ALTER TABLE invoices ADD COLUMN reminder_sent_at TEXT");
+      console.log("[migration] Added reminder_sent_at column to invoices");
+    }
+  } catch (err) {
+    console.error("[migration] Failed to add columns to invoices:", err);
+    throw new Error("Database migration failed: could not add columns to invoices", { cause: err });
+  }
+
   // Migration: add onboarding_complete column if not present (safe for existing DBs)
   try {
     const settingsCols = db.query<{ name: string }, []>("PRAGMA table_info(settings)").all();

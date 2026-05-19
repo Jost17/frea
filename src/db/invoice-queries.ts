@@ -299,3 +299,72 @@ export function saveInvoicePdfPath(invoiceId: number, pdfPath: string): void {
   db.query("UPDATE invoices SET pdf_path = ? WHERE id = ?").run(pdfPath, invoiceId);
   appendAuditLog("invoice", invoiceId, "update", { pdf_path: pdfPath });
 }
+
+// ─── Dunning System (FREA-305) ──────────────────────────────────────────────
+
+/**
+ * Advance dunning level for an overdue invoice (0→1→2→3).
+ * Updates reminder_level, reminder_sent_at, and appends audit log.
+ * Cannot go backwards or skip levels.
+ */
+export function advanceDunningLevel(invoiceId: number, currentLevel: number): void {
+  const invoice = getInvoice(invoiceId);
+  if (!invoice) {
+    throw new AppError("Rechnung nicht gefunden", 404);
+  }
+
+  const nextLevel = currentLevel + 1;
+  if (nextLevel > 3) {
+    throw new AppError("Mahnung ist bereits auf höchster Stufe", 422);
+  }
+
+  db.transaction(() => {
+    db.query(
+      "UPDATE invoices SET reminder_level = ?, reminder_sent_at = datetime('now') WHERE id = ?",
+    ).run(nextLevel, invoiceId);
+
+    appendAuditLog("invoice", invoiceId, "update", {
+      dunning_action: "level_advanced",
+      from_level: currentLevel,
+      to_level: nextLevel,
+    });
+  })();
+}
+
+/**
+ * Get all overdue invoices grouped by dunning level.
+ */
+export function getOverdueInvoicesByDunningLevel(): Record<number, Invoice[]> {
+  const overdue = db
+    .query<Invoice, []>(
+      `SELECT * FROM invoices
+       WHERE ${overdueInvoiceWhere("")}
+       ORDER BY due_date ASC`,
+    )
+    .all();
+
+  const grouped: Record<number, Invoice[]> = { 0: [], 1: [], 2: [], 3: [] };
+  for (const inv of overdue) {
+    const level = inv.reminder_level ?? 0;
+    if (level in grouped) {
+      grouped[level].push(inv);
+    }
+  }
+  return grouped;
+}
+
+/**
+ * Get count of invoices at each dunning level (for dashboard badge).
+ */
+export function getDunningStats(): { level: number; count: number }[] {
+  const result = db
+    .query<{ level: number; count: number }, []>(
+      `SELECT COALESCE(reminder_level, 0) as level, COUNT(*) as count
+       FROM invoices
+       WHERE ${overdueInvoiceWhere("")}
+       GROUP BY level
+       ORDER BY level ASC`,
+    )
+    .all();
+  return result || [];
+}

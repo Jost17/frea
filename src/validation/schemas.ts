@@ -183,6 +183,7 @@ export interface Invoice {
   service_period_to: string | null;
   paid_date: string | null;
   reminder_level: number;
+  reminder_sent_at: string | null;
   created_at: string;
 }
 
