@@ -120,10 +120,7 @@ describe("Invoice CRUD — integration", () => {
       po_number: "",
       time_entry_ids: [String(entryId)],
     });
-    const invoiceId = parseInt(
-      (createRes.headers.get("location") ?? "").split("/").pop()!,
-      10,
-    );
+    const invoiceId = parseInt((createRes.headers.get("location") ?? "").split("/").pop()!, 10);
 
     const res = await app.fetch(new Request(`http://localhost/rechnungen/${invoiceId}`));
     expect(res.status).toBe(200);
@@ -151,10 +148,7 @@ describe("Invoice item sum invariant", () => {
       po_number: "",
       time_entry_ids: [String(entry1), String(entry2)],
     });
-    const invoiceId = parseInt(
-      (createRes.headers.get("location") ?? "").split("/").pop()!,
-      10,
-    );
+    const invoiceId = parseInt((createRes.headers.get("location") ?? "").split("/").pop()!, 10);
 
     const invoice = getInvoice(invoiceId)!;
     const items = getInvoiceItems(invoiceId);

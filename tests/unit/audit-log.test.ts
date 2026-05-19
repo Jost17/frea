@@ -33,9 +33,8 @@ describe("Audit-Log GoBD-Unveränderlichkeit", () => {
 
   test("Bestehende Einträge bleiben nach fehlgeschlagenem UPDATE erhalten", () => {
     appendAuditLog("client", 2, "update", { field: "email" });
-    const before = (
-      db.query("SELECT COUNT(*) as count FROM audit_log").get() as { count: number }
-    ).count;
+    const before = (db.query("SELECT COUNT(*) as count FROM audit_log").get() as { count: number })
+      .count;
 
     try {
       db.run("UPDATE audit_log SET entity_id = 0");
@@ -43,9 +42,8 @@ describe("Audit-Log GoBD-Unveränderlichkeit", () => {
       // Trigger-Abort erwartet
     }
 
-    const after = (
-      db.query("SELECT COUNT(*) as count FROM audit_log").get() as { count: number }
-    ).count;
+    const after = (db.query("SELECT COUNT(*) as count FROM audit_log").get() as { count: number })
+      .count;
     expect(after).toBe(before);
   });
 });

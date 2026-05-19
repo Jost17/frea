@@ -26,6 +26,7 @@ import { renderInvoiceClientSelection } from "../templates/invoice-create-client
 import { renderInvoiceProjectSelection } from "../templates/invoice-create-project";
 import { renderInvoiceDetailPage } from "../templates/invoice-detail";
 import { renderInvoiceList } from "../templates/invoice-list";
+import { interactiveStatusBadge } from "../templates/invoice-shared";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
 import { invoiceCreateSchema, invoiceStatusUpdateSchema } from "../validation/schemas";
@@ -278,6 +279,34 @@ invoiceRoutes.post("/:id/status", async (c) => {
     }
 
     updateInvoiceStatus(id, parsed.data.status);
+
+    if (c.req.header("HX-Request")) {
+      const now = new Date().toISOString().split("T")[0];
+      const invoice = getInvoice(id);
+      if (!invoice) throw new AppError("Rechnung nicht gefunden", 404);
+      const isOverdue = invoice.status === "sent" && invoice.due_date < now;
+
+      const allInvoices = getAllInvoices();
+      const waiting = allInvoices.filter((inv) => inv.status === "sent").length;
+      const overdue = allInvoices.filter(
+        (inv) => inv.status === "sent" && inv.due_date < now,
+      ).length;
+      const summaryParts: string[] = [];
+      if (waiting > 0)
+        summaryParts.push(
+          `${waiting} ${waiting === 1 ? "Rechnung wartet" : "Rechnungen warten"} auf Zahlung`,
+        );
+      if (overdue > 0) summaryParts.push(`${overdue} überfällig`);
+      const summaryText = summaryParts.join(" · ");
+      const summaryClass = summaryText
+        ? "mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800"
+        : "";
+
+      return c.html(html`
+        ${interactiveStatusBadge(id, invoice.status, isOverdue)}
+        <div id="invoice-summary" hx-swap-oob="true" class="${summaryClass}">${summaryText}</div>
+      `);
+    }
 
     return c.redirect(`/rechnungen/${id}`);
   } catch (err) {
