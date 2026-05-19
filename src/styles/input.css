@@ -210,6 +210,14 @@ tr.htmx-swapping td {
   }
 }
 
+/* Status badge used as <summary> inside <details> — hides disclosure triangle */
+.status-badge::-webkit-details-marker {
+  display: none;
+}
+.status-badge {
+  list-style: none;
+}
+
 /* --- Layer Components --- */
 @layer components {
   .card {
