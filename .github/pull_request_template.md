@@ -28,3 +28,10 @@
 
 <!-- Was ist das Risiko? Gibt es manuelle Nacharbeiten oder Migrationen? -->
 
+## QA-Review-Gate (Board-Direktive FREA-276)
+
+- [ ] PR-Status in Paperclip auf `in_review` gesetzt, Assignee = QA Engineer
+- [ ] QA-Engineer-Sign-off erhalten (Paperclip-Kommentar oder Approved-Status)
+
+> Kein Merge ohne QA-Sign-off. CTO ist Eskalationspfad bei Disput — kein Default-Reviewer.
+
