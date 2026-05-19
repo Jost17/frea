@@ -253,3 +253,93 @@ describe("E2E: Invoice status pipeline (draft → sent → paid)", () => {
     expect(JSON.parse(toPaid.changes)).toMatchObject({ from: "sent", to: "paid" });
   });
 });
+
+// ─── FREA-319a: Section-Card Layout Tests ─────────────────────────────────────
+
+describe("FREA-319a: Section-Card Layout", () => {
+  test("GET /rechnungen/create?layout=sections renders section cards", async () => {
+    const res = await app.fetch(
+      new Request("http://localhost/rechnungen/create?layout=sections"),
+    );
+    expect(res.status).toBe(200);
+
+    const html = await res.text();
+    expect(html).toContain("Neue Rechnung");
+    expect(html).toContain("Kunde");
+    expect(html).toContain("Konditionen");
+    expect(html).toContain('hx-get="/rechnungen/create/entries"');
+    expect(html).toContain("#entries-section");
+    expect(html).toContain("<details");
+  });
+
+  test("Section layout includes step numbers (1, 3)", async () => {
+    const res = await app.fetch(
+      new Request("http://localhost/rechnungen/create?layout=sections"),
+    );
+    const html = await res.text();
+    // Customer section (step 1) and Terms section (step 3) — step 2 (entries) loads dynamically
+    expect(html).toContain("Kunde");
+    expect(html).toContain("Konditionen");
+  });
+
+  test("Hidden layout=sections field passed to entries endpoint", async () => {
+    const res = await app.fetch(
+      new Request("http://localhost/rechnungen/create?layout=sections"),
+    );
+    const html = await res.text();
+    expect(html).toContain('name="layout"');
+    expect(html).toContain('value="sections"');
+    expect(html).toContain('hx-include="[name=\'layout\']"');
+  });
+
+  test("GET /rechnungen/create (fallback) still works without layout param", async () => {
+    const res = await app.fetch(
+      new Request("http://localhost/rechnungen/create"),
+    );
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("Rechnung");
+  });
+
+  test("Terms section includes date, period, PO, service-period fields", async () => {
+    const res = await app.fetch(
+      new Request("http://localhost/rechnungen/create?layout=sections"),
+    );
+    const html = await res.text();
+
+    expect(html).toContain('name="invoice_date"');
+    expect(html).toContain('name="period_month"');
+    expect(html).toContain('name="period_year"');
+    expect(html).toContain('name="po_number"');
+    expect(html).toContain('name="service_period_from"');
+    expect(html).toContain('name="service_period_to"');
+  });
+
+  test("POST /rechnungen/create accepts layout=sections with all fields", async () => {
+    const clientId = seedClient();
+    const projectId = seedProject(clientId);
+    const entryId = seedTimeEntry(projectId);
+
+    const res = await postForm("/rechnungen/create", {
+      layout: "sections",
+      client_id: String(clientId),
+      project_id: String(projectId),
+      invoice_date: "2026-05-15",
+      period_month: "5",
+      period_year: "2026",
+      po_number: "PO-2026-001",
+      service_period_from: "2026-05-01",
+      service_period_to: "2026-05-15",
+      time_entry_ids: [String(entryId)],
+    });
+
+    expect(res.status).toBe(302);
+    const location = res.headers.get("location") ?? "";
+    expect(location).toMatch(/^\/rechnungen\/\d+$/);
+
+    const invoiceId = parseInt(location.split("/").pop()!, 10);
+    const invoice = getInvoice(invoiceId);
+    expect(invoice).not.toBeNull();
+    expect(invoice!.po_number).toBe("PO-2026-001");
+  });
+});
