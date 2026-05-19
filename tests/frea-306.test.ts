@@ -6,11 +6,11 @@ import { getSettings } from "../src/db/queries";
 describe("FREA-306: Reverse Charge & Partial Payments", () => {
   beforeEach(() => {
     initializeSchema();
-    // Clean up test data
+    // Clean up test data — order matters for FK constraints
+    db.run("DELETE FROM payments");
+    db.run("DELETE FROM invoice_items");
     db.run("DELETE FROM time_entries");
     db.run("DELETE FROM invoices");
-    db.run("DELETE FROM invoice_items");
-    db.run("DELETE FROM payments");
     db.run("DELETE FROM projects");
     db.run("DELETE FROM clients");
   });
