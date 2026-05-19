@@ -16,7 +16,8 @@
     "lint": "bunx @biomejs/biome lint .",
     "format": "bunx @biomejs/biome format --write .",
     "check": "bunx @biomejs/biome check --write .",
-    "setup:hooks": "bash scripts/setup-hooks.sh"
+    "setup:hooks": "bash scripts/setup-hooks.sh",
+    "seed:seo": "bun run scripts/seed-seo-pages.ts"
   },
   "dependencies": {
     "hono": "^4.12.16",

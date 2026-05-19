@@ -198,6 +198,26 @@ export function initializeSchema() {
   db.run("CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date)");
   db.run("CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)");
 
+  // SEO pages (FREA-93) — programmatic SEO landing pages
+  db.run(`
+    CREATE TABLE IF NOT EXISTS seo_pages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      meta_description TEXT NOT NULL,
+      content_html TEXT NOT NULL,
+      keyword TEXT NOT NULL DEFAULT '',
+      page_type TEXT NOT NULL DEFAULT '',
+      city TEXT NOT NULL DEFAULT '',
+      priority TEXT NOT NULL DEFAULT 'P2',
+      status TEXT NOT NULL DEFAULT 'draft',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run("CREATE INDEX IF NOT EXISTS idx_seo_pages_slug ON seo_pages(slug)");
+
   // Live-Timer (FREA-264) — transient sessions, not GoBD-relevant (no audit log)
   db.run(`
     CREATE TABLE IF NOT EXISTS active_timers (

@@ -18,7 +18,10 @@ import { invoiceRoutes } from "./routes/invoices";
 import { mcpRoutes } from "./routes/mcp";
 import { onboardingRoutes } from "./routes/onboarding";
 import { projectRoutes } from "./routes/projects";
+import { robotsRoutes } from "./routes/robots";
+import { seoApiRoutes, seoRoutes } from "./routes/seo";
 import { settingsRoutes } from "./routes/settings";
+import { sitemapRoutes } from "./routes/sitemap";
 import { timeRoutes } from "./routes/times";
 
 try {
@@ -86,3 +89,7 @@ app.route("/mcp", mcpRoutes);
 app.route("/ausgaben", expenseRoutes);
 app.route("/altersvorsorge", altersvorsorgeRoutes);
 app.route("/onboarding", onboardingRoutes);
+app.route("/seo", seoRoutes);
+app.route("/api", seoApiRoutes);
+app.route("/robots.txt", robotsRoutes);
+app.route("/sitemap.xml", sitemapRoutes);
