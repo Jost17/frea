@@ -25,6 +25,9 @@ tags:
   - branch-cleanup
   - delete-branch-on-merge
   - archive-tags
+  - repo-hygiene-guard
+  - gitignore-artifacts
+  - pr-stau-cleanup
 ---
 
 # Multi-Agent Working-Tree Contention — Lessons from the Branch-Hygiene-Guard
@@ -64,11 +67,15 @@ After the user stopped Paperclip, the resolution was: `git checkout -B feat/bran
 
 8. **Stuck-branch gotcha.** `git branch -D` fails when the branch is checked out in a worktree ("cannot delete working directory"). Remove the worktree first: `git worktree remove --force <path>` for a live worktree, or `git worktree prune` for dead registrations whose working dir is already gone (e.g. `/tmp` worktrees). See CLAUDE.md Rule 23 (worktree default) for why agent branches end up in worktrees.
 
+9. **Worktree isolation (Rule 23) does NOT stop `.claude/`-artifact leaks — add a deterministic CI backstop.** (Added 2026-05-30, 41-PR stau cleanup.) A cleanup of 41 stale PRs found the same contamination in **5 separate PRs** (#113, #85, #106, #102, #69): committed `.claude/worktrees/.../​.mcp.json`, empty worktree markers, and stray `frea-307-qa-sign-off.md` / `freaXXX-comment.md` files. Rule 23 gives each agent its own worktree — but the agent's *own* `.claude/` artifacts inside that worktree still get swept into `git add -A` and land in the PR diff. Two PRs (#102, #69) had gone further and mashed 2–4 unrelated tickets into one diff. The disease here is narrower than contention: it is `git add -A` plus an un-ignored agent-config dir. The fix is two-layer and now shipped (#130 / FREA-129): (a) `.gitignore` adds `.claude/` + `*.incoming` (structural, local); (b) a dedicated CI guard `.github/workflows/repo-hygiene-guard.yml` fails any PR whose diff touches a forbidden path — regex `(^|/)\.claude(/|$)|(^|/)\.mcp\.json$|\.incoming$` (all branches `(^|/)`-anchored so nested `packages/x/.claude/y` and a bare root `.claude` are both caught, without false-positiving `declaude.ts`). `pr-size-guard` (>1000 LOC) and the inactive soft `.githooks/pre-push` left this gap open; a contaminated PR under 1000 LOC sailed through both. Ticket-mashing itself is not yet caught deterministically — `pr-size-guard` + reviewer judgment are the current backstop. Lesson generalizes #7: when an artifact keeps leaking, the fix is a tool-layer guard on the *path*, not a reminder to agents.
+
 ## Why This Matters
 
 The Branch-Hygiene-Guard solving "branch pollution" was solving the symptom. The disease is multi-agent working-tree contention. Without that reframe, you ship the guard, declare victory, and the next session produces another 3,394-LOC orphan branch because two agents are still racing on the same checkout. The guard is necessary; it is not the cure. The cure is worktree isolation per agent — since adopted as **CLAUDE.md Rule 23 (worktree default, FREA-216)**, so this is no longer open.
 
 There is a second, independent generator below the contention problem: even with clean worktrees, merged branches are never reaped unless `delete_branch_on_merge` is set (Guidance #7). A 2026-05-30 sweep found 110 local branches because that setting was off — the symptom (pile-up) and its fix (one repo setting) are distinct from the contention story.
+
+A third generator, found in the 41-PR stau cleanup (Guidance #9): `.claude/`-artifact leaks survive Rule 23 because they come from `git add -A` inside the agent's own worktree, not from cross-agent contention. Shipping the worktree default and "declaring victory" left the leak open in 5 of the staued PRs. The cure is the same shape as every other generator here — a deterministic guard at the tool layer (`.gitignore` + a CI forbidden-path check, #130), not a behavioral reminder. Reminders degrade over context length; the CI guard does not.
 
 Adversarial verification matters because guards that have never failed in practice are vibe-confidence, not capability-confidence. The 5-second red CI run on PR #45 is the only evidence the guard actually works. Without it, all you have is a green PR that may or may not be load-bearing.
 
