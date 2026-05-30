@@ -27,29 +27,46 @@ export interface SeoPageInsert {
   status?: string;
 }
 
-const getSeoPageBySlugStmt = db.prepare<SeoPage, [string]>(
-  "SELECT * FROM seo_pages WHERE slug = ? LIMIT 1",
-);
+// Lazy-initialized prepared statements — avoids "no such table" errors when
+// this module is imported before initializeSchema() runs (e.g. in seed scripts).
+let _getBySlug: ReturnType<typeof db.prepare<SeoPage, [string]>> | null = null;
+let _getAllSlugs: ReturnType<typeof db.prepare<{ slug: string; updated_at: string }, []>> | null =
+  null;
+let _insert: ReturnType<typeof db.prepare> | null = null;
 
-const getAllSeoPageSlugsStmt = db.prepare<{ slug: string; updated_at: string }, []>(
-  "SELECT slug, updated_at FROM seo_pages ORDER BY priority ASC, created_at ASC",
-);
+function getBySlugStmt() {
+  if (!_getBySlug)
+    _getBySlug = db.prepare<SeoPage, [string]>("SELECT * FROM seo_pages WHERE slug = ? LIMIT 1");
+  return _getBySlug;
+}
 
-const insertSeoPageStmt = db.prepare(
-  `INSERT INTO seo_pages (slug, title, meta_description, content_html, keyword, page_type, city, priority, status)
-   VALUES ($slug, $title, $meta_description, $content_html, $keyword, $page_type, $city, $priority, $status)`,
-);
+function getAllSlugsStmt() {
+  if (!_getAllSlugs)
+    _getAllSlugs = db.prepare<{ slug: string; updated_at: string }, []>(
+      "SELECT slug, updated_at FROM seo_pages ORDER BY priority ASC, created_at ASC",
+    );
+  return _getAllSlugs;
+}
+
+function insertStmt() {
+  if (!_insert)
+    _insert = db.prepare(
+      `INSERT INTO seo_pages (slug, title, meta_description, content_html, keyword, page_type, city, priority, status)
+     VALUES ($slug, $title, $meta_description, $content_html, $keyword, $page_type, $city, $priority, $status)`,
+    );
+  return _insert;
+}
 
 export function getSeoPageBySlug(slug: string): SeoPage | null {
-  return getSeoPageBySlugStmt.get(slug) ?? null;
+  return getBySlugStmt().get(slug) ?? null;
 }
 
 export function getAllSeoPageSlugs(): Array<{ slug: string; updated_at: string }> {
-  return getAllSeoPageSlugsStmt.all();
+  return getAllSlugsStmt().all();
 }
 
 export function insertSeoPage(page: SeoPageInsert): void {
-  insertSeoPageStmt.run({
+  insertStmt().run({
     $slug: page.slug,
     $title: page.title,
     $meta_description: page.meta_description,
