@@ -8,14 +8,20 @@ import { globalErrorHandler, globalNotFoundHandler } from "./middleware/error-ha
 import { navContextMiddleware } from "./middleware/nav-context";
 import { onboardingGuard } from "./middleware/onboarding-guard";
 import { securityHeaders } from "./middleware/security-headers";
+import { altersvorsorgeRoutes } from "./routes/altersvorsorge";
 import { apiRoutes } from "./routes/api";
+import { bankImportRoutes } from "./routes/bank-import";
 import { clientRoutes } from "./routes/clients";
 import { dashboardRoutes } from "./routes/dashboard";
 import { expenseRoutes } from "./routes/expenses";
 import { invoiceRoutes } from "./routes/invoices";
 import { mcpRoutes } from "./routes/mcp";
+import { onboardingRoutes } from "./routes/onboarding";
 import { projectRoutes } from "./routes/projects";
+import { robotsRoutes } from "./routes/robots";
+import { seoApiRoutes, seoRoutes } from "./routes/seo";
 import { settingsRoutes } from "./routes/settings";
+import { sitemapRoutes } from "./routes/sitemap";
 import { timeRoutes } from "./routes/times";
 
 try {
@@ -50,10 +56,14 @@ app.use("/kunden/*", navContextMiddleware);
 app.use("/projekte/*", navContextMiddleware);
 app.use("/zeiten/*", navContextMiddleware);
 app.use("/rechnungen/*", navContextMiddleware);
+app.use("/bank-import", navContextMiddleware);
+app.use("/bank-import/*", navContextMiddleware);
 app.use("/einstellungen", navContextMiddleware);
 app.use("/einstellungen/*", navContextMiddleware);
 app.use("/ausgaben", navContextMiddleware);
 app.use("/ausgaben/*", navContextMiddleware);
+app.use("/altersvorsorge", navContextMiddleware);
+app.use("/altersvorsorge/*", navContextMiddleware);
 
 app.onError(globalErrorHandler);
 app.notFound(globalNotFoundHandler);
@@ -74,5 +84,12 @@ app.route("/zeiten", timeRoutes);
 app.route("/rechnungen", invoiceRoutes);
 app.route("/einstellungen", settingsRoutes);
 app.route("/api", apiRoutes);
+app.route("/bank-import", bankImportRoutes);
 app.route("/mcp", mcpRoutes);
 app.route("/ausgaben", expenseRoutes);
+app.route("/altersvorsorge", altersvorsorgeRoutes);
+app.route("/onboarding", onboardingRoutes);
+app.route("/seo", seoRoutes);
+app.route("/api", seoApiRoutes);
+app.route("/robots.txt", robotsRoutes);
+app.route("/sitemap.xml", sitemapRoutes);
