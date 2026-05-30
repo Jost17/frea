@@ -61,6 +61,13 @@ FREA_DB_PATH="/custom/path/frea.db"
 PORT=3114
 ```
 
+### Mail-Credentials-Konfiguration
+
+Mail-Credentials (SMTP) sollten **nicht in der Datenbank** gespeichert werden, sondern als **Umgebungsvariable** beim Deployment. 
+- Setze Mail-Credentials in `.env.local` oder im Deployment-System
+- Wenn konfiguriert, wird das Passwort-Feld in der UI deaktiviert
+- Bestehende DB-Einträge werden ignoriert, wenn Umgebungsvariable aktiv ist
+
 ## Skripte
 
 | Befehl | Beschreibung |

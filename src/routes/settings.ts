@@ -15,7 +15,7 @@ import { settingsSchema } from "../validation/schemas";
 
 export const settingsRoutes = new Hono<AppEnv>();
 
-const SETTINGS_FIELDS = {
+const SETTINGS_FIELDS: Record<string, "string" | "int" | "float" | "bool"> = {
   company_name: "string",
   address: "string",
   postal_code: "string",
@@ -31,12 +31,8 @@ const SETTINGS_FIELDS = {
   payment_days: "int",
   invoice_prefix: "string",
   kleinunternehmer: "bool",
-  smtp_host: "string",
-  smtp_port: "int",
-  smtp_user: "string",
-  smtp_password: "string",
-  smtp_from: "string",
-} as const;
+  // SMTP config is environment-only (FREA-312) — never submitted via this form.
+};
 
 settingsRoutes.get("/", (c) => {
   try {
@@ -65,6 +61,7 @@ settingsRoutes.post("/", async (c) => {
     const firstSetup = !isOnboardingComplete();
     const body = await c.req.formData();
     const data = parseFormFields(body, SETTINGS_FIELDS);
+
     const result = settingsSchema.safeParse({ ...data, country: "Deutschland" });
     if (!result.success)
       throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);

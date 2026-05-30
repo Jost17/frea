@@ -487,8 +487,8 @@ invoiceRoutes.post("/:id/send", async (c) => {
       saveInvoicePdfPath(id, result.filePath);
     }
 
-    // Send email with PDF attachment
-    const emailService = new EmailService(settings);
+    // Send email with PDF attachment (SMTP config from environment, see FREA-312)
+    const emailService = new EmailService();
     await emailService.sendInvoice({
       to: client.email,
       subject: `Rechnung ${invoice.invoice_number}`,
