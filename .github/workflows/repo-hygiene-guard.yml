@@ -1,0 +1,48 @@
+name: Repo Hygiene Guard
+
+# Blockt PRs, deren Diff verbotene Artefakt-Pfade berührt.
+# Wurzel-Ursache des PR-Staus (Mai 2026): committete .claude/worktrees/-Artefakte
+# in #113/#85/#106/#102/#69. .gitignore schützt lokal, dieser Guard erzwingt es in CI.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  hygiene-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Forbidden-path check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+
+          # Verbotene Pfade (Regex): Agent-/Tooling-Artefakte, Rescue-Orphans.
+          # Alle Zweige mit (^|/) verankert → fängt auch verschachtelte Pfade
+          # (z.B. packages/x/.claude/y) und ein bares .claude im Root.
+          FORBIDDEN='(^|/)\.claude(/|$)|(^|/)\.mcp\.json$|\.incoming$'
+
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          HITS=$(echo "$CHANGED" | grep -E "$FORBIDDEN" || true)
+
+          if [ -n "$HITS" ]; then
+            echo "::error::PR-Diff enthält verbotene Artefakt-Pfade (Repo-Hygiene #129):"
+            echo "$HITS" | while IFS= read -r f; do echo "::error::  $f"; done
+            echo ""
+            echo "Fix: Dateien aus dem Branch entfernen (git rm --cached <pfad>) — .claude/ + *.incoming gehören nie in einen PR."
+            exit 1
+          fi
+          echo "Repo-Hygiene OK — keine verbotenen Pfade im Diff."
