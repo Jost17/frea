@@ -8,15 +8,17 @@ interface EpcQrInput {
   reference: string;
 }
 
-function buildEpcString(input: EpcQrInput): string {
+export function buildEpcString(input: EpcQrInput): string {
   const { recipientName, iban, bic, amount, reference } = input;
   const amountStr = `EUR${amount.toFixed(2)}`;
   const bicStr = bic ?? "";
-  // EPC069-12 format (GiroCode), version 002, encoding UTF-8 (2), transfer type SCT
+  // EPC069-12 format (GiroCode), version 002, character set 1 = UTF-8, transfer type SCT.
+  // The qrcode lib encodes the string as UTF-8 bytes, so the charset field MUST be "1";
+  // "2" (ISO 8859-1) would garble German umlauts (ä/ö/ü/ß) in name/reference.
   const lines = [
     "BCD",
     "002",
-    "2",
+    "1",
     "SCT",
     bicStr,
     recipientName.slice(0, 70),

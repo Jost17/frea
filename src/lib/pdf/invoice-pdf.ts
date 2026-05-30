@@ -65,7 +65,8 @@ export async function generateInvoicePdf(
   ensurePdfDir();
 
   const epcQrDataUrl = await generateEpcQrDataUrl({
-    recipientName: data.settings.bank_name ?? data.settings.company_name,
+    // Beneficiary = the account holder (the freelancer), never the bank name.
+    recipientName: data.settings.company_name,
     iban: data.settings.iban ?? "",
     bic: data.settings.bic ?? undefined,
     amount: data.invoice.gross_amount,
