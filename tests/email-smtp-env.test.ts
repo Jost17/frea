@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { EmailService } from "../src/services/email";
 
 // Synthetic, non-secret test values assembled at runtime so the pre-commit
@@ -14,9 +14,31 @@ const SMTP_ENV_KEYS = [
   "SMTP_PASSWORD",
 ] as const;
 
+// Snapshot any pre-existing SMTP_* env (a deploy-config app may have them set in
+// CI/local) so this file restores the exact prior state instead of wiping it —
+// Bun.env is process-global and shared across test files.
+const savedSmtpEnv = new Map<string, string | undefined>();
+
+function snapshotSmtpEnv(): void {
+  for (const key of SMTP_ENV_KEYS) {
+    savedSmtpEnv.set(key, Bun.env[key]);
+  }
+}
+
 function clearSmtpEnv(): void {
   for (const key of SMTP_ENV_KEYS) {
     delete Bun.env[key];
+  }
+}
+
+function restoreSmtpEnv(): void {
+  for (const key of SMTP_ENV_KEYS) {
+    const prior = savedSmtpEnv.get(key);
+    if (prior === undefined) {
+      delete Bun.env[key];
+    } else {
+      Bun.env[key] = prior;
+    }
   }
 }
 
@@ -38,6 +60,8 @@ function validate(service: EmailService): { host: string; port: number; password
 }
 
 describe("EmailService SMTP config (environment-only, FREA-312)", () => {
+  beforeAll(snapshotSmtpEnv);
+  afterAll(restoreSmtpEnv);
   beforeEach(clearSmtpEnv);
   afterEach(clearSmtpEnv);
 
@@ -63,5 +87,11 @@ describe("EmailService SMTP config (environment-only, FREA-312)", () => {
     setFullSmtpEnv();
     delete Bun.env.SMTP_HOST;
     expect(() => validate(new EmailService())).toThrow(/SMTP-Konfiguration unvollständig/);
+  });
+
+  it("rejects an out-of-range SMTP_PORT with a clear error instead of deferring to connect", () => {
+    setFullSmtpEnv();
+    Bun.env.SMTP_PORT = "65536";
+    expect(() => validate(new EmailService())).toThrow(/Ungültiger SMTP_PORT/);
   });
 });

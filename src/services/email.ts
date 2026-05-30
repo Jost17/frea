@@ -39,6 +39,9 @@ export class EmailService {
           "SMTP_FROM und SMTP_PASSWORD als Umgebungsvariablen setzen.",
       );
     }
+    if (!Number.isInteger(config.port) || config.port < 1 || config.port > 65535) {
+      throw new Error(`Ungültiger SMTP_PORT: ${config.port}. Erlaubt sind Werte von 1 bis 65535.`);
+    }
     return config;
   }
 

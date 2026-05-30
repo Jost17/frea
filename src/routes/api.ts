@@ -138,9 +138,10 @@ apiRoutes.get("/settings/company", (c) => {
   if (!settings) {
     throw new AppError("Einstellungen nicht initialisiert", 500);
   }
-  // Never expose the SMTP secret via the API.
-  const { smtp_password: _omitted, ...safeSettings } = settings;
-  return c.json(safeSettings);
+  // SMTP credentials are environment-only (FREA-312) and are intentionally not
+  // part of the getSettings() projection (src/db/queries.ts), so they can never
+  // reach this response. The settings-secret-leak test guards that projection.
+  return c.json(settings);
 });
 
 // PUT /api/settings/company
