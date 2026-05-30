@@ -27,3 +27,7 @@ Thumbs.db
 dist/
 build/
 public/static/styles.css
+
+# Agent/Tooling artifacts (NEVER commit — siehe Repo-Hygiene-Guard #129)
+.claude/
+*.incoming
