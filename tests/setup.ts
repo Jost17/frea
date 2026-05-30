@@ -7,3 +7,7 @@ process.env.EMAIL = "test@example.com";
 process.env.IBAN = "DE00000000000000000000";
 process.env.BIC = "TESTDE00";
 process.env.TAX_NUMBER = "000/000/00000";
+
+// Dynamic import to ensure env vars are set FIRST
+const mod = await import("../src/db/schema");
+mod.initializeSchema();

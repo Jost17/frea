@@ -1,6 +1,43 @@
 import { OPEN_INVOICE_STATUSES_SQL, overdueInvoiceWhere } from "./invoice-status";
 import { db } from "./schema";
 
+// ─── Cashflow Forecast ────────────────────────────────────────────────────────
+
+export interface CashflowMonth {
+  month: string; // YYYY-MM
+  label: string; // "Mai 2026"
+  expected_amount: number;
+  invoice_count: number;
+  is_overdue: boolean; // due_date month is before current month
+}
+
+export function getCashflowForecast(): CashflowMonth[] {
+  const rows = db
+    .query<{ month: string; expected_amount: number; invoice_count: number }, []>(
+      `SELECT
+        strftime('%Y-%m', due_date) AS month,
+        COALESCE(SUM(gross_amount), 0) AS expected_amount,
+        COUNT(*) AS invoice_count
+       FROM invoices
+       WHERE ${OPEN_INVOICE_STATUSES_SQL}
+       GROUP BY month
+       ORDER BY month ASC
+       LIMIT 12`,
+    )
+    .all();
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  return rows.map((row) => {
+    const [year, mon] = row.month.split("-").map(Number);
+    const label = new Date(year, mon - 1, 1).toLocaleDateString("de-DE", {
+      month: "long",
+      year: "numeric",
+    });
+    return { ...row, label, is_overdue: row.month < currentMonth };
+  });
+}
+
 // ─── Overdue Count (used by nav-context middleware) ──────────────────────────
 
 export function getOverdueInvoiceCount(): number {
