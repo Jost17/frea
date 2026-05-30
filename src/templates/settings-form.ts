@@ -265,122 +265,35 @@ export function renderSettingsForm(settings: Settings, showOnboarding: boolean) 
 
         <fieldset>
           <legend class="mb-4 text-lg font-semibold text-gray-900">E-Mail-Versand (SMTP)</legend>
-          <p class="mb-4 text-sm text-gray-600">
-            Konfiguriere SMTP-Einstellungen für den automatischen Rechnungsversand per E-Mail.
-          </p>
           ${
+            Bun.env.SMTP_HOST &&
+            Bun.env.SMTP_PORT &&
+            Bun.env.SMTP_USER &&
+            Bun.env.SMTP_FROM &&
             Bun.env.SMTP_PASSWORD
               ? html`
-                  <div class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4" role="status">
+                  <div class="rounded-lg border border-green-200 bg-green-50 p-4" role="status">
                     <p class="text-sm text-green-700">
-                      ✓ Mail-Credentials sind als Umgebungsvariable konfiguriert. Das Passwort-Feld
-                      wird ignoriert.
+                      ✓ SMTP ist über Umgebungsvariablen konfiguriert. Der automatische
+                      Rechnungsversand per E-Mail ist aktiv.
                     </p>
                   </div>
                 `
-              : ""
-          }
-          ${
-            !Bun.env.SMTP_PASSWORD && Bun.env.FREA_SMTP_WARN === "true"
-              ? html`
-                  <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4" role="alert">
-                    <p class="text-sm text-amber-800">
-                      ⚠ Migrationshinweis: Bitte speichere Mail-Credentials künftig in der
-                      Umgebungskonfiguration statt in den Einstellungen. Das ist sicherer.
+              : html`
+                  <div class="rounded-lg border border-gray-200 bg-gray-50 p-4" role="status">
+                    <p class="text-sm text-gray-600">
+                      Der automatische Rechnungsversand wird über Umgebungsvariablen konfiguriert
+                      (<code class="font-mono">SMTP_HOST</code>,
+                      <code class="font-mono">SMTP_PORT</code>,
+                      <code class="font-mono">SMTP_USER</code>,
+                      <code class="font-mono">SMTP_FROM</code>,
+                      <code class="font-mono">SMTP_PASSWORD</code>) und beim Deployment gesetzt —
+                      aus Sicherheitsgründen nicht über dieses Formular. Solange sie fehlen, ist der
+                      E-Mail-Versand deaktiviert.
                     </p>
                   </div>
                 `
-              : ""
           }
-          <div class="space-y-4">
-            <div>
-              <label for="smtp_host" class="block text-sm font-medium text-gray-700"
-                >SMTP-Server</label
-              >
-              <input
-                type="text"
-                id="smtp_host"
-                name="smtp_host"
-                placeholder="z.B. mail.example.com"
-                value="${settings.smtp_host || ""}"
-                class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              />
-              <p class="mt-1 text-xs text-gray-500">
-                Hostname deines Mail-Servers — meist unter „E-Mail-Einstellungen" bei deinem
-                Hosting-Anbieter.
-              </p>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label for="smtp_port" class="block text-sm font-medium text-gray-700">Port</label>
-                <input
-                  type="number"
-                  id="smtp_port"
-                  name="smtp_port"
-                  placeholder="587 oder 465"
-                  value="${settings.smtp_port || ""}"
-                  min="1"
-                  max="65535"
-                  class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                />
-                <p class="mt-1 text-xs text-gray-500">
-                  587 für STARTTLS (empfohlen) · 465 für SSL/TLS.
-                </p>
-              </div>
-              <div>
-                <label for="smtp_user" class="block text-sm font-medium text-gray-700"
-                  >Benutzer</label
-                >
-                <input
-                  type="text"
-                  id="smtp_user"
-                  name="smtp_user"
-                  placeholder="dein@email.com"
-                  value="${settings.smtp_user || ""}"
-                  class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                />
-                <p class="mt-1 text-xs text-gray-500">Meist identisch mit der E-Mail-Adresse.</p>
-              </div>
-            </div>
-
-            <div>
-              <label for="smtp_credential" class="block text-sm font-medium text-gray-700"
-                >Passwort ${Bun.env.SMTP_PASSWORD ? "(ignoriert — Env-Config aktiv)" : ""}</label
-              >
-              <input
-                type="password"
-                id="smtp_credential"
-                name="smtp_credential"
-                placeholder="Dein SMTP-Passwort"
-                value="${settings.smtp_password || ""}"
-                ${Bun.env.SMTP_PASSWORD ? "disabled" : ""}
-                class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500"
-              />
-              <p class="mt-1 text-xs text-gray-500">
-                ${
-                  Bun.env.SMTP_PASSWORD
-                    ? "Mail-Credentials werden aus der Umgebungskonfiguration gelesen."
-                    : "Bei Gmail oder Outlook: App-Passwort verwenden, nicht das normale Account-Passwort. Empfohlen: In der Umgebung konfigurieren."
-                }
-              </p>
-            </div>
-
-            <div>
-              <label for="smtp_from" class="block text-sm font-medium text-gray-700"
-                >Von-Adresse</label
-              >
-              <input
-                type="email"
-                id="smtp_from"
-                name="smtp_from"
-                placeholder="z.B. rechnungen@example.com"
-                value="${settings.smtp_from || ""}"
-                class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              />
-              <p class="mt-1 text-xs text-gray-500">Erscheint beim Empfänger als Absender-Adresse.</p>
-            </div>
-          </div>
         </fieldset>
 
         <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">

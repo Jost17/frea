@@ -31,11 +31,7 @@ const SETTINGS_FIELDS: Record<string, "string" | "int" | "float" | "bool"> = {
   payment_days: "int",
   invoice_prefix: "string",
   kleinunternehmer: "bool",
-  smtp_host: "string",
-  smtp_port: "int",
-  smtp_user: "string",
-  smtp_credential: "string", // form field = "smtp_password", but renamed to avoid security scan
-  smtp_from: "string",
+  // SMTP config is environment-only (FREA-312) — never submitted via this form.
 };
 
 settingsRoutes.get("/", (c) => {
@@ -66,14 +62,7 @@ settingsRoutes.post("/", async (c) => {
     const body = await c.req.formData();
     const data = parseFormFields(body, SETTINGS_FIELDS);
 
-    // Map smtp_credential field back to smtp_password for schema validation
-    const settingsData = { ...data };
-    (settingsData as any).smtp_password = Bun.env.SMTP_PASSWORD
-      ? ""
-      : (settingsData as any).smtp_credential || "";
-    delete (settingsData as any).smtp_credential;
-
-    const result = settingsSchema.safeParse({ ...settingsData, country: "Deutschland" });
+    const result = settingsSchema.safeParse({ ...data, country: "Deutschland" });
     if (!result.success)
       throw new AppError(result.error.issues[0]?.message ?? "Ungültige Eingabe", 422);
     updateSettings(result.data);
