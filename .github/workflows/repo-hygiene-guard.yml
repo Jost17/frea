@@ -30,8 +30,10 @@ jobs:
           set -euo pipefail
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
 
-          # Verbotene Pfade (Regex, ankerbar): Agent-/Tooling-Artefakte, Rescue-Orphans.
-          FORBIDDEN='^\.claude/|(^|/)\.mcp\.json$|\.incoming$'
+          # Verbotene Pfade (Regex): Agent-/Tooling-Artefakte, Rescue-Orphans.
+          # Alle Zweige mit (^|/) verankert → fängt auch verschachtelte Pfade
+          # (z.B. packages/x/.claude/y) und ein bares .claude im Root.
+          FORBIDDEN='(^|/)\.claude(/|$)|(^|/)\.mcp\.json$|\.incoming$'
 
           CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
           HITS=$(echo "$CHANGED" | grep -E "$FORBIDDEN" || true)
