@@ -10,6 +10,7 @@ export interface InvoicePdfData {
   items: InvoiceItem[];
   client: Client;
   settings: Settings;
+  epcQrDataUrl?: string | null;
 }
 
 function escapeHtml(str: string): string {
@@ -22,7 +23,7 @@ function escapeHtml(str: string): string {
 }
 
 export function buildInvoiceHtml(data: InvoicePdfData): string {
-  const { invoice, items, client, settings } = data;
+  const { invoice, items, client, settings, epcQrDataUrl } = data;
   const config = parseInvoiceLayoutConfig(settings);
   const isKleinunternehmer = Boolean(settings.kleinunternehmer);
   const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
@@ -223,6 +224,18 @@ export function buildInvoiceHtml(data: InvoicePdfData): string {
     }
     .payment-info p { font-size: 11px; color: #166534; margin-bottom: 2px; }
     .payment-info strong { font-weight: 600; }
+    .payment-qr-block {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .payment-qr-block .payment-text { flex: 1; }
+    .qr-label {
+      font-size: 9px;
+      color: #9ca3af;
+      text-align: center;
+      margin-top: 3px;
+    }
   </style>
 </head>
 <body>
@@ -302,10 +315,22 @@ export function buildInvoiceHtml(data: InvoicePdfData): string {
       </div>
       <div>
         <p class="notes-label">Zahlungsbedingungen</p>
-        ${config.show_payment_terms ? `<p class="notes-text">Zahlbar innerhalb ${settings.payment_days} Tage</p>` : ""}
-        ${config.show_bank_details && settings.bank_name ? `<p class="notes-text">Kontoinhaber: ${escapeHtml(settings.bank_name)}</p>` : ""}
-        ${config.show_bank_details && settings.iban ? `<p class="notes-text">IBAN: ${escapeHtml(settings.iban)}</p>` : ""}
-        ${config.show_bank_details && settings.bic ? `<p class="notes-text">BIC: ${escapeHtml(settings.bic)}</p>` : ""}
+        <div class="payment-qr-block">
+          <div class="payment-text">
+            ${config.show_payment_terms ? `<p class="notes-text">Zahlbar innerhalb ${settings.payment_days} Tage</p>` : ""}
+            ${config.show_bank_details && settings.bank_name ? `<p class="notes-text">Kontoinhaber: ${escapeHtml(settings.bank_name)}</p>` : ""}
+            ${config.show_bank_details && settings.iban ? `<p class="notes-text">IBAN: ${escapeHtml(settings.iban)}</p>` : ""}
+            ${config.show_bank_details && settings.bic ? `<p class="notes-text">BIC: ${escapeHtml(settings.bic)}</p>` : ""}
+          </div>
+          ${
+            epcQrDataUrl
+              ? `<div>
+                  <img src="${epcQrDataUrl}" width="80" height="80" alt="GiroCode QR" style="display:block;">
+                  <p class="qr-label">GiroCode</p>
+                </div>`
+              : ""
+          }
+        </div>
       </div>
     </div>
   </div>
