@@ -1,6 +1,7 @@
 ---
 title: Multi-Agent Working-Tree Contention — Lessons from the Branch-Hygiene-Guard
 date: 2026-05-05
+last_updated: 2026-05-30
 category: workflow-issues
 module: git-workflow
 problem_type: workflow_issue
@@ -20,10 +21,10 @@ tags:
   - multi-agent
   - git-worktree
   - pre-push-hook
-  - ci-guard
   - adversarial-testing
-  - paperclip
   - branch-cleanup
+  - delete-branch-on-merge
+  - archive-tags
 ---
 
 # Multi-Agent Working-Tree Contention — Lessons from the Branch-Hygiene-Guard
@@ -48,15 +49,26 @@ After the user stopped Paperclip, the resolution was: `git checkout -B feat/bran
 
 3. **Always ship guards with an adversarial proof PR.** Green on the implementing PR is necessary but not sufficient — it only proves the guard didn't crash. Open a second PR engineered to violate the rule (branch deliberately N commits behind base, with the threshold temporarily lowered) and verify the failure mode is exactly the documented one. Close and delete after proof. Without this, you have vibe-confidence, not capability-confidence.
 
-4. **Two-stage branch cleanup.** Stage 1: patch-id match via `git cherry origin/main <branch>` — catches identical-diff merges. Stage 2: ticket-number-in-branch-name vs. merged-PR-titles — catches squash+reformat survivors that patch-id misses (because biome/prettier mutate the diff). The session itself flagged the gotcha: *"Patch-ID lügt manchmal"* — it only matches identical diffs, so reformat or conflict resolution can produce false uniqueness.
+4. **Multi-stage branch cleanup — classify by content, never by name, and cap the downside before deleting.** (Refined 2026-05-30 on a 110-branch sweep.)
+   - **Stage 0 — archive before delete (reversible safety-net).** Tag every branch slated for deletion: `git tag archive/<branch> <branch>` (slashes in tag names are fine). Recovery is then always `git checkout -b <branch> archive/<branch>`. This drops data-loss risk to **0** *without* having to solve the unsolvable squash-oracle (Stage 3). Do this first — a branch with no upstream looks like trash but can be the only copy of unpushed work (a `seo-queries lazy-init` fix, `0d9d086`, was rescued this way minutes before the sweep).
+   - **Stage 1 — fully-contained check:** `git rev-list --count origin/main..<branch>` == 0 → identical-SHA merged, safe.
+   - **Stage 2 — patch-id match:** `git cherry origin/main <branch>` (no `+` lines) — catches cherry-picked/rebased merges under a different name.
+   - **Stage 3 — exclude active work:** cross-check against `gh pr list --state open --json headRefName` → an open PR's head is live work, **keep**; and ticket-number-in-branch-name vs. `gh pr list --state merged` titles — catches squash+reformat survivors patch-id misses (biome/prettier mutate the diff).
+   - **Hard limit (be honest):** squash-merge fuses N commits into one new commit whose patch-id matches no individual branch commit → `git cherry` reports squash-merged work as *unmerged* (`+`). There is **no perfect deterministic oracle** for "squash-merged under a divergent name" without PR linkage. The session flagged it as *"Patch-ID lügt manchmal."* That is exactly why Stage 0 exists: archive-then-delete makes the whole operation reversible, so a misclassified squash-merge costs nothing.
 
 5. **Adopt better ideas from competing implementations even when produced chaotically.** Paperclip's inline-CI-in-`ci.yml` was a cleaner architecture than the original separate `branch-from-main.yml` workflow file. Sunk-cost defense of the first draft is a self-inflicted wound. Mid-session reframe was explicit: *"Komplexitätsschuld reduzieren — beide Hygiene-Checks im selben Workflow-File, weil sie konzeptuell zusammengehören (PR-Hygiene-Suite)."*
 
-6. **When a permission system blocks one form of an operation, look for the equivalent.** `git reset --hard origin/main` was blocked by the harness on every invocation; `git branch --force main origin/main` was permitted and functionally identical for this case. Use the workaround, then flag the asymmetry — the policy is enforcing the wrong predicate. (Session history: this is a recurring blocker on FREA workflow edits.)
+6. **When a permission system blocks one form of an operation, look for the equivalent.** `git reset --hard origin/main` was blocked by the harness on every invocation; `git branch --force main origin/main` was permitted and functionally identical for this case. Use the workaround, then flag the asymmetry — the policy is enforcing the wrong predicate. (Session history: this is a recurring blocker on FREA workflow edits.) — Note 2026-05-30: `git reset --hard origin/main` is still permission-blocked; the reliable path is to hand the user the exact command to run via `!`, *after* archiving anything unique (Stage 0).
+
+7. **Fix the generator, not the symptom — make the repo self-cleaning.** (Added 2026-05-30.) Branches pile up because nothing reaps them after merge. The one-time lever: enable the GitHub repo setting once — `gh api -X PATCH repos/<owner>/<repo> -F delete_branch_on_merge=true`. Then the loop closes itself: merge deletes the remote branch → local `git fetch --prune` marks it `[gone]` → gstack `ce-clean-gone-branches` reaps it trivially. Without this, `ce-clean-gone-branches` finds nothing (branches never get `[gone]` tracking) and you are back to manual content-classification. The deletion is nacharbeit; **the setting is the actual fix.** A cleanup sweep that does not also flip this setting will regenerate the same pile within weeks.
+
+8. **Stuck-branch gotcha.** `git branch -D` fails when the branch is checked out in a worktree ("cannot delete working directory"). Remove the worktree first: `git worktree remove --force <path>` for a live worktree, or `git worktree prune` for dead registrations whose working dir is already gone (e.g. `/tmp` worktrees). See CLAUDE.md Rule 23 (worktree default) for why agent branches end up in worktrees.
 
 ## Why This Matters
 
-The Branch-Hygiene-Guard solving "branch pollution" was solving the symptom. The disease is multi-agent working-tree contention. Without that reframe, you ship the guard, declare victory, and the next session produces another 3,394-LOC orphan branch because two agents are still racing on the same checkout. The guard is necessary; it is not the cure. The cure is worktree isolation per agent, or an explicit lock, or both — currently unsolved (see "Open Follow-Up" below).
+The Branch-Hygiene-Guard solving "branch pollution" was solving the symptom. The disease is multi-agent working-tree contention. Without that reframe, you ship the guard, declare victory, and the next session produces another 3,394-LOC orphan branch because two agents are still racing on the same checkout. The guard is necessary; it is not the cure. The cure is worktree isolation per agent — since adopted as **CLAUDE.md Rule 23 (worktree default, FREA-216)**, so this is no longer open.
+
+There is a second, independent generator below the contention problem: even with clean worktrees, merged branches are never reaped unless `delete_branch_on_merge` is set (Guidance #7). A 2026-05-30 sweep found 110 local branches because that setting was off — the symptom (pile-up) and its fix (one repo setting) are distinct from the contention story.
 
 Adversarial verification matters because guards that have never failed in practice are vibe-confidence, not capability-confidence. The 5-second red CI run on PR #45 is the only evidence the guard actually works. Without it, all you have is a green PR that may or may not be load-bearing.
 
@@ -107,6 +119,33 @@ for b in $(git for-each-ref --format='%(refname:short)' refs/heads/); do
     echo "DELETE: $b  (ticket $ticket merged via #$pr)"
   fi
 done
+```
+
+**Stage 0 — archive-then-delete (reversible bulk cleanup, 2026-05-30):**
+```bash
+# For every branch classified safe-to-delete: tag it, then delete.
+while read -r b; do
+  git tag archive/"$b" "$b"   # reversible safety-net (slashes ok in tag names)
+  git branch -D "$b"
+done < /tmp/todelete.txt
+
+# Recovery, any time later:
+git checkout -b feat/foo archive/feat/foo
+```
+
+**Generator-fix — make the repo self-cleaning (one-time):**
+```bash
+gh api -X PATCH repos/<owner>/<repo> -F delete_branch_on_merge=true
+# henceforth: merge → remote branch deleted → `git fetch --prune` marks [gone]
+#           → `ce-clean-gone-branches` (gstack) reaps it with zero manual triage
+```
+
+**Stuck branch (checked out in a worktree):**
+```bash
+git worktree list | grep "\[$b\]"            # find the worktree
+git worktree remove --force <path>           # live worktree
+git worktree prune                           # dead registration (working dir gone)
+git branch -D "$b"
 ```
 
 **Adversarial PR pattern (mandatory before declaring a guard "done"):**
@@ -168,13 +207,13 @@ jobs:
 
 ## Open Follow-Up
 
-The Branch-Hygiene-Guard is the symptom-fix. The root cause — multi-agent working-tree contention — is still unsolved. Three options surfaced in the session:
+**Resolved since 2026-05-05:**
+- **Worktree-Default** (the recommended "medium" option) — adopted as **CLAUDE.md Rule 23 (FREA-216)**. Non-primary/parallel agents work in dedicated worktrees; no shared checkout.
+- **`delete_branch_on_merge`** — enabled on `Jost17/frea` 2026-05-30 (`gh api -X PATCH repos/Jost17/frea -F delete_branch_on_merge=true`). The repo is now self-cleaning via the `[gone]` → `ce-clean-gone-branches` loop (Guidance #7).
 
+**Still open:**
 - **Small:** Pre-Tool-Use-Hook in `.claude/settings.json` that warns when another Claude Code process runs on the same repo (`pgrep -f "claude.*frea_freelancer"`).
-- **Medium:** Worktree-Default for non-primary agents — Paperclip gets `~/frea_freelancer.paperclip/`, Claude Code stays in the main path. Clean isolation, no lock needed.
-- **Large:** Verifier-Agent over a Stop-Hook that diffs whether branch unexpectedly switched after each tool call — non-promptable verifier for working-tree integrity.
-
-Recommended: medium (worktree default). This is its own task, not a sub-task of the Branch-Hygiene-Guard.
+- **Large:** Verifier-Agent over a Stop-Hook that diffs whether the branch unexpectedly switched after each tool call — a non-promptable verifier for working-tree integrity.
 
 ## Related
 
@@ -186,3 +225,6 @@ Recommended: medium (worktree default). This is its own task, not a sub-task of 
 - PR #44 — Branch-Hygiene-Guard implementation
 - PR #45 (closed) — Adversarial test PR proving the guard fails correctly on stale branches
 - `docs/solutions/security-issues/multi-agent-review-host-spoofing-iban-validation.md` — another multi-agent failure mode (review-layer convergence); seed of a future multi-agent failure-mode index
+- gstack `ce-clean-gone-branches` — the standard reaper; only reliable *after* `delete_branch_on_merge` is enabled (Guidance #7). On a repo without `[gone]` tracking it correctly finds nothing — a silent-failure class (empty result is ambiguous: "nothing stale" vs. "tool doesn't apply here").
+- CLAUDE.md Rule 23 (worktree default, FREA-216) — resolves the contention root cause this doc opened.
+- 2026-05-30 sweep: 110 → 36 local branches, 66 `archive/*` tags, `delete_branch_on_merge` enabled, 0 data loss (one unpushed fix `0d9d086` rescued via PR #119 just before).
