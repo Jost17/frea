@@ -44,6 +44,30 @@ describe("buildEpcString (EPC069-12 / GiroCode)", () => {
     expect(lines[5]).toHaveLength(70);
     expect(lines[10]).toHaveLength(140);
   });
+
+  it("flattens CR/LF in fields so the line structure cannot be shifted (injection guard)", () => {
+    const lines = buildEpcString({
+      ...validInput,
+      recipientName: "Evil\nDE99\n9999",
+      reference: "ref\r\nline2",
+    }).split("\n");
+    // Must still be exactly 11 lines with IBAN/amount in their canonical slots.
+    expect(lines).toHaveLength(11);
+    expect(lines[5]).toBe("Evil DE99 9999");
+    expect(lines[6]).toBe("DE89370400440532013000");
+    expect(lines[7]).toBe("EUR1234.50");
+    expect(lines[10]).toBe("ref line2");
+  });
+
+  it("keeps the total payload within the EPC 331-byte cap even with multibyte fields", () => {
+    const payload = buildEpcString({
+      ...validInput,
+      recipientName: "ä".repeat(70),
+      reference: "x".repeat(140),
+      amount: 999999999.99,
+    });
+    expect(new TextEncoder().encode(payload).length).toBeLessThanOrEqual(331);
+  });
 });
 
 describe("generateEpcQrDataUrl", () => {
@@ -62,5 +86,9 @@ describe("generateEpcQrDataUrl", () => {
 
   it("returns null for a non-positive amount", async () => {
     expect(await generateEpcQrDataUrl({ ...validInput, amount: 0 })).toBeNull();
+  });
+
+  it("returns null when the amount exceeds the EPC maximum (999999999.99)", async () => {
+    expect(await generateEpcQrDataUrl({ ...validInput, amount: 1_000_000_000 })).toBeNull();
   });
 });
