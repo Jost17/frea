@@ -44,15 +44,20 @@ function seed(): { clientId: number; projectId: number; entry: TimeEntry } {
   return { clientId, projectId, entry };
 }
 
+// Eindeutiges, disjunktes Jahr pro Rechnung → invoice_number
+// (prefix-{year}-{next_invoice_number}) kollidiert nicht mit anderen Test-Files,
+// auch wenn die in-memory-DB + next_invoice_number über Files geteilt werden.
+let _yr = 0;
 function makeInvoice(clientId: number, projectId: number, settings: Settings): number {
+  const year = 2050 + ++_yr;
   return createInvoice(
     {
       client_id: clientId,
       project_id: projectId,
       time_entry_ids: [],
-      invoice_date: "2026-01-31",
+      invoice_date: `${year}-01-31`,
       period_month: 1,
-      period_year: 2026,
+      period_year: year,
       po_number: "",
       service_period_from: "",
       service_period_to: "",
