@@ -343,6 +343,14 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
       throw new AppError(`PDF konnte nicht erstellt werden: ${result.error}`, 500);
     }
 
+    // FREA-115: graceful-degrade ist nicht still — wenn XML erwartet war aber das
+    // Embedding fehlte, wird das invoice-spezifisch geloggt (Provisioning-Signal).
+    if (zugferdXml && !result.zugferdEmbedded) {
+      console.warn(
+        `[invoices] Rechnung ${invoice.invoice_number} ohne eingebettetes ZUGFeRD-XML ausgeliefert — Embedding nicht verfügbar (FREA-115).`,
+      );
+    }
+
     saveInvoicePdfPath(id, result.filePath);
 
     const fileName = result.fileName;
@@ -375,6 +383,7 @@ invoiceRoutes.post("/:id/send", async (c) => {
 
     // Auto-regenerate PDF if missing
     let pdfPath = invoice.pdf_path;
+    let zugferdMissing = false;
     if (!pdfPath) {
       const items = getInvoiceItems(id);
 
@@ -387,6 +396,12 @@ invoiceRoutes.post("/:id/send", async (c) => {
       );
       if (!result.success) {
         throw new AppError(`PDF konnte nicht erstellt werden: ${result.error}`, 500);
+      }
+      if (zugferdXml && !result.zugferdEmbedded) {
+        zugferdMissing = true;
+        console.warn(
+          `[invoices] Rechnung ${invoice.invoice_number} wird OHNE eingebettetes ZUGFeRD-XML versendet — Embedding nicht verfügbar (FREA-115).`,
+        );
       }
       pdfPath = result.filePath;
       saveInvoicePdfPath(id, result.filePath);
@@ -403,7 +418,12 @@ invoiceRoutes.post("/:id/send", async (c) => {
     // Update invoice status to 'sent'
     updateInvoiceStatus(id, "sent");
 
-    return c.json({ success: true, message: "Rechnung versendet" });
+    return c.json({
+      success: true,
+      message: zugferdMissing
+        ? "Rechnung versendet — Hinweis: ohne eingebettete E-Rechnung (ZUGFeRD-XML), da das Embedding aktuell nicht verfügbar ist."
+        : "Rechnung versendet",
+    });
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "Rechnung konnte nicht versendet werden", 500);

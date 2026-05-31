@@ -44,6 +44,9 @@ export interface PdfGenerationResult {
   success: true;
   filePath: string;
   fileName: string;
+  // FREA-115: false, wenn ZUGFeRD angefordert war, das Embedding aber fehlschlug
+  // (Mustang/Ghostscript/Java fehlen) — das reine PDF ist trotzdem valide.
+  zugferdEmbedded: boolean;
 }
 
 export interface PdfGenerationError {
@@ -56,6 +59,23 @@ export type PdfResult = PdfGenerationResult | PdfGenerationError;
 export interface GeneratePdfOptions {
   embedZugferd?: true;
   zugferdXml?: string;
+}
+
+/**
+ * FREA-115: Bettet ZUGFeRD ein und degradiert graceful. Das Embedding braucht
+ * Mustang-CLI.jar + Java + Ghostscript — fehlen die, darf NICHT die ganze
+ * Rechnung scheitern (500). Das reine PDF ist eine valide USt-Rechnung; nur das
+ * eingebettete XML entfällt. Wirft nie — gibt true bei Erfolg, sonst false.
+ */
+export async function tryEmbedZugferd(filePath: string, xmlContent: string): Promise<boolean> {
+  try {
+    await embedZUGFeRDInPDF(filePath, xmlContent);
+    return true;
+  } catch (embedErr) {
+    const message = embedErr instanceof Error ? embedErr.message : String(embedErr);
+    console.warn(`[invoice-pdf] ZUGFeRD-Embedding übersprungen, PDF bleibt valide: ${message}`);
+    return false;
+  }
 }
 
 export async function generateInvoicePdf(
@@ -92,11 +112,12 @@ export async function generateInvoicePdf(
 
     await writeFile(filePath, pdfBytes);
 
-    if (options?.embedZugferd && options.zugferdXml) {
-      await embedZUGFeRDInPDF(filePath, options.zugferdXml);
-    }
+    const zugferdEmbedded =
+      options?.embedZugferd && options.zugferdXml
+        ? await tryEmbedZugferd(filePath, options.zugferdXml)
+        : false;
 
-    return { success: true, filePath, fileName };
+    return { success: true, filePath, fileName, zugferdEmbedded };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unbekannter Fehler";
     console.error("[invoice-pdf] PDF generation failed:", message);
