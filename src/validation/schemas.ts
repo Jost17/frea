@@ -184,6 +184,10 @@ export interface Invoice {
   paid_date: string | null;
   reminder_level: number;
   created_at: string;
+  // FREA-116: bei Erstellung eingefrorene USt-Behandlung. NULL = Alt-Rechnung
+  // vor der Migration → Renderer fällt auf settings.* zurück.
+  kleinunternehmer: number | null;
+  vat_rate: number | null;
 }
 
 export interface InvoiceItem {
