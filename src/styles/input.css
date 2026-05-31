@@ -60,6 +60,8 @@
   --color-status-overdue-text: oklch(38% 0.18 25);
   --color-status-cancelled-bg: oklch(95% 0.01 265);
   --color-status-cancelled-text: oklch(45% 0.02 265);
+  --color-status-info-bg: oklch(94% 0.05 250);
+  --color-status-info-text: oklch(38% 0.14 250);
 
   /* Motion */
   --duration-slow: 300ms;
@@ -102,6 +104,8 @@
   --color-status-overdue-text: oklch(72% 0.18 25);
   --color-status-cancelled-bg: oklch(25% 0.01 265);
   --color-status-cancelled-text: oklch(70% 0.02 265);
+  --color-status-info-bg: oklch(22% 0.06 250);
+  --color-status-info-text: oklch(78% 0.14 250);
 }
 
 /* --- Base styles --- */
@@ -204,6 +208,14 @@ tr.htmx-swapping td {
   to {
     opacity: 1;
   }
+}
+
+/* Status badge used as <summary> inside <details> — hides disclosure triangle */
+.status-badge::-webkit-details-marker {
+  display: none;
+}
+.status-badge {
+  list-style: none;
 }
 
 /* --- Layer Components --- */

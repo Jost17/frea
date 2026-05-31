@@ -1,4 +1,29 @@
 {
   "$schema": "https://glama.ai/mcp/schemas/server.json",
-  "maintainers": ["Jost17"]
+  "name": "FREA",
+  "description": "German freelancer invoicing compliance — validates invoices against §14 UStG, GoBD, and MwSt-per-line-item rules. Provides legal requirement resources and a validation tool for AI assistants.",
+  "homepage": "https://github.com/Jost17/frea_freelancer",
+  "repository": "https://github.com/Jost17/frea_freelancer",
+  "license": "MIT",
+  "maintainers": ["Jost17"],
+  "mcpVersion": "2024-11-05",
+  "transport": "http",
+  "endpoint": "/mcp/server",
+  "categories": ["finance", "legal", "invoicing", "german-compliance"],
+  "tools": [
+    {
+      "name": "frea:validate_invoice",
+      "description": "Validates a proposed invoice against German legal requirements (§14 UStG, GoBD, MwSt per line item). Returns compliance status, violations, suggestions, and calculated VAT total."
+    }
+  ],
+  "resources": [
+    {
+      "uri": "frea://legal/invoicing-requirements-de",
+      "description": "§14 UStG compliance reference — mandatory invoice fields, MwSt calculation rules, GoBD requirements, Kleinunternehmer §19 UStG, Reverse Charge."
+    },
+    {
+      "uri": "frea://setup/freelancer-onboarding",
+      "description": "Step-by-step onboarding checklist for setting up FREA (Stammdaten, Client, Invoice, Audit-Log, ZUGFeRD)."
+    }
+  ]
 }

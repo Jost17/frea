@@ -61,6 +61,13 @@ FREA_DB_PATH="/custom/path/frea.db"
 PORT=3114
 ```
 
+### Mail-Credentials-Konfiguration
+
+Mail-Credentials (SMTP) sollten **nicht in der Datenbank** gespeichert werden, sondern als **Umgebungsvariable** beim Deployment. 
+- Setze Mail-Credentials in `.env.local` oder im Deployment-System
+- Wenn konfiguriert, wird das Passwort-Feld in der UI deaktiviert
+- Bestehende DB-Einträge werden ignoriert, wenn Umgebungsvariable aktiv ist
+
 ## Skripte
 
 | Befehl | Beschreibung |
@@ -99,6 +106,32 @@ public/
 docs/
   adr/          — Architecture Decision Records
 ```
+
+## MCP Server (KI-Integration)
+
+FREA stellt einen MCP Server bereit, über den AI-Assistenten (Claude, Cursor, Windsurf, …) direkt auf deutsche Rechnungskonformität zugreifen können.
+
+**Endpoint:** `POST /mcp/server` (JSON-RPC 2.0, MCP 2024-11-05)
+
+**Tools:**
+- `frea:validate_invoice` — Prüft einen Rechnungsentwurf gegen §14 UStG, GoBD und MwSt-pro-Position-Regel
+
+**Ressourcen:**
+- `frea://legal/invoicing-requirements-de` — Komplettes §14-UStG-Referenzdokument (Markdown)
+- `frea://setup/freelancer-onboarding` — Onboarding-Checkliste für FREA-Einrichtung (JSON)
+
+**MCP-Config für Claude Desktop / Cursor:**
+```json
+{
+  "mcpServers": {
+    "frea": {
+      "url": "http://localhost:3114/mcp/server"
+    }
+  }
+}
+```
+
+Discovery-Endpoint: `GET /mcp/server` — gibt Server-Info und Capabilities zurück.
 
 ## Lizenz
 

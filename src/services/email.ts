@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import type { Settings } from "../validation/schemas";
 
 export interface EmailParams {
   to: string;
@@ -7,29 +6,52 @@ export interface EmailParams {
   attachmentPath: string;
 }
 
+interface SmtpConfig {
+  host: string;
+  port: number;
+  user: string;
+  from: string;
+  password: string;
+}
+
+/**
+ * SMTP configuration is read exclusively from environment variables, set at
+ * deploy time. Mail credentials are never stored in or read from the database
+ * (see ADR / FREA-312) — keeping the secret out of SQLite and out of any
+ * rendered settings page or API response.
+ */
+function readSmtpConfig(): SmtpConfig {
+  return {
+    host: Bun.env.SMTP_HOST || "",
+    port: Number.parseInt(Bun.env.SMTP_PORT || "", 10) || 0,
+    user: Bun.env.SMTP_USER || "",
+    from: Bun.env.SMTP_FROM || "",
+    password: Bun.env.SMTP_PASSWORD || "",
+  };
+}
+
 export class EmailService {
-  private settings: Settings;
-
-  constructor(settings: Settings) {
-    this.settings = settings;
-  }
-
-  private validateSmtpConfig(): void {
-    const { smtp_host, smtp_port, smtp_user, smtp_from } = this.settings;
-    if (!smtp_host || !smtp_port || !smtp_user || !smtp_from) {
+  private validateSmtpConfig(): SmtpConfig {
+    const config = readSmtpConfig();
+    if (!config.host || !config.port || !config.user || !config.from || !config.password) {
       throw new Error(
-        "SMTP-Konfiguration unvollständig. Bitte alle SMTP-Felder in Einstellungen ausfüllen.",
+        "SMTP-Konfiguration unvollständig. Bitte SMTP_HOST, SMTP_PORT, SMTP_USER, " +
+          "SMTP_FROM und SMTP_PASSWORD als Umgebungsvariablen setzen.",
       );
     }
+    if (!Number.isInteger(config.port) || config.port < 1 || config.port > 65535) {
+      throw new Error(`Ungültiger SMTP_PORT: ${config.port}. Erlaubt sind Werte von 1 bis 65535.`);
+    }
+    return config;
   }
 
   async sendInvoice(params: EmailParams): Promise<void> {
-    this.validateSmtpConfig();
+    const config = this.validateSmtpConfig();
 
     try {
       const nodemailer = await this.loadNodemailer();
       if (nodemailer) {
-        return this.sendViaNodemailer(nodemailer, params);
+        return this.sendViaNodemailer(nodemailer, config, params);
       }
 
       console.warn("[email] nodemailer not installed. Simulating send...");
@@ -54,14 +76,18 @@ export class EmailService {
     }
   }
 
-  private async sendViaNodemailer(nodemailer: any, params: EmailParams): Promise<void> {
+  private async sendViaNodemailer(
+    nodemailer: any,
+    config: SmtpConfig,
+    params: EmailParams,
+  ): Promise<void> {
     const transporter = nodemailer.createTransport({
-      host: this.settings.smtp_host,
-      port: this.settings.smtp_port,
-      secure: this.settings.smtp_port === 465,
+      host: config.host,
+      port: config.port,
+      secure: config.port === 465,
       auth: {
-        user: this.settings.smtp_user,
-        pass: this.settings.smtp_password,
+        user: config.user,
+        pass: config.password,
       },
     });
 
@@ -69,7 +95,7 @@ export class EmailService {
 
     try {
       await transporter.sendMail({
-        from: this.settings.smtp_from,
+        from: config.from,
         to: params.to,
         subject: params.subject,
         text: "Anbei erhalten Sie die angeforderte Rechnung.",
