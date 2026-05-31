@@ -1,7 +1,7 @@
 ---
 title: Verifier-Green ≠ QA-Ship-Ready — Independent Review Pass Before Merge
 date: 2026-05-30
-last_updated: 2026-05-30
+last_updated: 2026-05-31
 category: process-issues
 module: pr-workflow
 problem_type: process_issue
@@ -61,7 +61,10 @@ When #103 was actually fixed (not just reviewed), a second independent gstack pa
 - The first env-var "fix" attempt then shipped a **leak-regression test that was green for the wrong reason** — it seeded the canary via `updateSettings()` (which the allowlist silently drops), so the secret never entered the DB and the assertion was vacuous (`[]==[]`). Round 2 re-pointed the test at the *real* barrier (`getSettings()` projection) and **empirically proved it load-bearing** — widening the SELECT to include `smtp_password` turns the test red.
 - **#71** (FREA-258 GiroCode/EPC-QR) passed CI + tests but the adversarial pass found four money-path correctness bugs that green never showed: EPC charset `2` (ISO 8859-1) where UTF-8 (`1`) was meant → garbled umlauts; beneficiary = `bank_name` instead of the account holder; **newline injection** in name/reference shifting the position-based EPC lines → wrong payee/IBAN/amount; and char-based truncation overflowing the EPC **331-byte** payload cap. See `epc-qr-girocode-correctness-2026-05-30.md`.
 
-Net: across two sessions, **independent adversarial review changed the outcome of every green money-path/security PR it touched** — and twice caught a *test* that proved nothing. Tests-green and verifier-green are the same class of necessary-not-sufficient signal.
+- **#117** (FREA-117 parseFormFields bool) passed unit tests but the adversarial pass found the *first* fix shipped the wrong **default direction**: a blocklist (`"0"/"false"/"" → 0`, else `1`) defaults any unrecognized API/MCP value to `1` — and `kleinunternehmer` is a tax flag that drives whether VAT is charged on every invoice. Flipped to an allowlist (`"1"/"true"/"on" → 1`, else `0`) so garbage defaults to the safe `0`. Green never showed the unsafe default.
+- **#116** (FREA-116 freeze VAT on invoice) passed 101 tests but two independent adversarial reviewers both found the fix was **half-applied**: it froze the PDF-HTML body but left the legally-authoritative ZUGFeRD XML and the on-screen detail view reading live settings — an issued invoice still drifted retroactively at the most compliance-critical layer. Completing it required a mechanical grep of *all* read sites (see `pr-premise-is-an-unverified-read-path`). The suite stayed green through the half-fix because it exercised only the one fixed read path — the textbook `[]==[]` blind spot. The same review also flagged a *dead* signal field (`zugferdEmbedded`), turning a planned silent-degrade into a logged/surfaced one.
+
+Net: across three sessions, **independent adversarial review changed the outcome of nearly every green money-path/security PR it touched** — catching a wrong-direction tax default, a half-applied freeze, four EPC-QR correctness bugs, and twice a *test* that proved nothing. Tests-green and verifier-green are the same class of necessary-not-sufficient signal. The cost is one adversarial subagent per PR; on money-path diffs the catch rate justified it every time.
 
 ## When to Apply
 
