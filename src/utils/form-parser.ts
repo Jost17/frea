@@ -22,15 +22,15 @@ export function parseFormFields(
         break;
       }
       case "bool": {
-        // Checkboxen senden nur bei Aktivierung (value="1"); fehlt der Key → 0.
-        // API/MCP-Clients können den Key aber explizit mit "0"/"false"/"" senden —
-        // body.has() allein würde das fälschlich als true werten (FREA-117-Footgun).
-        if (!body.has(key)) {
-          result[key] = 0;
-          break;
-        }
+        // Aktivierte Checkbox sendet value="1" (kleinunternehmer) bzw. "on"
+        // (billable, ohne value=-Attribut); unchecked → Key fehlt → 0.
+        // Allowlist statt Blocklist: unbekannte/Garbage-Werte von API/MCP-Clients
+        // defaulten sicher auf 0 statt fälschlich auf 1 (FREA-117). Wichtig, weil
+        // kleinunternehmer die USt-Behandlung jeder Rechnung bestimmt — der falsche
+        // Default wäre billing-relevant. Nutzt body.get() (erster Wert) → bewusst
+        // inkompatibel mit dem hidden+checkbox-Pattern.
         const value = typeof raw === "string" ? raw.trim().toLowerCase() : "";
-        result[key] = value === "0" || value === "false" || value === "" ? 0 : 1;
+        result[key] = value === "1" || value === "true" || value === "on" ? 1 : 0;
         break;
       }
     }

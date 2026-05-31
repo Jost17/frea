@@ -37,9 +37,23 @@ describe("parseFormFields — bool (FREA-117)", () => {
     expect(result.billable).toBe(0);
   });
 
-  test("beliebiger truthy Wert → 1", () => {
+  test("Checkbox ohne value= sendet 'on' → 1 (billable)", () => {
+    const result = parseFormFields(form({ billable: "on" }), { billable: "bool" });
+    expect(result.billable).toBe(1);
+  });
+
+  test("'true' → 1", () => {
     const result = parseFormFields(form({ billable: "true" }), { billable: "bool" });
     expect(result.billable).toBe(1);
+  });
+
+  test("Garbage-Wert (no/off/2/null) → sicherer 0-Default, nicht 1", () => {
+    for (const garbage of ["no", "nein", "off", "2", "null"]) {
+      const result = parseFormFields(form({ kleinunternehmer: garbage }), {
+        kleinunternehmer: "bool",
+      });
+      expect(result.kleinunternehmer).toBe(0);
+    }
   });
 });
 
