@@ -19,7 +19,7 @@ import {
 } from "../db/queries";
 import type { AppEnv } from "../env";
 import { generateInvoicePdf } from "../lib/pdf/invoice-pdf";
-import { generateZUGFeRDXML, type ZUGFeRDInvoiceData } from "../lib/zugferd-generator";
+import { buildZugferdXml } from "../lib/zugferd-generator";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
 import { EmailService } from "../services/email";
 import { renderInvoiceClientSelection } from "../templates/invoice-create-client";
@@ -330,56 +330,9 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
 
     if (!client || !settings) throw new AppError("Daten fehlen", 500);
 
-    // Generate ZUGFeRD XML if not Kleinunternehmer
-    let zugferdXml: string | undefined;
-    if (!settings.kleinunternehmer && items.length > 0) {
-      const data: ZUGFeRDInvoiceData = {
-        invoiceNumber: invoice.invoice_number,
-        invoiceDate: invoice.invoice_date,
-        dueDate: invoice.due_date,
-        periodMonth: invoice.period_month,
-        periodYear: invoice.period_year,
-        periodStart: invoice.service_period_from || invoice.invoice_date,
-        periodEnd: invoice.service_period_to || invoice.invoice_date,
-        seller: {
-          name: settings.company_name,
-          address: settings.address || "",
-          postalCode: settings.postal_code || "",
-          city: settings.city || "",
-          country: "Deutschland",
-          email: settings.email,
-          taxNumber: settings.tax_number,
-          vatId: settings.ust_id || undefined,
-        },
-        buyer: {
-          name: client.name,
-          address: client.address || null,
-          postalCode: client.postal_code || null,
-          city: client.city || null,
-          country: "Deutschland",
-          email: client.email || undefined,
-          reference: invoice.po_number || invoice.invoice_number,
-        },
-        payment: {
-          iban: settings.iban,
-          bic: settings.bic,
-        },
-        vat: { categoryCode: "S" },
-        lineItems: items.map((item) => ({
-          description: item.description,
-          quantity: item.days,
-          unitPrice: item.daily_rate,
-          netAmount: item.net_amount,
-        })),
-        totals: {
-          netAmount: invoice.net_amount,
-          vatRate: settings.vat_rate,
-          vatAmount: invoice.vat_amount,
-          grossAmount: invoice.gross_amount,
-        },
-      };
-      zugferdXml = generateZUGFeRDXML(data);
-    }
+    // FREA-116: ZUGFeRD über buildZugferdXml — liest die eingefrorene
+    // USt-Behandlung von der Rechnung, nicht live aus settings.
+    const zugferdXml = buildZugferdXml(invoice, items, client, settings);
 
     const result = await generateInvoicePdf(
       { invoice, items, client, settings },
@@ -388,6 +341,14 @@ invoiceRoutes.get("/:id/pdf", async (c) => {
 
     if (!result.success) {
       throw new AppError(`PDF konnte nicht erstellt werden: ${result.error}`, 500);
+    }
+
+    // FREA-115: graceful-degrade ist nicht still — wenn XML erwartet war aber das
+    // Embedding fehlte, wird das invoice-spezifisch geloggt (Provisioning-Signal).
+    if (zugferdXml && !result.zugferdEmbedded) {
+      console.warn(
+        `[invoices] Rechnung ${invoice.invoice_number} ohne eingebettetes ZUGFeRD-XML ausgeliefert — Embedding nicht verfügbar (FREA-115).`,
+      );
     }
 
     saveInvoicePdfPath(id, result.filePath);
@@ -422,59 +383,12 @@ invoiceRoutes.post("/:id/send", async (c) => {
 
     // Auto-regenerate PDF if missing
     let pdfPath = invoice.pdf_path;
+    let zugferdMissing = false;
     if (!pdfPath) {
       const items = getInvoiceItems(id);
 
-      // Generate ZUGFeRD XML if not Kleinunternehmer
-      let zugferdXml: string | undefined;
-      if (!settings.kleinunternehmer && items.length > 0) {
-        const data: ZUGFeRDInvoiceData = {
-          invoiceNumber: invoice.invoice_number,
-          invoiceDate: invoice.invoice_date,
-          dueDate: invoice.due_date,
-          periodMonth: invoice.period_month,
-          periodYear: invoice.period_year,
-          periodStart: invoice.service_period_from || invoice.invoice_date,
-          periodEnd: invoice.service_period_to || invoice.invoice_date,
-          seller: {
-            name: settings.company_name,
-            address: settings.address || "",
-            postalCode: settings.postal_code || "",
-            city: settings.city || "",
-            country: "Deutschland",
-            email: settings.email,
-            taxNumber: settings.tax_number,
-            vatId: settings.ust_id || undefined,
-          },
-          buyer: {
-            name: client.name,
-            address: client.address || null,
-            postalCode: client.postal_code || null,
-            city: client.city || null,
-            country: "Deutschland",
-            email: client.email || undefined,
-            reference: invoice.po_number || invoice.invoice_number,
-          },
-          payment: {
-            iban: settings.iban,
-            bic: settings.bic,
-          },
-          vat: { categoryCode: "S" },
-          lineItems: items.map((item) => ({
-            description: item.description,
-            quantity: item.days,
-            unitPrice: item.daily_rate,
-            netAmount: item.net_amount,
-          })),
-          totals: {
-            netAmount: invoice.net_amount,
-            vatRate: settings.vat_rate,
-            vatAmount: invoice.vat_amount,
-            grossAmount: invoice.gross_amount,
-          },
-        };
-        zugferdXml = generateZUGFeRDXML(data);
-      }
+      // FREA-116: ZUGFeRD über buildZugferdXml — eingefrorene USt-Behandlung.
+      const zugferdXml = buildZugferdXml(invoice, items, client, settings);
 
       const result = await generateInvoicePdf(
         { invoice, items, client, settings },
@@ -482,6 +396,12 @@ invoiceRoutes.post("/:id/send", async (c) => {
       );
       if (!result.success) {
         throw new AppError(`PDF konnte nicht erstellt werden: ${result.error}`, 500);
+      }
+      if (zugferdXml && !result.zugferdEmbedded) {
+        zugferdMissing = true;
+        console.warn(
+          `[invoices] Rechnung ${invoice.invoice_number} wird OHNE eingebettetes ZUGFeRD-XML versendet — Embedding nicht verfügbar (FREA-115).`,
+        );
       }
       pdfPath = result.filePath;
       saveInvoicePdfPath(id, result.filePath);
@@ -498,7 +418,12 @@ invoiceRoutes.post("/:id/send", async (c) => {
     // Update invoice status to 'sent'
     updateInvoiceStatus(id, "sent");
 
-    return c.json({ success: true, message: "Rechnung versendet" });
+    return c.json({
+      success: true,
+      message: zugferdMissing
+        ? "Rechnung versendet — Hinweis: ohne eingebettete E-Rechnung (ZUGFeRD-XML), da das Embedding aktuell nicht verfügbar ist."
+        : "Rechnung versendet",
+    });
   } catch (err) {
     if (err instanceof AppError) throw err;
     return logAndRespond(c, err, "Rechnung konnte nicht versendet werden", 500);

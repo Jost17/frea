@@ -145,8 +145,8 @@ export function createInvoice(
         `INSERT INTO invoices
          (invoice_number, client_id, project_id, invoice_date, due_date, period_month, period_year,
           net_amount, vat_amount, gross_amount, status, po_number,
-          service_period_from, service_period_to)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)
+          service_period_from, service_period_to, kleinunternehmer, vat_rate)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)
          RETURNING id`,
       )
       .get(
@@ -163,6 +163,9 @@ export function createInvoice(
         data.po_number || null,
         data.service_period_from || null,
         data.service_period_to || null,
+        // FREA-116: USt-Behandlung bei Erstellung einfrieren (siehe schema.ts)
+        isKleinunternehmer ? 1 : 0,
+        effectiveVatRate,
       ) as { id: number } | undefined;
 
     if (!invoiceRecord) throw new Error("Rechnung konnte nicht erstellt werden");

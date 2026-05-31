@@ -4,6 +4,7 @@ import {
   parseInvoiceLayoutConfig,
 } from "../../templates/invoice-shared";
 import type { Client, Invoice, InvoiceItem, Settings } from "../../validation/schemas";
+import { resolveTaxTreatment } from "../tax-treatment";
 
 export interface InvoicePdfData {
   invoice: Invoice;
@@ -25,8 +26,9 @@ function escapeHtml(str: string): string {
 export function buildInvoiceHtml(data: InvoicePdfData): string {
   const { invoice, items, client, settings, epcQrDataUrl } = data;
   const config = parseInvoiceLayoutConfig(settings);
-  const isKleinunternehmer = Boolean(settings.kleinunternehmer);
-  const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
+  // FREA-116: USt-Behandlung von der Rechnung lesen (eingefroren bei Erstellung),
+  // nicht live aus settings — siehe resolveTaxTreatment.
+  const { isKleinunternehmer, effectiveVatRate } = resolveTaxTreatment(invoice, settings);
 
   const senderLine = escapeHtml(
     `${settings.company_name} · ${settings.address || ""} · ${settings.postal_code || ""} ${settings.city || ""}`,
