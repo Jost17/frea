@@ -329,6 +329,26 @@ export function initializeSchema() {
   }
 
   try {
+    // FREA-116: USt-Behandlung bei Erstellung auf der Rechnung einfrieren statt
+    // beim Render live aus settings zu lesen (ausgestellte Rechnung muss
+    // unveränderlich sein, GoBD). KEIN Default → bestehende Rechnungen bleiben
+    // NULL und der Renderer fällt für sie auf settings zurück (kein Backfill,
+    // erfindet keine Rückwirkung die wir nicht kennen).
+    const freezeCols = db.query<{ name: string }, []>("PRAGMA table_info(invoices)").all();
+    const freezeNames = freezeCols.map((c) => c.name);
+    if (!freezeNames.includes("kleinunternehmer")) {
+      db.run("ALTER TABLE invoices ADD COLUMN kleinunternehmer INTEGER");
+    }
+    if (!freezeNames.includes("vat_rate")) {
+      db.run("ALTER TABLE invoices ADD COLUMN vat_rate REAL");
+    }
+    console.log("[migration] FREA-116: invoice tax-treatment freeze columns ensured");
+  } catch (err) {
+    console.error("[migration] FREA-116: Failed to add invoice freeze columns:", err);
+    throw new Error("Database migration failed: FREA-116 invoice freeze columns", { cause: err });
+  }
+
+  try {
     const itemCols = db.query<{ name: string }, []>("PRAGMA table_info(invoice_items)").all();
     const itemNames = itemCols.map((c) => c.name);
     // BT-130: Invoiced quantity unit of measure (UN/ECE rec 20: DAY, HUR, C62=piece, MTK=m²)
