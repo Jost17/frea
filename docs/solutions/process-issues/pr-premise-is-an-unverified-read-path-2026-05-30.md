@@ -1,7 +1,7 @@
 ---
 title: A Reported Bug/PR Premise Is Itself an Unverified Read-Path
 date: 2026-05-30
-last_updated: 2026-05-30
+last_updated: 2026-05-31
 category: process-issues
 module: pr-workflow
 problem_type: workflow_issue
@@ -111,6 +111,18 @@ expect(db.query("SELECT smtp_password FROM settings WHERE id = 1").get().smtp_pa
   .toBe(canary);                          // canary really stored
 expect(getSettings()).not.toHaveProperty("smtp_password"); // real protection
 ```
+
+## Instance two (2026-05-31, FREA-116): scoping a fix to one read-site is itself a premise
+
+The same failure mode, one level up: not "where does the value leak?" but "where is the bug, so where do I fix it?". The FREA-116 fix (freeze VAT treatment onto the invoice instead of reading live settings at render) was scoped from "I read `invoice-html.ts`, the bug is there" — a **read-path scoping claim that nobody had falsified with a mechanical scan**. The PDF-HTML fix shipped green (101 tests). Two adversarial reviewers then found the value was read live at **three other sites** the fix never touched: the ZUGFeRD XML generator (legally authoritative), the on-screen detail view, and two duplicated inline route blocks. The fix was *half-applied*; the suite stayed green because it exercised only the one fixed read path (`[]==[]` again).
+
+The falsifying check that should have run *before* claiming the fix complete:
+```bash
+$ grep -rn "settings\.kleinunternehmer\|settings\.vat_rate" src/ | grep -v "<the-fixed-file>"
+# → zugferd-generator.ts, invoice-detail.ts, routes/invoices.ts (x4)
+# four issued-invoice render/emit sites still reading live settings
+```
+**Rule:** when fixing a shared value that has many readers (a settings field, a config flag, a derived rate), the claim "the bug is only in file F" is an enumeration premise. Mechanically `grep -rn` the symbol across the whole codebase, classify every site (issued-invoice render = must use frozen value; preview/creation = settings is correct), and fix or consciously exclude each. A green test on the one site you fixed proves nothing about the N you didn't grep. Extracting a single resolver (`resolveTaxTreatment(invoice, settings)`) and routing all sites through it turns "did I get them all?" into a compile-time question.
 
 ## Related
 
