@@ -3,6 +3,8 @@ import { createInvoice, getInvoice, getInvoiceItems } from "../src/db/invoice-qu
 import { getClient, getSettings } from "../src/db/queries";
 import { db, initializeSchema } from "../src/db/schema";
 import { buildInvoiceHtml } from "../src/lib/pdf/invoice-html";
+import { buildZugferdXml } from "../src/lib/zugferd-generator";
+import { renderInvoiceDetailPage } from "../src/templates/invoice-detail";
 import type { Client, Invoice, Settings, TimeEntry } from "../src/validation/schemas";
 
 beforeAll(() => {
@@ -123,5 +125,61 @@ describe("FREA-116 — USt-Behandlung wird bei Erstellung eingefroren", () => {
 
     // Legacy-Fallback: jetzt zeigt das PDF den §19-Hinweis (settings-getrieben)
     expect(html).toContain("§19 UStG");
+  });
+
+  test("ZUGFeRD-XML nutzt die eingefrorene Behandlung, nicht live settings", () => {
+    const { clientId, projectId } = seed();
+    db.run("UPDATE settings SET kleinunternehmer = 0, vat_rate = 0.19 WHERE id = 1");
+    const settingsAtIssue = getSettings() as Settings;
+    const id = makeInvoice(clientId, projectId, settingsAtIssue);
+    const inv = getInvoice(id) as Invoice;
+    const items = getInvoiceItems(id);
+    const client = getClient(clientId) as Client;
+
+    // Settings nachträglich auf Kleinunternehmer kippen
+    db.run("UPDATE settings SET kleinunternehmer = 1 WHERE id = 1");
+    const settingsNow = getSettings() as Settings;
+
+    // XML muss WEITERHIN erzeugt werden (Rechnung wurde mit USt ausgestellt) —
+    // vor dem Fix gab buildZugferdXml hier undefined zurück (settings-getrieben).
+    const xml = buildZugferdXml(inv, items, client, settingsNow);
+    expect(xml).toBeDefined();
+    expect(xml).toContain("19.00");
+  });
+
+  test("Alt-Rechnung (NULL-Snapshot) + Kleinunternehmer-Settings → ZUGFeRD unterdrückt (Fallback)", () => {
+    const { clientId, projectId } = seed();
+    db.run("UPDATE settings SET kleinunternehmer = 0, vat_rate = 0.19 WHERE id = 1");
+    const id = makeInvoice(clientId, projectId, getSettings() as Settings);
+    db.run("UPDATE invoices SET kleinunternehmer = NULL, vat_rate = NULL WHERE id = ?", [id]);
+    const inv = getInvoice(id) as Invoice;
+    const items = getInvoiceItems(id);
+    const client = getClient(clientId) as Client;
+
+    db.run("UPDATE settings SET kleinunternehmer = 1 WHERE id = 1");
+    const xml = buildZugferdXml(inv, items, client, getSettings() as Settings);
+    expect(xml).toBeUndefined();
+  });
+
+  test("Invoice-Detail-Ansicht zeigt eingefrorene Behandlung, nicht live settings", () => {
+    const { clientId, projectId } = seed();
+    db.run("UPDATE settings SET kleinunternehmer = 0, vat_rate = 0.19 WHERE id = 1");
+    const id = makeInvoice(clientId, projectId, getSettings() as Settings);
+    const inv = getInvoice(id) as Invoice;
+    const items = getInvoiceItems(id);
+    const client = getClient(clientId) as Client;
+
+    db.run("UPDATE settings SET kleinunternehmer = 1 WHERE id = 1");
+    const settingsNow = getSettings() as Settings;
+
+    const view = renderInvoiceDetailPage({
+      invoice: inv,
+      items,
+      client,
+      settings: settingsNow,
+      isOverdue: false,
+    }).toString();
+
+    expect(view).not.toContain("§19 UStG");
   });
 });

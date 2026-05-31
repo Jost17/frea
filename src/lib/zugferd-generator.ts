@@ -4,6 +4,7 @@
  * Anforderung: https://www.ferd-net.de/standards/zunorm/index.html
  */
 import type { Client, Invoice, InvoiceItem, Settings } from "../validation/schemas";
+import { resolveTaxTreatment } from "./tax-treatment";
 
 export type VATCategory = "S" | "E" | "AE";
 
@@ -329,7 +330,10 @@ export function buildZugferdXml(
   client: Client,
   settings: Settings,
 ): string | undefined {
-  if (settings.kleinunternehmer || items.length === 0) return undefined;
+  // FREA-116: USt-Behandlung von der Rechnung (eingefroren), nicht live aus
+  // settings — sonst driftet die rechtlich maßgebliche XML-Payload rückwirkend.
+  const { isKleinunternehmer, effectiveVatRate } = resolveTaxTreatment(invoice, settings);
+  if (isKleinunternehmer || items.length === 0) return undefined;
   return generateZUGFeRDXML({
     invoiceNumber: invoice.invoice_number,
     invoiceDate: invoice.invoice_date,
@@ -370,7 +374,7 @@ export function buildZugferdXml(
     })),
     totals: {
       netAmount: invoice.net_amount,
-      vatRate: settings.vat_rate,
+      vatRate: effectiveVatRate,
       vatAmount: invoice.vat_amount,
       grossAmount: invoice.gross_amount,
     },

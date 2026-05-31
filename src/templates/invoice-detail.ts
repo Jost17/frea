@@ -1,4 +1,5 @@
 import { html } from "hono/html";
+import { resolveTaxTreatment } from "../lib/tax-treatment";
 import type { Client, Invoice, InvoiceItem, Settings } from "../validation/schemas";
 import { Button } from "./components/button";
 import { Table, TableRow, Td } from "./components/table";
@@ -27,8 +28,8 @@ export function renderInvoiceDetailPage(args: {
   const { invoice, items, client, settings, isOverdue } = args;
   const config = parseInvoiceLayoutConfig(settings);
 
-  const isKleinunternehmer = Boolean(settings.kleinunternehmer);
-  const effectiveVatRate = isKleinunternehmer ? 0 : settings.vat_rate;
+  // FREA-116: eingefrorene USt-Behandlung von der Rechnung, nicht live aus settings.
+  const { isKleinunternehmer, effectiveVatRate } = resolveTaxTreatment(invoice, settings);
   const accent = config.accent_color;
 
   const vatHeader =

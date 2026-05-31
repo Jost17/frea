@@ -4,6 +4,7 @@ import {
   parseInvoiceLayoutConfig,
 } from "../../templates/invoice-shared";
 import type { Client, Invoice, InvoiceItem, Settings } from "../../validation/schemas";
+import { resolveTaxTreatment } from "../tax-treatment";
 
 export interface InvoicePdfData {
   invoice: Invoice;
@@ -25,19 +26,9 @@ function escapeHtml(str: string): string {
 export function buildInvoiceHtml(data: InvoicePdfData): string {
   const { invoice, items, client, settings, epcQrDataUrl } = data;
   const config = parseInvoiceLayoutConfig(settings);
-  // FREA-116: USt-Behandlung von der Rechnung lesen, nicht live aus settings —
-  // eine ausgestellte Rechnung darf sich bei Settings-Änderung nicht rückwirkend
-  // ändern. Beide Snapshot-Felder werden atomar gesetzt (createInvoice); fehlen
-  // sie (NULL = Alt-Rechnung vor der Migration), Fallback auf settings.*.
-  const isFrozen = invoice.kleinunternehmer != null && invoice.vat_rate != null;
-  const isKleinunternehmer = isFrozen
-    ? Boolean(invoice.kleinunternehmer)
-    : Boolean(settings.kleinunternehmer);
-  const effectiveVatRate = isKleinunternehmer
-    ? 0
-    : isFrozen
-      ? (invoice.vat_rate as number)
-      : settings.vat_rate;
+  // FREA-116: USt-Behandlung von der Rechnung lesen (eingefroren bei Erstellung),
+  // nicht live aus settings — siehe resolveTaxTreatment.
+  const { isKleinunternehmer, effectiveVatRate } = resolveTaxTreatment(invoice, settings);
 
   const senderLine = escapeHtml(
     `${settings.company_name} · ${settings.address || ""} · ${settings.postal_code || ""} ${settings.city || ""}`,
