@@ -1,6 +1,133 @@
 import { OPEN_INVOICE_STATUSES_SQL, overdueInvoiceWhere } from "./invoice-status";
 import { db } from "./schema";
 
+// ─── Weekly Time Stats ────────────────────────────────────────────────────────
+
+export interface WeeklyTimeStats {
+  total_hours: number;
+  entry_count: number;
+  project_count: number;
+}
+
+export function getWeeklyTimeStats(): WeeklyTimeStats {
+  // ISO week start: Monday. ((strftime('%w') + 6) % 7) = days since Monday (0=Mon…6=Sun)
+  const row = db
+    .query<WeeklyTimeStats, []>(
+      `SELECT
+        COALESCE(SUM(duration), 0)          AS total_hours,
+        COUNT(*)                             AS entry_count,
+        COUNT(DISTINCT project_id)           AS project_count
+       FROM time_entries
+       WHERE invoice_id IS NULL
+         AND date >= date('now', '-' || ((cast(strftime('%w', 'now') as integer) + 6) % 7) || ' days')`,
+    )
+    .get();
+  return row ?? { total_hours: 0, entry_count: 0, project_count: 0 };
+}
+
+// ─── Open Invoices By Client ──────────────────────────────────────────────────
+
+export interface OpenInvoiceByClient {
+  client_id: number;
+  client_name: string;
+  invoice_count: number;
+  total_amount: number;
+  oldest_due_date: string | null;
+  has_overdue: number; // 0 or 1
+}
+
+export function getOpenInvoicesByClient(): OpenInvoiceByClient[] {
+  return db
+    .query<OpenInvoiceByClient, []>(
+      `SELECT
+        c.id                                                   AS client_id,
+        c.name                                                 AS client_name,
+        COUNT(i.id)                                            AS invoice_count,
+        COALESCE(SUM(i.gross_amount), 0)                       AS total_amount,
+        MIN(i.due_date)                                        AS oldest_due_date,
+        CASE WHEN MIN(i.due_date) < date('now') THEN 1 ELSE 0 END AS has_overdue
+       FROM invoices i
+       JOIN clients c ON c.id = i.client_id
+       WHERE ${OPEN_INVOICE_STATUSES_SQL}
+       GROUP BY c.id, c.name
+       ORDER BY has_overdue DESC, total_amount DESC`,
+    )
+    .all();
+}
+
+// ─── Quarterly Revenue ────────────────────────────────────────────────────────
+
+export interface QuarterData {
+  quarter: number; // 1–4
+  label: string;   // "Q1 2026"
+  net_revenue: number;
+  gross_revenue: number;
+}
+
+export interface QuarterlyRevenueSummary {
+  ytd_net: number;
+  ytd_gross: number;
+  prev_year_gross: number;
+  quarters: QuarterData[];
+}
+
+export function getQuarterlyRevenue(): QuarterlyRevenueSummary {
+  const currentYear = new Date().getFullYear();
+  const currentQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
+
+  const ytdRow = db
+    .query<{ ytd_net: number; ytd_gross: number }, []>(
+      `SELECT
+        COALESCE(SUM(net_amount), 0)   AS ytd_net,
+        COALESCE(SUM(gross_amount), 0) AS ytd_gross
+       FROM invoices
+       WHERE status IN ('sent', 'paid')
+         AND strftime('%Y', invoice_date) = strftime('%Y', 'now')`,
+    )
+    .get();
+
+  const quarterRows = db
+    .query<{ quarter: number; net_revenue: number; gross_revenue: number }, []>(
+      `SELECT
+        CAST(CEIL(CAST(strftime('%m', invoice_date) AS REAL) / 3) AS INTEGER) AS quarter,
+        COALESCE(SUM(net_amount), 0)                                           AS net_revenue,
+        COALESCE(SUM(gross_amount), 0)                                         AS gross_revenue
+       FROM invoices
+       WHERE status IN ('sent', 'paid')
+         AND strftime('%Y', invoice_date) = strftime('%Y', 'now')
+       GROUP BY quarter
+       ORDER BY quarter ASC`,
+    )
+    .all();
+
+  const prevYearRow = db
+    .query<{ prev_year_gross: number }, []>(
+      `SELECT COALESCE(SUM(gross_amount), 0) AS prev_year_gross
+       FROM invoices
+       WHERE status IN ('sent', 'paid')
+         AND strftime('%Y', invoice_date) = strftime('%Y', date('now', '-1 year'))`,
+    )
+    .get();
+
+  const quarters: QuarterData[] = [];
+  for (let q = 1; q <= currentQuarter; q++) {
+    const row = quarterRows.find((r) => r.quarter === q);
+    quarters.push({
+      quarter: q,
+      label: `Q${q} ${currentYear}`,
+      net_revenue: row?.net_revenue ?? 0,
+      gross_revenue: row?.gross_revenue ?? 0,
+    });
+  }
+
+  return {
+    ytd_net: ytdRow?.ytd_net ?? 0,
+    ytd_gross: ytdRow?.ytd_gross ?? 0,
+    prev_year_gross: prevYearRow?.prev_year_gross ?? 0,
+    quarters,
+  };
+}
+
 // ─── Cashflow Forecast ────────────────────────────────────────────────────────
 
 export interface CashflowMonth {
