@@ -10,7 +10,10 @@ import {
 } from "../db/queries";
 import type { AppEnv } from "../env";
 import { AppError, handleMutationError, logAndRespond } from "../middleware/error-handler";
+import { Button } from "../templates/components/button";
 import { EmptyState } from "../templates/components/empty-state";
+import { FormField } from "../templates/components/form-field";
+import { Table, TableRow, Td } from "../templates/components/table";
 import { Layout } from "../templates/layout";
 import { parseFormFields } from "../utils/form-parser";
 import { type Client, type Project, projectSchema } from "../validation/schemas";
@@ -47,13 +50,8 @@ projectRoutes.get("/", (c) => {
         overdueCount,
         children: html`
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-semibold">Projekte</h1>
-            <a
-              href="/projekte/new"
-              class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              + Neues Projekt
-            </a>
+            <h1 class="text-2xl font-semibold text-text-primary">Projekte</h1>
+            ${Button({ href: "/projekte/new", children: "+ Neues Projekt" })}
           </div>
 
           ${
@@ -69,26 +67,30 @@ projectRoutes.get("/", (c) => {
                   ${[...byClient.entries()].map(([clientName, clientProjects]) => {
                     return html`
                       <div>
-                        <h2 class="text-lg font-semibold mb-3">${clientName}</h2>
-                        <div class="rounded-lg border border-gray-200 overflow-hidden bg-white">
-                          <table class="w-full text-sm">
-                            <tbody>
-                              ${clientProjects.map((project) => {
-                                return html`
-                                  <tr class="border-t hover:bg-gray-50">
-                                    <td class="px-4 py-3">
-                                      <a href="/projekte/${project.id}" class="font-medium text-blue-600 hover:underline">
-                                        ${project.name}
-                                      </a>
-                                      <div class="text-xs text-gray-500">${project.code}</div>
-                                    </td>
-                                    <td class="px-4 py-3 text-right">${project.daily_rate.toFixed(2)} \u20AC/Tag</td>
-                                  </tr>
-                                `;
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
+                        <h2 class="text-lg font-semibold text-text-primary mb-3">${clientName}</h2>
+                        ${Table({
+                          columns: [{ label: "Projekt" }, { label: "Tagessatz", align: "right" }],
+                          rows: clientProjects.map((project) =>
+                            TableRow({
+                              children: html`
+                                ${Td({
+                                  children: html`
+                                    <a
+                                      href="/projekte/${project.id}"
+                                      class="font-medium text-primary hover:underline"
+                                    >${project.name}</a>
+                                    <div class="text-xs text-text-muted">${project.code}</div>
+                                  `,
+                                })}
+                                ${Td({
+                                  align: "right",
+                                  extraClass: "text-text-secondary",
+                                  children: `${project.daily_rate.toFixed(2)} €/Tag`,
+                                })}
+                              `,
+                            }),
+                          ),
+                        })}
                       </div>
                     `;
                   })}
@@ -203,179 +205,143 @@ function renderProjectForm(project: Project | null, clients: Pick<Client, "id" |
   const isNew = !project;
   const action = isNew ? "/projekte" : `/projekte/${project.id}`;
 
+  const clientOptions = [
+    { value: "", label: "-- Wählen --" },
+    ...clients.map((c) => ({ value: String(c.id), label: c.name })),
+  ];
+
   return html`
     <div class="max-w-2xl">
       <div class="mb-6 flex items-center justify-between">
-        <h1 class="text-2xl font-semibold">${isNew ? "Neues Projekt" : `Projekt: ${project.name}`}</h1>
+        <h1 class="text-2xl font-semibold text-text-primary">
+          ${isNew ? "Neues Projekt" : `Projekt: ${project.name}`}
+        </h1>
         ${
           !isNew
             ? html`<form method="post" action="/projekte/${project.id}/delete" class="inline">
-              <button
-                type="submit"
-                onclick="return confirm('Wirklich loeschen?')"
-                class="text-red-600 hover:underline text-xs"
-              >
-                Loeschen
-              </button>
-            </form>`
+                ${Button({
+                  variant: "danger",
+                  type: "submit",
+                  children: "Löschen",
+                  attrs: `onclick="return confirm('Wirklich löschen?')"`,
+                })}
+              </form>`
             : ""
         }
       </div>
 
-      <form method="post" action="${action}" class="space-y-6 rounded-lg border border-gray-200 bg-white p-6">
-        <div>
-          <label for="client_id" class="block text-sm font-medium text-gray-700">Kunde *</label>
-          <select
-            id="client_id"
-            name="client_id"
-            required
-            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          >
-            <option value="">-- Waehlen --</option>
-            ${clients.map((c) => {
-              return html`<option value="${c.id}" ${project?.client_id === c.id ? "selected" : ""}>${c.name}</option>`;
-            })}
-          </select>
+      <form
+        method="post"
+        action="${action}"
+        class="space-y-6 rounded-lg border border-border-subtle bg-bg-surface p-6 shadow-card"
+      >
+        ${FormField({
+          type: "select",
+          id: "client_id",
+          name: "client_id",
+          label: "Kunde",
+          required: true,
+          value: project ? String(project.client_id) : "",
+          options: clientOptions,
+        })}
+
+        <div class="grid grid-cols-2 gap-4">
+          ${FormField({
+            type: "text",
+            id: "code",
+            name: "code",
+            label: "Kürzel",
+            required: true,
+            value: project?.code || "",
+            hint: "Internes Projektkürzel (z.B. PROJ-001). Erscheint in der Zeiterfassung.",
+          })}
+          ${FormField({
+            type: "text",
+            id: "name",
+            name: "name",
+            label: "Name",
+            required: true,
+            value: project?.name || "",
+          })}
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="code" class="block text-sm font-medium text-gray-700">Kürzel *</label>
-            <input
-              type="text"
-              id="code"
-              name="code"
-              required
-              value="${project?.code || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              aria-describedby="code-hint"
-            />
-            <p id="code-hint" class="mt-1 text-xs text-gray-500">Internes Projektkürzel (z.B. PROJ-001). Erscheint in der Zeiterfassung.</p>
-          </div>
-          <div>
-            <label for="name" class="block text-sm font-medium text-gray-700">Name *</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              required
-              value="${project?.name || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
+          ${FormField({
+            type: "number",
+            id: "daily_rate",
+            name: "daily_rate",
+            label: "Tagessatz",
+            required: true,
+            value: project?.daily_rate || "",
+            hint: "Dein Tagessatz in Euro (netto). Wird für die Rechnungsberechnung verwendet.",
+            attrs: 'min="0" step="0.01"',
+          })}
+          ${FormField({
+            type: "number",
+            id: "budget_days",
+            name: "budget_days",
+            label: "Budget (Tage)",
+            value: project?.budget_days || "",
+            hint: "Geplante Anzahl Arbeitstage. Optional — hilft bei der Auslastungsübersicht.",
+            attrs: 'min="0" step="0.5"',
+          })}
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="daily_rate" class="block text-sm font-medium text-gray-700">Tagessatz *</label>
-            <input
-              type="number"
-              id="daily_rate"
-              name="daily_rate"
-              required
-              min="0"
-              step="0.01"
-              value="${project?.daily_rate || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              aria-describedby="daily-rate-hint"
-            />
-            <p id="daily-rate-hint" class="mt-1 text-xs text-gray-500">Dein Tagessatz in Euro (netto). Wird für die Rechnungsberechnung verwendet.</p>
-          </div>
-          <div>
-            <label for="budget_days" class="block text-sm font-medium text-gray-700">Budget (Tage)</label>
-            <input
-              type="number"
-              id="budget_days"
-              name="budget_days"
-              min="0"
-              step="0.5"
-              value="${project?.budget_days || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              aria-describedby="budget-hint"
-            />
-            <p id="budget-hint" class="mt-1 text-xs text-gray-500">Geplante Anzahl Arbeitstage. Optional — hilft bei der Auslastungsübersicht.</p>
-          </div>
+          ${FormField({
+            type: "date",
+            id: "start_date",
+            name: "start_date",
+            label: "Startdatum",
+            value: project?.start_date || "",
+          })}
+          ${FormField({
+            type: "date",
+            id: "end_date",
+            name: "end_date",
+            label: "Enddatum",
+            value: project?.end_date || "",
+          })}
         </div>
+
+        ${FormField({
+          type: "textarea",
+          id: "service_description",
+          name: "service_description",
+          label: "Leistungsbeschreibung",
+          value: project?.service_description || "",
+          hint: "Was du lieferst. Wird auf die Rechnung übernommen.",
+        })}
 
         <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="start_date" class="block text-sm font-medium text-gray-700">Startdatum</label>
-            <input
-              type="date"
-              id="start_date"
-              name="start_date"
-              value="${project?.start_date || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label for="end_date" class="block text-sm font-medium text-gray-700">Enddatum</label>
-            <input
-              type="date"
-              id="end_date"
-              name="end_date"
-              value="${project?.end_date || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
+          ${FormField({
+            type: "text",
+            id: "contract_number",
+            name: "contract_number",
+            label: "Vertragsnummer",
+            value: project?.contract_number || "",
+            hint: "Optional. Referenz zum Rahmenvertrag.",
+          })}
+          ${FormField({
+            type: "date",
+            id: "contract_date",
+            name: "contract_date",
+            label: "Vertragsdatum",
+            value: project?.contract_date || "",
+          })}
         </div>
 
-        <div>
-          <label for="service_description" class="block text-sm font-medium text-gray-700">Leistungsbeschreibung</label>
-          <textarea
-            id="service_description"
-            name="service_description"
-            rows="3"
-            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            aria-describedby="service-desc-hint"
-          >
-${project?.service_description || ""}</textarea
-          >
-          <p id="service-desc-hint" class="mt-1 text-xs text-gray-500">Was du lieferst. Wird auf die Rechnung übernommen.</p>
-        </div>
+        ${FormField({
+          type: "textarea",
+          id: "notes",
+          name: "notes",
+          label: "Notizen",
+          value: project?.notes || "",
+        })}
 
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="contract_number" class="block text-sm font-medium text-gray-700">Vertragsnummer</label>
-            <input
-              type="text"
-              id="contract_number"
-              name="contract_number"
-              value="${project?.contract_number || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              aria-describedby="contract-number-hint"
-            />
-            <p id="contract-number-hint" class="mt-1 text-xs text-gray-500">Optional. Referenz zum Rahmenvertrag.</p>
-          </div>
-          <div>
-            <label for="contract_date" class="block text-sm font-medium text-gray-700">Vertragsdatum</label>
-            <input
-              type="date"
-              id="contract_date"
-              name="contract_date"
-              value="${project?.contract_date || ""}"
-              class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label for="notes" class="block text-sm font-medium text-gray-700">Notizen</label>
-          <textarea
-            id="notes"
-            name="notes"
-            rows="3"
-            class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm"
-          >
-${project?.notes || ""}</textarea
-          >
-        </div>
-
-        <div class="flex justify-end gap-4 border-t border-gray-200 pt-6">
-          <a href="/projekte" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"> Abbrechen </a>
-          <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-            Speichern
-          </button>
+        <div class="flex justify-end gap-4 border-t border-border-subtle pt-6">
+          ${Button({ variant: "link", href: "/projekte", children: "Abbrechen" })}
+          ${Button({ variant: "primary", type: "submit", children: "Speichern" })}
         </div>
       </form>
     </div>
